@@ -1,0 +1,33 @@
+﻿@using Skinnix.RhymeTool.Client.Data.Structure;
+
+@inject IJSRuntime js
+
+@{
+    void TextareaContent()
+    {
+        if (Document == null)
+            return;
+
+        foreach (var node in Document.Nodes)
+        {
+            switch (node)
+            {
+                case TextRhymeNode text:
+                    <p>@text.Text</p>
+                    break;
+            }
+        }
+    }
+}
+
+<div class="editor-wrapper">
+    <div class="editor-header">
+
+    </div>
+
+    <div class="editor-textarea" role="textbox"@ref="editor">
+        @{
+            TextareaContent();
+        }
+    </div>
+</div>

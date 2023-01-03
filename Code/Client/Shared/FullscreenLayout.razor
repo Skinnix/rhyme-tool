@@ -1,0 +1,19 @@
+﻿@inherits LayoutComponentBase
+
+<div class="page">
+    <MenuBarWrapper>
+        <div class="sidebar">
+            <NavMenu />
+        </div>
+
+        <main class="d-flex flex-fill flex-column">
+            <div class="header">
+                <MenuBar/>
+            </div>
+
+            <article class="content flex-fill">
+                @Body
+            </article>
+        </main>
+    </MenuBarWrapper>
+</div>

@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+		<AssemblyName>Skinnix.RhymeTool.Server</AssemblyName>
+		<RootNamespace>Skinnix.RhymeTool.Server</RootNamespace>
+		<Configurations>Debug;Release;Server Side</Configurations>
+  </PropertyGroup>
+
+	<PropertyGroup>
+		<OutputPath>..\..\Build\$(Configuration)\</OutputPath>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)'=='Server Side'">
+		<DefineConstants>$(DefineConstants)TRACE;DEBUG</DefineConstants>
+	</PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="7.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Client\RhymeTool.Client.csproj" />
+  </ItemGroup>
+
+</Project>

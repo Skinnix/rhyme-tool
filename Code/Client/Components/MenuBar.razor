@@ -1,0 +1,14 @@
+﻿@Context?.GetContent(Group)
+
+@code {
+    [CascadingParameter] public MenuBarContext? Context { get; set; }
+
+    [Parameter] public string Group { get; set; } = string.Empty;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        Context?.RegisterRefresh(this, StateHasChanged, Group);
+    }
+}

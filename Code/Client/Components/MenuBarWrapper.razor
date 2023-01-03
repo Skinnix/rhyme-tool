@@ -1,0 +1,9 @@
+﻿<CascadingValue TValue="MenuBarContext" Value="context">
+    @ChildContent
+</CascadingValue>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    private readonly MenuBarContext context = new();
+}

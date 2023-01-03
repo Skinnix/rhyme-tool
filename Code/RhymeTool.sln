@@ -1,0 +1,41 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.4.33205.214
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RhymeTool.Server", "Server\RhymeTool.Server.csproj", "{3F48A01A-D945-4A32-B782-8755437EBF96}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RhymeTool.Client", "Client\RhymeTool.Client.csproj", "{AD48566A-206F-4DF4-A2E1-E40788435DA7}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Common", "Common", "{E5D15BFB-63FB-4C5D-92A8-249F0325F37F}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+		Server Side|Any CPU = Server Side|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3F48A01A-D945-4A32-B782-8755437EBF96}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3F48A01A-D945-4A32-B782-8755437EBF96}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3F48A01A-D945-4A32-B782-8755437EBF96}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3F48A01A-D945-4A32-B782-8755437EBF96}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3F48A01A-D945-4A32-B782-8755437EBF96}.Server Side|Any CPU.ActiveCfg = Server Side|Any CPU
+		{3F48A01A-D945-4A32-B782-8755437EBF96}.Server Side|Any CPU.Build.0 = Server Side|Any CPU
+		{AD48566A-206F-4DF4-A2E1-E40788435DA7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AD48566A-206F-4DF4-A2E1-E40788435DA7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AD48566A-206F-4DF4-A2E1-E40788435DA7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AD48566A-206F-4DF4-A2E1-E40788435DA7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AD48566A-206F-4DF4-A2E1-E40788435DA7}.Server Side|Any CPU.ActiveCfg = Server Side|Any CPU
+		{AD48566A-206F-4DF4-A2E1-E40788435DA7}.Server Side|Any CPU.Build.0 = Server Side|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {E94CAD93-4200-43EB-8F03-A6A82C5FFD80}
+	EndGlobalSection
+EndGlobal

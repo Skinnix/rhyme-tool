@@ -1,0 +1,26 @@
+﻿@page "/editor"
+@layout FullscreenLayout
+
+@using Skinnix.RhymeTool.Client.Components.Editing
+@using Skinnix.RhymeTool.Client.Data.Structure;
+
+<PageTitle>Editor</PageTitle>
+
+<RhymeEditor Document="document"></RhymeEditor>
+
+@code {
+    private readonly RhymeDocument document = new();
+
+    public Editor()
+    {
+        document.Nodes.Add(new TextRhymeNode()
+        {
+            Text = "Erste Zeile"
+        });
+        
+        document.Nodes.Add(new TextRhymeNode()
+        {
+            Text = "Zweite Zeile"
+        });
+    }
+}
