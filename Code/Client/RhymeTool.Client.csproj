@@ -4,9 +4,9 @@
     <TargetFramework>net7.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-		<AssemblyName>Skinnix.RhymeTool.Client</AssemblyName>
-		<RootNamespace>Skinnix.RhymeTool.Client</RootNamespace>
-		<Configurations>Debug;Release;Server Side</Configurations>
+    <AssemblyName>Skinnix.RhymeTool.Client</AssemblyName>
+    <RootNamespace>Skinnix.RhymeTool.Client</RootNamespace>
+    <Configurations>Debug;Release;Server Side</Configurations>
   </PropertyGroup>
 
   <PropertyGroup>

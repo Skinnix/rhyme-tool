@@ -8,14 +8,22 @@
         if (Document == null)
             return;
 
+        var index = 0;
         foreach (var node in Document.Nodes)
         {
             switch (node)
             {
                 case TextRhymeNode text:
-                    <p>@text.Text</p>
+                    <p data-node-id="@node.Id" data-node-index="@index">
+                        @if (!string.IsNullOrEmpty(text.Text))
+                        {
+                            @(text.Text);
+                        }
+                    </p>
                     break;
             }
+
+            index++;
         }
     }
 }
@@ -25,9 +33,16 @@
 
     </div>
 
-    <div class="editor-textarea" role="textbox"@ref="editor">
+    <div class="editor-content d-none"
+            @ref="content">
         @{
             TextareaContent();
         }
+    </div>
+
+    <div class="editor-textarea" role="textbox"
+            contenteditable
+            data-refreshed="@refreshGuid"
+            @ref="editor">
     </div>
 </div>
