@@ -4,7 +4,7 @@
 	{
 		public event EventHandler<RhymeNodeChangedEventArgs>? Changed;
 
-		public Guid Id { get; } = Guid.NewGuid();
+		public Guid Id { get; init; } = Guid.NewGuid();
 
 		protected void InvokeChanged(RhymeNodeChangedEventArgs e)
 			=> Changed?.Invoke(this, e);

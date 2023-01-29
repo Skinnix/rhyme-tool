@@ -14,7 +14,7 @@
             switch (node)
             {
                 case TextRhymeNode text:
-                    <p data-node-id="@node.Id" data-node-index="@index">
+                    <p data-node-id="@node.Id">
                         @if (!string.IsNullOrEmpty(text.Text))
                         {
                             @(text.Text);
@@ -33,7 +33,7 @@
 
     </div>
 
-    <div class="editor-content d-none"
+    <div class="editor-content"
             @ref="content">
         @{
             TextareaContent();
@@ -42,7 +42,6 @@
 
     <div class="editor-textarea" role="textbox"
             contenteditable
-            data-refreshed="@refreshGuid"
             @ref="editor">
     </div>
 </div>

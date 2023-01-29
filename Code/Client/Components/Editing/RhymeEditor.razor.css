@@ -4,8 +4,12 @@
 .editor-header {
 }
 
-.editor-textarea[data-refreshed] {
-	background-color: red;
+.editor-textarea {
+	padding: 2px;
+}
+
+.editor-textarea p:last-child {
+	margin-bottom: 0;
 }
 
 .editor-textarea p:empty:before {
