@@ -142,7 +142,7 @@ public class SheetReader
 		//Trenne die Zeile in Wörter auf
 		var textLineComponents = ParseTextLine(line, lastChordLine).ToList();
 		lastChordLine = null;
-		var textLine = new SheetChordedLine(textLineComponents);
+		var textLine = new SheetCompositeLine(textLineComponents);
 		currentSegmentLines.Add(textLine);
 	}
 
@@ -237,9 +237,9 @@ public class SheetReader
 		return chords;
 	}
 
-	private List<SheetChordedLineComponent> ParseTextLine(ReadOnlySpan<char> line, IEnumerable<ChordInLine>? chordLine)
+	private List<SheetCompositeLineComponent> ParseTextLine(ReadOnlySpan<char> line, IEnumerable<ChordInLine>? chordLine)
 	{
-		var components = new List<SheetChordedLineComponent>();
+		var components = new List<SheetCompositeLineComponent>();
 		var offset = 0;
 		var chordEnumerator = (chordLine ?? Enumerable.Empty<ChordInLine>()).GetEnumerator();
 		ChordInLine nextChord = chordEnumerator.MoveNext() ? chordEnumerator.Current : default;
@@ -256,7 +256,7 @@ public class SheetReader
 			//Leerzeichen gefunden?
 			if (spaceOffset > offset)
 			{
-				components.Add(new SheetChordedLineSpace(spaceOffset - offset));
+				components.Add(new SheetSpace(spaceOffset - offset));
 				offset = spaceOffset;
 			}
 
@@ -317,7 +317,7 @@ public class SheetReader
 			}
 
 			//Speichere das Wort
-			components.Add(new SheetChordedLineWord(wordComponents));
+			components.Add(new SheetChordedWord(wordComponents));
 		}
 
 		//Verlänge ggf. die Zeile, um die nächsten Akkorde zu erfassen
@@ -326,7 +326,7 @@ public class SheetReader
 			//Verlängere die Zeile um Leerzeichen
 			if (nextChordOffset > offset)
 			{
-				components.Add(new SheetChordedLineSpace(nextChordOffset - offset));
+				components.Add(new SheetSpace(nextChordOffset - offset));
 				offset = nextChordOffset;
 			}
 
@@ -338,7 +338,7 @@ public class SheetReader
 			word.Attachments.Add(new WordComponentChord(nextChord.Chord));
 			if (nextChord.Suffix != null)
 				word.Attachments.Add(new WordComponentText(nextChord.Suffix) { Offset = nextChord.SuffixOffset - nextChord.Offset });
-			components.Add(new SheetChordedLineWord(word));
+			components.Add(new SheetChordedWord(word));
 
 			//Wechle zum nächsten Akkord
 			nextChord = chordEnumerator.MoveNext() ? chordEnumerator.Current : default;

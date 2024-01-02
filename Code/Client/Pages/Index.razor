@@ -1,18 +1,24 @@
-﻿@page "/"
+﻿@page "/a"
 
 @layout MainLayout
 
 @using Skinnix.RhymeTool.Client.Components.Editing
 @using Skinnix.RhymeTool.Data.Structure
+@using Skinnix.RhymeTool.Data.Structure.Display
 
 @inject HttpClient http
 
 <PageTitle>Index</PageTitle>
 
-<SheetDisplay Document="document" DisplayMode="SheetDisplayMode.ColumnBlocks" />
+<SheetDisplay Document="document" DisplayMode="SheetDisplayMode.Lines" Formatter="formatter" />
 
 @code {
     private SheetDocument? document;
+
+    private ISheetFormatter formatter = new DefaultSheetFormatter()
+    {
+        GermanMode = GermanNoteMode.ExplicitH,
+    };
 
     protected override async Task OnParametersSetAsync()
     {

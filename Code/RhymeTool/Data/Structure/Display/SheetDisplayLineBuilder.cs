@@ -7,8 +7,8 @@ public abstract class SheetDisplayLineBuilder : IComparable<SheetDisplayLineBuil
 	public abstract int CompareTo(SheetDisplayLineBuilder? other);
 	public abstract SheetDisplayLine CreateDisplayLine();
 
-	public abstract void Append(SheetDisplayElement element);
-	public abstract void ExtendLength(int totalLength);
+	public abstract void Append(SheetDisplayElement element, ISheetFormatter? formatter = null);
+	public abstract void ExtendLength(int totalLength, int minExtension);
 }
 
 public abstract class SheetDisplayLineBuilder<TLine> : SheetDisplayLineBuilder
@@ -25,16 +25,20 @@ public abstract class SheetDisplayTextLineBuilder<TLine> : SheetDisplayLineBuild
 	private int currentLength;
 	public override int CurrentLength => currentLength;
 
-	public override void Append(SheetDisplayElement element)
+	public override void Append(SheetDisplayElement element, ISheetFormatter? formatter = null)
 	{
-		var length = element.Length;
+		var length = element.GetLength(formatter);
 		Elements.Add(element);
 		currentLength += length;
 	}
 
-	public override void ExtendLength(int totalLength)
+	public override void ExtendLength(int totalLength, int minExtension)
 	{
-		if (currentLength >= totalLength) return;
+		if (currentLength + minExtension > totalLength)
+			totalLength = currentLength + minExtension;
+
+		if (currentLength >= totalLength)
+			return;
 
 		var space = new SheetDisplaySpace(totalLength - currentLength);
 		Elements.Add(space);

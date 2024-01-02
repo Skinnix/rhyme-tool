@@ -2,6 +2,8 @@
 
 public class SheetDocument
 {
+	public string Label { get; set; } = string.Empty;
+
 	public List<SheetSegment> Segments { get; } = new();
 
 	public SheetDocument() { }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
+using Skinnix.RhymeTool.Data.Structure.Display;
 
 namespace Skinnix.RhymeTool.Data.Structure;
 
@@ -48,6 +49,9 @@ public record struct Note(NoteType Type, AccidentalType Accidental)
 		=> Accidental == AccidentalType.None
 		? Type.GetDisplayName()
 		: $"{Type.GetDisplayName()}{Accidental.GetDisplayName()}";
+
+	public string ToString(ISheetFormatter? formatter)
+		=> formatter?.Format(this) ?? ToString();
 
 	public static int TryRead(ReadOnlySpan<char> s, out Note note)
 	{

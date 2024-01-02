@@ -2,6 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Runtime.Serialization;
 using System.Text;
+using Skinnix.RhymeTool.Data.Structure.Display;
 
 namespace Skinnix.RhymeTool.Data.Structure;
 
@@ -20,7 +21,7 @@ public enum ChordQuality : byte
 	Augmented,
 }
 
-public record Chord(Note Root, ChordQuality Quality)
+public sealed record Chord(Note Root, ChordQuality Quality)
 {
 	public Note? Bass { get; init; }
 	public IReadOnlyList<ChordAlteration> Alterations { get; init; } = Array.Empty<ChordAlteration>();
@@ -47,6 +48,9 @@ public record Chord(Note Root, ChordQuality Quality)
 
 		return sb.ToString();
 	}
+
+	public string ToString(ISheetFormatter? formatter)
+		=> formatter?.Format(this) ?? ToString();
 
 	public static int TryRead(ReadOnlySpan<char> s, out Chord? chord)
 	{

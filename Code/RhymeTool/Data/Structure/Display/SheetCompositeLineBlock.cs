@@ -6,18 +6,18 @@ using System.Threading.Tasks;
 
 namespace Skinnix.RhymeTool.Data.Structure.Display;
 
-public record SheetDisplayComponentBlock
+public record SheetCompositeLineBlock
 {
-	public IReadOnlyCollection<SheetDisplayComponentBlockLine> Lines { get; }
+	public IReadOnlyCollection<SheetCompositeLineBlockLine> Lines { get; }
 
-	public SheetDisplayComponentBlock(params SheetDisplayComponentBlockLine[] lineBlocks) : this((IEnumerable<SheetDisplayComponentBlockLine>)lineBlocks) { }
-	public SheetDisplayComponentBlock(IEnumerable<SheetDisplayComponentBlockLine> lineBlocks)
+	public SheetCompositeLineBlock(params SheetCompositeLineBlockLine[] lineBlocks) : this((IEnumerable<SheetCompositeLineBlockLine>)lineBlocks) { }
+	public SheetCompositeLineBlock(IEnumerable<SheetCompositeLineBlockLine> lineBlocks)
 	{
 		Lines = lineBlocks.ToList().AsReadOnly();
 	}
 }
 
-public abstract record SheetDisplayComponentBlockLine(SheetDisplayElement Element)
+public abstract record SheetCompositeLineBlockLine(SheetDisplayElement Element)
 {
 	public static SheetDisplayComponentBlockLine<TLineBuilder> Create<TLineBuilder>(SheetDisplayElement element)
 		where TLineBuilder : SheetDisplayLineBuilder, new()
@@ -26,23 +26,20 @@ public abstract record SheetDisplayComponentBlockLine(SheetDisplayElement Elemen
 	public abstract bool CanAppend(SheetDisplayLineBuilder line);
 
 	public abstract SheetDisplayLineBuilder CreateBuilder();
-	public virtual SheetDisplayLineBuilder CreateBuilderAndAppend(int offset)
+	public virtual SheetDisplayLineBuilder CreateBuilderAndAppend(int offset, ISheetFormatter? formatter = null)
 	{
 		var builder = CreateBuilder();
-		builder.ExtendLength(offset);
-		builder.Append(Element);
+		builder.ExtendLength(offset, 0);
+		builder.Append(Element, formatter);
 		return builder;
 	}
 }
 
-public sealed record SheetDisplayComponentBlockLine<TLineBuilder>(SheetDisplayElement Element) : SheetDisplayComponentBlockLine(Element)
+public sealed record SheetDisplayComponentBlockLine<TLineBuilder>(SheetDisplayElement Element) : SheetCompositeLineBlockLine(Element)
 	where TLineBuilder : SheetDisplayLineBuilder, new()
 {
 	public override TLineBuilder CreateBuilder()
 		=> new TLineBuilder();
-
-	public override string ToString()
-		=> Element.ToString();
 
 	public override bool CanAppend(SheetDisplayLineBuilder line)
 		=> line is TLineBuilder;

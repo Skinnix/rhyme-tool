@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Skinnix.RhymeTool.Data.Structure.Display;
 
 namespace Skinnix.RhymeTool.Data.Structure;
 
@@ -23,6 +24,9 @@ public record struct ChordDegree(byte Value, ChordDegreeModifier Modifier = Chor
 		=> Modifier == ChordDegreeModifier.None
 		? Value.ToString()
 		: $"{Modifier.GetDisplayName()}{Value}";
+
+	public string ToString(ISheetFormatter? formatter)
+		=> formatter?.Format(this) ?? ToString();
 
 	public static int TryRead(ReadOnlySpan<char> s, out ChordDegree degree)
 	{
@@ -79,6 +83,9 @@ public record struct ChordAlteration(ChordAlterationType Type, ChordDegree Degre
 {
 	public override string ToString()
 		=> $"{Type.GetDisplayName()}{Degree}";
+
+	public string ToString(ISheetFormatter? formatter)
+		=> formatter?.Format(this) ?? ToString();
 
 	public static int TryRead(ReadOnlySpan<char> s, out ChordAlteration alteration)
 	{

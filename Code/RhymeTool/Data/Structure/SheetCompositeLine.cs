@@ -2,27 +2,22 @@
 
 namespace Skinnix.RhymeTool.Data.Structure;
 
-public abstract class SheetChordedLineComponent
+public class SheetCompositeLine : SheetLine
 {
-	public abstract IEnumerable<SheetDisplayComponentBlock> CreateDisplayBlocks();
-}
+	public List<SheetCompositeLineComponent> Components { get; } = new();
 
-public class SheetChordedLine : SheetLine
-{
-	public List<SheetChordedLineComponent> Components { get; } = new();
+	public SheetCompositeLine() { }
 
-	public SheetChordedLine() { }
-
-	public SheetChordedLine(params SheetChordedLineComponent[] components) : this((IEnumerable<SheetChordedLineComponent>)components) { }
-	public SheetChordedLine(IEnumerable<SheetChordedLineComponent> components)
+	public SheetCompositeLine(params SheetCompositeLineComponent[] components) : this((IEnumerable<SheetCompositeLineComponent>)components) { }
+	public SheetCompositeLine(IEnumerable<SheetCompositeLineComponent> components)
 	{
 		Components = components.ToList();
 	}
 
-	public override IEnumerable<SheetDisplayLine> CreateDisplayLines()
+	public override IEnumerable<SheetDisplayLine> CreateDisplayLines(ISheetFormatter? formatter = null)
 	{
 		//Erzeuge die Blöcke
-		var blocks = Components.SelectMany(c => c.CreateDisplayBlocks()).ToList();
+		var blocks = Components.SelectMany(c => c.CreateBlocks()).ToList();
 
 		//Erzeuge Zeilen aus den Blöcken
 		var lines = new List<SheetDisplayLineBuilder>();
@@ -55,12 +50,15 @@ public class SheetChordedLine : SheetLine
 					//Versuche den Block hinzuzufügen
 					if (!appended && lineBlock.CanAppend(line))
 					{
+						//Berechne Mindestabstand
+						var minSpace = formatter?.SpaceBefore(this, line, lineBlock.Element) ?? 0;
+
 						//Verlängere ggf. die Zeile
-						line.ExtendLength(maxOffset);
+						line.ExtendLength(maxOffset, minSpace);
 						appended = true;
 
 						//Hänge den Block an
-						line.Append(lineBlock.Element);
+						line.Append(lineBlock.Element, formatter);
 						break;
 					}
 				}
@@ -68,9 +66,19 @@ public class SheetChordedLine : SheetLine
 				//Keine passende Zeile gefunden?
 				if (!appended)
 				{
-					//Erzeuge einen neuen Zeilenbuilder (mit passendem Offset)
-					var lineBuilder = lineBlock.CreateBuilderAndAppend(maxOffset);
-					lines.Add(lineBuilder);
+					//Erzeuge einen neuen Zeilenbuilder
+					var line = lineBlock.CreateBuilder();
+					lines.Add(line);
+
+					//Berechne Mindestabstand
+					var minSpace = formatter?.SpaceBefore(this, line, lineBlock.Element) ?? 0;
+
+					//Verlängere ggf. die Zeile
+					line.ExtendLength(maxOffset, minSpace);
+
+					//Hänge den Block an
+					line.Append(lineBlock.Element, formatter);
+					appended = true;
 				}
 			}
 		}
@@ -80,10 +88,10 @@ public class SheetChordedLine : SheetLine
 		return lines.Select(l => l.CreateDisplayLine());
 	}
 
-	public override IEnumerable<SheetDisplayBlock> CreateDisplayBlocks()
+	public override IEnumerable<SheetDisplayBlock> CreateDisplayBlocks(ISheetFormatter? formatter = null)
 	{
 		//Erzeuge die Blöcke
-		var blocks = Components.SelectMany(c => c.CreateDisplayBlocks()).ToList();
+		var blocks = Components.SelectMany(c => c.CreateBlocks()).ToList();
 
 		//Erzeuge und zähle virtuelle Zeilen
 		var lines = new List<SheetDisplayLineBuilder>();
@@ -133,7 +141,7 @@ public class SheetChordedLine : SheetLine
 					if (lineBlock.CanAppend(targetLine))
 					{
 						//Erzeuge eine Zeile an der passenden Position
-						var line = lineBlock.CreateBuilderAndAppend(0).CreateDisplayLine();
+						var line = lineBlock.CreateBuilderAndAppend(0, formatter).CreateDisplayLine();
 						blockLines[i] = line;
 						break;
 					}
@@ -154,23 +162,37 @@ public class SheetChordedLine : SheetLine
 	}
 }
 
-public class SheetChordedLineWord : SheetChordedLineComponent
+public abstract class SheetCompositeLineComponent
+{
+	public abstract IEnumerable<SheetCompositeLineBlock> CreateBlocks();
+}
+
+public class SheetChordedWord : SheetCompositeLineComponent
 {
 	public List<WordComponent> Components { get; } = new();
 
-	public SheetChordedLineWord(params WordComponent[] components) : this((IEnumerable<WordComponent>)components) { }
-	public SheetChordedLineWord(IEnumerable<WordComponent> components)
+	public SheetChordedWord(params WordComponent[] components) : this((IEnumerable<WordComponent>)components) { }
+	public SheetChordedWord(IEnumerable<WordComponent> components)
 	{
 		Components = components.ToList();
 	}
 
-	public override IEnumerable<SheetDisplayComponentBlock> CreateDisplayBlocks()
+	public override IEnumerable<SheetCompositeLineBlock> CreateBlocks()
 	{
 		foreach (var component in Components)
 		{
-			var textBlock = SheetDisplayComponentBlockLine.Create<SheetDisplayTextLine.Builder>(new SheetDisplayText(component.Text));
-			var attachmentBlocks = component.Attachments.Select(a => a.CreateDisplayLineBlock());
-			yield return new SheetDisplayComponentBlock(attachmentBlocks.Prepend(textBlock));
+			var attachmentBlocks = component.Attachments.Select(a => a.CreateDisplayBlockLine()).ToList();
+
+			//Textanker, wenn es Attachments gibt
+			SheetDisplayElement textElement = attachmentBlocks.Count == 0
+				? new SheetDisplayText(component.Text)
+				: new SheetDisplayAnchorText(component.Text)
+				{
+					Targets = attachmentBlocks.Select(b => b.Element).ToList()
+				};
+			var textBlock = SheetCompositeLineBlockLine.Create<SheetDisplayTextLine.Builder>(textElement);
+
+			yield return new SheetCompositeLineBlock(attachmentBlocks.Prepend(textBlock));
 		}
 	}
 }
@@ -192,7 +214,7 @@ public abstract class WordComponentAttachment
 	public int Offset { get; set; }
 
 	public abstract object GetAttachment();
-	public abstract SheetDisplayComponentBlockLine CreateDisplayLineBlock();
+	public abstract SheetCompositeLineBlockLine CreateDisplayBlockLine();
 }
 
 public class WordComponentChord : WordComponentAttachment
@@ -205,8 +227,8 @@ public class WordComponentChord : WordComponentAttachment
 	}
 
 	public override Chord GetAttachment() => Chord;
-	public override SheetDisplayComponentBlockLine<SheetDisplayChordLine.Builder> CreateDisplayLineBlock()
-		=> SheetDisplayComponentBlockLine.Create<SheetDisplayChordLine.Builder>(new SheetDisplayChord(Chord));
+	public override SheetDisplayComponentBlockLine<SheetDisplayChordLine.Builder> CreateDisplayBlockLine()
+		=> SheetCompositeLineBlockLine.Create<SheetDisplayChordLine.Builder>(new SheetDisplayChord(Chord));
 }
 
 public class WordComponentText : WordComponentAttachment
@@ -219,22 +241,22 @@ public class WordComponentText : WordComponentAttachment
 	}
 
 	public override string GetAttachment() => Text;
-	public override SheetDisplayComponentBlockLine<SheetDisplayChordLine.Builder> CreateDisplayLineBlock()
-		=> SheetDisplayComponentBlockLine.Create<SheetDisplayChordLine.Builder>(new SheetDisplayText(Text));
+	public override SheetDisplayComponentBlockLine<SheetDisplayChordLine.Builder> CreateDisplayBlockLine()
+		=> SheetCompositeLineBlockLine.Create<SheetDisplayChordLine.Builder>(new SheetDisplayText(Text));
 }
 
-public class SheetChordedLineSpace : SheetChordedLineComponent
+public class SheetSpace : SheetCompositeLineComponent
 {
 	public int Count { get; set; }
 
-	public SheetChordedLineSpace(int count = 1)
+	public SheetSpace(int count = 1)
 	{
 		Count = count;
 	}
 
-	public override IEnumerable<SheetDisplayComponentBlock> CreateDisplayBlocks()
-		=> new SheetDisplayComponentBlock[]
+	public override IEnumerable<SheetCompositeLineBlock> CreateBlocks()
+		=> new SheetCompositeLineBlock[]
 		{
-			new(SheetDisplayComponentBlockLine.Create<SheetDisplayTextLine.Builder>(new SheetDisplaySpace(Count)))
+			new(SheetCompositeLineBlockLine.Create<SheetDisplayTextLine.Builder>(new SheetDisplaySpace(Count)))
 		};
 }

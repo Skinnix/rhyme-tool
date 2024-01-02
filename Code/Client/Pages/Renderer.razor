@@ -1,0 +1,123 @@
+﻿@page "/renderer"
+@using Skinnix.RhymeTool.Data.Structure
+@using Skinnix.RhymeTool.Data.Structure.Display
+@using Skinnix.RhymeTool.Client.Components.Editing
+
+@layout MainLayout
+
+@inject HttpClient http
+@inject IJSRuntime js
+
+<SectionContent SectionName="NavbarMain">
+    <button class="navbar-toggler d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#rendererMenu" aria-controls="rendererMenu">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+</SectionContent>
+
+<div class="col sheet-wrapper">
+    <SheetRenderer Document="document" DisplayMode="SheetDisplayMode.Lines" Formatter="formatter" />
+</div>
+
+<aside class="col-2 offcanvas-lg offcanvas-end d-flex" data-bs-scroll="true" id="rendererMenu">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="offcanvasResponsiveLabel">@document?.Label</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#rendererMenu" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body flex-column">
+        <div class="sticky-lg-top">
+            @if (document != null)
+            {
+                <h4>Tools</h4>
+                <div class="row mb-3">
+                    <label class="form-label">
+                        Transponieren
+                    </label>
+                    <div class="col">
+                        <div class="input-group" role="group">
+                            <button type="button" class="btn btn-outline-secondary"
+                                    @onclick="DecrementTranspose">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            
+                            <input inputmode="numeric" class="form-control text-center"
+                                   @bind:get="formatter.Transformation?.Transpose ?? 0"
+                                   @bind:set="SetTranspose" />
+
+                            <button type="button" class="btn btn-outline-secondary"
+                                    @onclick="IncrementTranspose">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <h4>Navigation</h4>
+                <nav class="nav nav-pills flex-column" id="pageNavigation">
+                    @{
+                        var segmentIndex = 0;
+                    }
+                    @foreach (var segment in document.Segments)
+                    {
+                        <a class="nav-link" href="#sheetSegment@(segmentIndex++)">
+                            @segment.Title
+                        </a>
+                    }
+                </nav>
+            }
+        </div>
+    </div>
+</aside>
+
+@code {
+    private SheetDocument? document;
+
+    private DefaultSheetFormatter formatter = new DefaultSheetFormatter()
+    {
+        GermanMode = GermanNoteMode.Descriptive,
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await base.OnParametersSetAsync();
+
+        using (var stream = await http.GetStreamAsync("/Data/test-sas.txt"))
+        using (var reader = new StreamReader(stream))
+        {
+            //Lese Sheet
+            document = SheetReader.ReadSheet(reader);
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+
+        await js.InvokeVoidAsync("startScrollSpy", "pageNavigation");
+    }
+
+    private void DecrementTranspose()
+        => SetTranspose((formatter.Transformation?.Transpose ?? 0) - 1);
+
+    private void IncrementTranspose()
+        => SetTranspose((formatter.Transformation?.Transpose ?? 0) + 1);
+
+    private void SetTranspose(int value)
+    {
+        if (formatter.Transformation == null)
+            formatter = formatter with
+            {
+                Transformation = new SheetTransformation()
+                {
+                    Transpose = value
+                }
+            };
+        else
+            formatter = formatter with
+            {
+                Transformation = formatter.Transformation with
+                {
+                    Transpose = value
+                }
+            };
+    }
+}

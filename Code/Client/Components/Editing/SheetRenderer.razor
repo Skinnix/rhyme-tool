@@ -4,16 +4,16 @@
 @using Skinnix.RhymeTool.Data.Structure.Display
 
 @{
-    void RenderChord(SheetDisplayChord chord)
+    void RenderChord(Chord chord)
     {
         <span class="element element-chord chord">
-            <span class="chord-root">@chord.Chord.Root.ToString()</span><span class="chord-quality">@chord.Chord.Quality.GetDisplayName()</span>
+            <span class="chord-root">@chord.Root.ToString(Formatter)</span><span class="chord-quality">@chord.Quality.ToString(Formatter)</span>
 
-            @if (chord.Chord.Alterations.Count > 0)
+            @if (chord.Alterations.Count > 0)
             {
                 var firstAlteration = true;
                 <span class="chord-alterations">
-                    @foreach (var alteration in chord.Chord.Alterations)
+                    @foreach (var alteration in chord.Alterations)
                     {
                         if (!firstAlteration)
                         {
@@ -21,14 +21,14 @@
                         }
                         firstAlteration = false;
 
-                        <span class="chord-alteration">@alteration.ToString()</span>
+                        <span class="chord-alteration">@alteration.ToString(Formatter)</span>
                     }
                 </span>
             }
 
-            @if (chord.Chord.Bass != null)
+            @if (chord.Bass != null)
             {
-                <span class="chord-bass-separator">/</span><span class="chord-bass">@chord.Chord.Bass.ToString()</span>
+                <span class="chord-bass-separator">/</span><span class="chord-bass">@(Formatter?.FormatBass(chord.Bass.Value) ?? chord.Bass.Value.ToString())</span>
             }
         </span>
     }
@@ -38,15 +38,19 @@
         switch (element)
         {
             case SheetDisplayChord chord:
-                RenderChord(chord);
+                RenderChord(chord.Chord);
                 break;
 
             case SheetDisplaySpace space:
-                @("".PadRight(space.Length))
+                @("".PadRight(space.GetLength(Formatter)))
                 break;
 
             case SheetDisplayText text:
                 @text.Text
+                break;
+
+            case SheetDisplayAnchorText anchorText:
+                <span class="anchor-text">@anchorText.Text</span>
                 break;
         }
     }
@@ -90,51 +94,51 @@
     }
 }
 
-<div class="chord-sheet-wrapper">
-    <div class="chord-sheet">
-        @if (Document != null)
+<div class="chord-sheet">
+    @if (Document != null)
+    {
+        var segmentIndex = 0;
+        @foreach (var segment in Document.Segments)
         {
-            @foreach (var segment in Document.Segments)
-            {
-                <div class="segment">
-                    @if (segment.Title != null)
+            <div class="segment" id="sheetSegment@(segmentIndex++)">
+                @if (segment.Title != null)
+                {
+                    <div class="segment-title">
+                        <span class="segment-title-brackets">[</span>@segment.Title<span class="segment-title-brackets">]</span>
+                    </div>
+                }
+                @if (DisplayMode == SheetDisplayMode.Lines)
+                {
+                    @foreach (var line in segment.Lines)
                     {
-                        <div class="segment-title">
-                            <span class="segment-title-brackets">[</span>@segment.Title<span class="segment-title-brackets">]</span>
+                        <div class="metaline metaline-lines">
+                            @foreach (var display in line.CreateDisplayLines(Formatter))
+                            {
+                                RenderLine(display);
+                            }
                         </div>
                     }
-                    @if (DisplayMode == SheetDisplayMode.Lines)
+                }
+                else if (DisplayMode == SheetDisplayMode.ColumnBlocks)
+                {
+                    foreach (var line in segment.Lines)
                     {
-                        @foreach (var line in segment.Lines)
-                        {
-                            <div class="metaline metaline-lines">
-                                @foreach (var display in line.CreateDisplayLines())
-                                {
-                                    RenderLine(display);
-                                }
-                            </div>
-                        }
+                        <div class="metaline metaline-blocks">
+                            @foreach (var display in line.CreateDisplayBlocks(Formatter))
+                            {
+                                RenderBlock(display);
+                            }
+                        </div>
                     }
-                    else if (DisplayMode == SheetDisplayMode.ColumnBlocks)
-                    {
-                        foreach (var line in segment.Lines)
-                        {
-                            <div class="metaline metaline-blocks">
-                                @foreach (var display in line.CreateDisplayBlocks())
-                                {
-                                    RenderBlock(display);
-                                }
-                            </div>
-                        }
-                    }
-                </div>
+                }
+            </div>
             
-            }
         }
-    </div>
+    }
 </div>
 
 @code {
     [Parameter] public SheetDocument? Document { get; set; }
     [Parameter] public SheetDisplayMode DisplayMode { get; set; }
+    [Parameter] public ISheetFormatter? Formatter { get; set; }
 }

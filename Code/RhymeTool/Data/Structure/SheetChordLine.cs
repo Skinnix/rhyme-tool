@@ -6,16 +6,24 @@ public class SheetChordLine : SheetLine
 {
 	public List<PositionedChord> Chords { get; } = new();
 
-	public override IEnumerable<SheetDisplayLine> CreateDisplayLines()
+	public override IEnumerable<SheetDisplayLine> CreateDisplayLines(ISheetFormatter? formatter = null)
 	{
 		var builder = new SheetDisplayChordLine.Builder();
 		foreach (var chord in Chords)
 		{
-			builder.ExtendLength(chord.Offset);
-			builder.Append(new SheetDisplayChord(chord.Chord));
+			//Berechne Mindestabstand
+			var displayChord = new SheetDisplayChord(chord.Chord);
+			var minSpace = formatter?.SpaceBefore(this, builder, displayChord) ?? 0;
+
+			//Verlängere ggf. die Zeile
+			builder.ExtendLength(chord.Offset, minSpace);
+
+			//Hänge den Akkord an
+			builder.Append(displayChord, formatter);
 			
+			//Wenn der Akkord ein Suffix hat, hänge es an
 			if (chord.Suffix != null)
-				builder.Append(new SheetDisplayText(chord.Suffix));
+				builder.Append(new SheetDisplayText(chord.Suffix), formatter);
 		}
 
 		return new[]
@@ -24,7 +32,7 @@ public class SheetChordLine : SheetLine
 		};
 	}
 
-	public override IEnumerable<SheetDisplayBlock> CreateDisplayBlocks()
+	public override IEnumerable<SheetDisplayBlock> CreateDisplayBlocks(ISheetFormatter? formatter = null)
 	{
 		var offset = 0;
 		foreach (var chord in Chords)
@@ -47,7 +55,7 @@ public class SheetChordLine : SheetLine
 	}
 }
 
-public class PositionedChord
+public sealed class PositionedChord
 {
 	public Chord Chord { get; set; }
 	public int Offset { get; set; }

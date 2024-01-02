@@ -1,9 +1,3 @@
-[Zwischenspiel Gitarre]
-Dadd9, Bbmaj7 , Cadd9 -> Gadd9
-
-Bbmaj7/D                   Cadd9/D
-denn wir stehen felsenfest - Saite an Saite!
-
 [Intro]
 G5 G6b G6
 (Tempo >150)
