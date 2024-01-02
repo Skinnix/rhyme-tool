@@ -1,0 +1,15 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<AssemblyName>Skinnix.RhymeTool</AssemblyName>
+		<RootNamespace>Skinnix.RhymeTool</RootNamespace>
+	</PropertyGroup>
+
+	<PropertyGroup>
+		<OutputPath>..\..\Build\$(Configuration)\</OutputPath>
+	</PropertyGroup>
+
+</Project>

@@ -1,4 +1,4 @@
-﻿@page "/editor"
+﻿@* @page "/editor"
 @layout FullscreenLayout
 
 @using Skinnix.RhymeTool.Client.Components.Editing
@@ -9,7 +9,7 @@
 <RhymeEditor Document="document"></RhymeEditor>
 
 @code {
-    private readonly RhymeDocument document = new();
+    private readonly SheetDocument document = new();
 
     public Editor()
     {
@@ -23,4 +23,4 @@
             Text = "Zweite Zeile"
         });
     }
-}
+} *@

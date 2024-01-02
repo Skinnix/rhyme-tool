@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.ResponseCompression;
+using Skinnix.RhymeTool.Client;
+using Skinnix.RhymeTool.Data.Structure;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +16,8 @@ builder.Services.AddServerSideBlazor()
 	{
 		o.DetailedErrors = true;
 	});
+
+builder.Services.AddRhymeToolClient("https://localhost:7105");
 #endif
 
 var app = builder.Build();
@@ -41,6 +45,8 @@ app.MapRazorPages();
 app.MapControllers();
 
 #if SERVER_SIDE
+app.Services.UseRhymeToolClient();
+
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
 #else

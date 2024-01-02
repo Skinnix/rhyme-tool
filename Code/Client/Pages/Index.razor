@@ -1,8 +1,28 @@
 ﻿@page "/"
+
 @layout MainLayout
+
+@using Skinnix.RhymeTool.Client.Components.Editing
+@using Skinnix.RhymeTool.Data.Structure
+
+@inject HttpClient http
 
 <PageTitle>Index</PageTitle>
 
-<h1>Hello, world!</h1>
+<SheetDisplay Document="document" DisplayMode="SheetDisplayMode.ColumnBlocks" />
 
-Welcome to your new app.
+@code {
+    private SheetDocument? document;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await base.OnParametersSetAsync();
+
+        using (var stream = await http.GetStreamAsync("/Data/test-sas.txt"))
+        using (var reader = new StreamReader(stream))
+        {
+            //Lese Sheet
+            document = SheetReader.ReadSheet(reader);
+        }
+    }
+}

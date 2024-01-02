@@ -1,0 +1,83 @@
+﻿$chordColor: var(--bs-primary);
+$separatorColor: #6c757d;
+
+.chord-sheet {
+	pre {
+		margin: 0;
+		padding: 0;
+	}
+
+	.segment:not(:first-child) {
+		margin-top: 1em;
+	}
+
+	.segment-title {
+		font-weight: bold;
+		font-size: 1.2em;
+
+		.segment-title-brackets {
+			display: inline-block;
+			width: 1px !important;
+			height: 1px !important;
+			padding: 0 !important;
+			margin: -1px !important;
+			overflow: hidden !important;
+			clip: rect(0,0,0,0) !important;
+			white-space: nowrap !important;
+			border: 0 !important;
+		}
+	}
+
+	.metaline.metaline-lines {
+		display: flex;
+		flex-direction: column;
+		overflow-x: auto;
+
+		.line {
+			overflow: visible;
+		}
+	}
+
+	.metaline.metaline-blocks {
+		display: flex;
+		flex-direction: row;
+		flex-wrap: wrap;
+		align-items: baseline;
+		overflow-x: hidden;
+
+		.block {
+			overflow-y: hidden;
+		}
+	}
+
+	.line.line-empty::before, .line:empty::before {
+		content: ' ';
+	}
+
+	.chord {
+		color: $chordColor;
+		white-space: normal;
+
+		.chord-root {
+			font-weight: bold;
+		}
+
+		.chord-alterations {
+			vertical-align: super;
+		}
+
+		.chord-alteration-separator, .chord-bass-separator {
+			color: $separatorColor;
+		}
+	}
+}
+
+.chord-sheet.no-chords {
+	.line.line-chords {
+		display: none;
+	}
+
+	.chord {
+		display: none;
+	}
+}

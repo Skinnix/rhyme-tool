@@ -12,6 +12,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Common", "Common", "{E5D15B
 		.editorconfig = .editorconfig
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RhymeTool", "RhymeTool\RhymeTool.csproj", "{1A32AB1B-ACDE-4E37-883D-A3F3CF71DA24}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -31,6 +33,12 @@ Global
 		{AD48566A-206F-4DF4-A2E1-E40788435DA7}.Release|Any CPU.Build.0 = Release|Any CPU
 		{AD48566A-206F-4DF4-A2E1-E40788435DA7}.Server Side|Any CPU.ActiveCfg = Server Side|Any CPU
 		{AD48566A-206F-4DF4-A2E1-E40788435DA7}.Server Side|Any CPU.Build.0 = Server Side|Any CPU
+		{1A32AB1B-ACDE-4E37-883D-A3F3CF71DA24}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1A32AB1B-ACDE-4E37-883D-A3F3CF71DA24}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1A32AB1B-ACDE-4E37-883D-A3F3CF71DA24}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1A32AB1B-ACDE-4E37-883D-A3F3CF71DA24}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1A32AB1B-ACDE-4E37-883D-A3F3CF71DA24}.Server Side|Any CPU.ActiveCfg = Debug|Any CPU
+		{1A32AB1B-ACDE-4E37-883D-A3F3CF71DA24}.Server Side|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
