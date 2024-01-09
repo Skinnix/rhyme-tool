@@ -1,0 +1,144 @@
+﻿@namespace Skinnix.RhymeTool.Client.Components.Rendering
+
+@using Skinnix.RhymeTool.Data.Notation
+@using Skinnix.RhymeTool.Data.Notation.Display
+
+@{
+    void RenderChord(Chord chord)
+    {
+        <span class="element element-chord chord">
+            <span class="chord-root">@chord.Root.ToString(Formatter)</span><span class="chord-quality">@chord.Quality.ToString(Formatter)</span>
+
+            @if (chord.Alterations.Count > 0)
+            {
+                var firstAlteration = true;
+                <span class="chord-alterations">
+                    @foreach (var alteration in chord.Alterations)
+                    {
+                        if (!firstAlteration)
+                        {
+                            <span class="chord-alteration-separator">/</span>
+                        }
+                        firstAlteration = false;
+
+                        <span class="chord-alteration">@alteration.ToString(Formatter)</span>
+                    }
+                </span>
+            }
+
+            @if (chord.Bass != null)
+            {
+                <span class="chord-bass-separator">/</span><span class="chord-bass">@(Formatter?.FormatBass(chord.Bass.Value) ?? chord.Bass.Value.ToString())</span>
+            }
+        </span>
+    }
+
+    void RenderElement(SheetDisplayLineElement element)
+    {
+        switch (element)
+        {
+            case SheetDisplayLineChord chord:
+                RenderChord(chord.Chord);
+                break;
+
+            case SheetDisplayLineSpace space:
+                @("".PadRight(space.GetLength(Formatter)))
+                break;
+
+            case SheetDisplayLineText text:
+                @text.Text
+                break;
+
+            case SheetDisplayLineAnchorText anchorText:
+                <span class="anchor-text">@anchorText.Text</span>
+                break;
+        }
+    }
+
+    void RenderElements(IEnumerable<SheetDisplayLineElement> elements)
+    {
+        foreach (var element in elements)
+            RenderElement(element);
+    }
+
+    void RenderLine(SheetDisplayLine line)
+    {
+        switch (line)
+        {
+            case SheetDisplayEmptyLine empty:
+                <pre class="line line-empty"></pre>
+                break;
+
+            // case SheetDisplaySpacerLine spacer:
+            //     <pre class="line line-space">@{ RenderElements(line.GetElements()); }</pre>
+            //     break;
+
+            case SheetDisplayChordLine chords:
+                <pre class="line line-chords">@{ RenderElements(line.GetElements()); }</pre>
+                break;
+
+            case SheetDisplayTextLine text:
+                <pre class="line line-text">@{ RenderElements(line.GetElements()); }</pre>
+                break;
+        }
+    }
+
+    void RenderBlock(SheetDisplayBlock block)
+    {
+        <div class="block">
+            @foreach (var line in block.GetLines())
+            {
+                RenderLine(line);
+            }
+        </div>
+    }
+}
+
+<div class="chord-sheet">
+    @if (Document != null)
+    {
+        var segmentIndex = 0;
+        @foreach (var segment in Document.Segments)
+        {
+            <div class="segment" id="sheetSegment@(segmentIndex++)">
+                @if (segment.Title != null)
+                {
+                    <div class="segment-title">
+                        <span class="segment-title-brackets">[</span>@segment.Title<span class="segment-title-brackets">]</span>
+                    </div>
+                }
+                @if (DisplayMode == SheetDisplayMode.Lines)
+                {
+                    @foreach (var line in segment.Lines)
+                    {
+                        <div class="metaline metaline-lines">
+                            @foreach (var display in line.CreateDisplayLines(Formatter))
+                            {
+                                RenderLine(display);
+                            }
+                        </div>
+                    }
+                }
+                else if (DisplayMode == SheetDisplayMode.ColumnBlocks)
+                {
+                    foreach (var line in segment.Lines)
+                    {
+                        // <div class="metaline metaline-blocks">
+                        //     @foreach (var display in line.CreateDisplayBlocks(Formatter))
+                        //     {
+                        //         RenderBlock(display);
+                        //     }
+                        // </div>
+                    }
+                }
+            </div>
+            
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public SheetDocument? Document { get; set; }
+    [Parameter] public SheetDisplayMode DisplayMode { get; set; }
+    [Parameter] public ISheetFormatter? Formatter { get; set; }
+}

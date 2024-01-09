@@ -1,26 +1,59 @@
-﻿@* @page "/editor"
-@layout FullscreenLayout
+﻿@page "/editor"
 
+@using Skinnix.RhymeTool.Data.Notation
+@using Skinnix.RhymeTool.Data.Notation.Display
 @using Skinnix.RhymeTool.Client.Components.Editing
-@using Skinnix.RhymeTool.Client.Data.Structure;
 
-<PageTitle>Editor</PageTitle>
+@layout MainLayout
 
-<RhymeEditor Document="document"></RhymeEditor>
+@inject HttpClient http
+@inject IJSRuntime js
+
+<SectionContent SectionName="NavbarMain">
+    <button class="navbar-toggler d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#rendererMenu" aria-controls="rendererMenu">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+</SectionContent>
+
+<div class="col sheet-wrapper">
+    <SheetEditor Document="document" Formatter="formatter" />
+</div>
+
+<aside class="col-2 offcanvas-lg offcanvas-end d-flex" data-bs-scroll="true" id="rendererMenu">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="offcanvasResponsiveLabel">@document?.Label</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#rendererMenu" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body flex-column">
+        <div class="sticky-lg-top">
+            @if (document != null)
+            {
+                <h4>Tools</h4>
+                <div class="row mb-3">
+                    
+                </div>
+            }
+        </div>
+    </div>
+</aside>
 
 @code {
-    private readonly SheetDocument document = new();
+    private SheetDocument? document;
 
-    public Editor()
+    private DefaultSheetFormatter formatter = new DefaultSheetFormatter()
+        {
+            GermanMode = GermanNoteMode.Descriptive,
+        };
+
+    protected override async Task OnParametersSetAsync()
     {
-        document.Nodes.Add(new TextRhymeNode()
+        await base.OnParametersSetAsync();
+
+        using (var stream = await http.GetStreamAsync("/Data/test-sas.txt"))
+        using (var reader = new StreamReader(stream))
         {
-            Text = "Erste Zeile"
-        });
-        
-        document.Nodes.Add(new TextRhymeNode()
-        {
-            Text = "Zweite Zeile"
-        });
+            //Lese Sheet
+            document = SheetReader.ReadSheet(reader);
+        }
     }
-} *@
+}

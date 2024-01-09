@@ -12,6 +12,108 @@
 	});
 }
 
+function registerBeforeInput(element, reference) {
+	var existingReference = element['data-reference'];
+	if (existingReference === reference) {
+		return;
+	} else if (existingReference) {
+		var existingListener = element['data-listener'];
+		if (existingListener) {
+			element.removeEventListener('beforeinput', existingListener);
+		}
+	}
+
+	var listener = function (event) {
+		handleBeforeInput(element, reference, event);
+	};
+	element['data-reference'] = reference;
+	element['data-listener'] = listener;
+
+	element.addEventListener('beforeinput', listener);
+}
+
+function handleBeforeInput(element, reference, event) {
+	event.preventDefault();
+	event.stopPropagation();
+
+	//get data
+	var data = event.data;
+	if (data === null && event.dataTransfer) {
+		data = event.dataTransfer.getData('text');
+	}
+
+	//get selection
+	var selectionRange = getSelectionRange(element, function (node) {
+		return node && node.classList && node.classList.contains('line');
+	});
+	var selection = {
+		start: {
+			metaline: selectionRange.start.node.parentElement.getAttribute('data-metaline'),
+			line: parseInt(selectionRange.start.node.getAttribute('data-line-index')),
+			offset: selectionRange.start.offset
+		},
+		end: {
+			metaline: selectionRange.end.node.parentElement.getAttribute('data-metaline'),
+			line: parseInt(selectionRange.end.node.getAttribute('data-line-index')),
+			offset: selectionRange.end.offset
+		}
+	};
+	
+	reference.invokeMethodAsync('OnBeforeInput', {
+		inputType: event.inputType,
+		data: data,
+		selection: selection,
+	});
+}
+
+function getSelectionRange(wrapper, elementCondition) {
+	function getNodeAndOffset(wrapper, elementCondition, node, offset) {
+		if (!offset)
+			offset = 0;
+
+		for (; !elementCondition(node); node = node.parentElement) {
+			for (var current = node.previousSibling; current; current = current.previousSibling) {
+				offset += current.textContent.length;
+			}
+		}
+
+		return {
+			node: node,
+			offset: offset
+		};
+	};
+
+	var selection = window.getSelection();
+
+	if (selection.anchorNode === selection.extentNode && elementCondition(selection.anchorNode)) {
+		return {
+			start: {
+				node: selection.anchorNode,
+				offset: selection.anchorOffset,
+			},
+			end: {
+				node: selection.extentNode,
+				offset: selection.extentOffset,
+			}
+		};
+	}
+
+	if (selection.rangeCount == 0)
+		return null;
+	var range = selection.getRangeAt(0);
+
+	if (!wrapper.contains(range.startContainer) || !wrapper.contains(range.endContainer))
+		return null;
+
+	var start = getNodeAndOffset(wrapper, elementCondition, range.startContainer, range.startOffset);
+	var end = getNodeAndOffset(wrapper, elementCondition, range.endContainer, range.endOffset);
+	
+	return {
+		start: start,
+		end: end
+	};
+}
+
 
 function initializeEditor(content, editor, reference, serverSide) {
 	function CreateId() {

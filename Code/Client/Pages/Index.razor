@@ -2,15 +2,15 @@
 
 @layout MainLayout
 
-@using Skinnix.RhymeTool.Client.Components.Editing
-@using Skinnix.RhymeTool.Data.Structure
-@using Skinnix.RhymeTool.Data.Structure.Display
+@using Skinnix.RhymeTool.Client.Components.Rendering
+@using Skinnix.RhymeTool.Data.Notation
+@using Skinnix.RhymeTool.Data.Notation.Display
 
 @inject HttpClient http
 
 <PageTitle>Index</PageTitle>
 
-<SheetDisplay Document="document" DisplayMode="SheetDisplayMode.Lines" Formatter="formatter" />
+<SheetRenderer Document="document" DisplayMode="SheetDisplayMode.Lines" Formatter="formatter" />
 
 @code {
     private SheetDocument? document;

@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.ResponseCompression;
 using Skinnix.RhymeTool.Client;
-using Skinnix.RhymeTool.Data.Structure;
+using Skinnix.RhymeTool.Data.Notation;
 
 var builder = WebApplication.CreateBuilder(args);
 

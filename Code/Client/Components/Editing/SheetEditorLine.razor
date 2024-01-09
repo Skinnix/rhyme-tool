@@ -1,0 +1,176 @@
+﻿@namespace Skinnix.RhymeTool.Client.Components.Editing
+
+@using Skinnix.RhymeTool.ComponentModel
+@using Skinnix.RhymeTool.Data.Notation
+@using Skinnix.RhymeTool.Data.Notation.Display
+@using Skinnix.RhymeTool.Data.Notation.Display.Caching
+
+@inject IJSRuntime js
+
+@{
+    void RenderChord(Chord chord)
+    {
+        <span class="element element-chord chord">
+            <span class="chord-root">@chord.Root.ToString(Formatter)</span><span class="chord-quality">@chord.Quality.ToString(Formatter)</span>
+
+            @if (chord.Alterations.Count > 0)
+            {
+                var firstAlteration = true;
+                <span class="chord-alterations">
+                    @foreach (var alteration in chord.Alterations)
+                    {
+                        if (!firstAlteration)
+                        {
+                            <span class="chord-alteration-separator">/</span>
+                        }
+                        firstAlteration = false;
+
+                        <span class="chord-alteration">@alteration.ToString(Formatter)</span>
+                    }
+                </span>
+            }
+
+            @if (chord.Bass != null)
+            {
+                <span class="chord-bass-separator">/</span>
+
+                <span class="chord-bass">@(Formatter?.FormatBass(chord.Bass.Value) ?? chord.Bass.Value.ToString())</span>
+            }
+        </span>
+    }
+
+    void RenderElement(SheetDisplayLineElement element)
+    {
+        switch (element)
+        {
+            case SheetDisplayLineChord chord:
+                RenderChord(chord.Chord);
+                break;
+
+            case SheetDisplayLineSpace space:
+                @("".PadRight(space.GetLength(Formatter)))
+                break;
+
+            case SheetDisplayLineText text:
+                @text.Text
+                break;
+
+            case SheetDisplayLineAnchorText anchorText:
+                <span class="anchor-text">@anchorText.Text</span>
+                break;
+        }
+    }
+
+    void RenderElements(IEnumerable<SheetDisplayLineElement> elements)
+    {
+        foreach (var element in elements)
+            RenderElement(element);
+    }
+
+    void RenderLine(SheetDisplayLine line, int lineIndex)
+    {
+        switch (line)
+        {
+            case SheetDisplayEmptyLine empty:
+                <pre class="line line-empty" data-line-index="@lineIndex"></pre>
+                break;
+
+            // case SheetDisplaySpacerLine spacer:
+            //     <pre class="line line-space" data-line-index="@lineIndex">
+            //         @{ RenderElements(line.GetElements()); }
+            //     </pre>
+            //     break;
+
+            case SheetDisplayChordLine chords:
+                <pre class="line line-chords" data-line-index="@lineIndex">
+                    @{ RenderElements(line.GetElements()); }
+                </pre>
+                break;
+
+            case SheetDisplayTextLine text:
+                <pre class="line line-text" data-line-index="@lineIndex">
+                    @{ RenderElements(line.GetElements()); }
+                </pre>
+                break;
+        }
+    }
+}
+
+@if (lineCache != null)
+{
+    var lineIndex = 0;
+
+    <div class="metaline metaline-lines" data-metaline="@(lineCache.Line.Guid)">
+        @foreach (var display in lineCache.GetDisplayLines(Formatter))
+        {
+            RenderLine(display, lineIndex++);
+        }
+    </div>
+}
+
+@code {
+    [CascadingParameter] public SheetDocument? Document { get; set; }
+    [CascadingParameter] public SheetSegment? Segment { get; set; }
+    [CascadingParameter] public ISheetFormatter? Formatter { get; set; }
+
+    [Parameter] public SheetLine? Line { get; set; }
+
+    private SheetLineCache? lineCache;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        if (lineCache != null)
+            lineCache.Modified -= OnLineModified;
+
+        lineCache = Line == null ? null : new SheetLineCache(Line);
+
+        if (lineCache != null)
+            lineCache.Modified += OnLineModified;
+    }
+
+    private void OnLineModified(object? sender, ModifiedEventArgs args)
+    {
+        StateHasChanged();
+    }
+
+    public Task HandleInput(InputEventData data)
+    {
+        if (lineCache == null) throw new InvalidOperationException("editor not initialized");
+
+        //find lines
+        var lines = lineCache.GetDisplayLines();
+        var startLine = lines[data.Selection.Start.Line];
+        var endLine = lines[data.Selection.End.Line];
+
+        if (startLine != endLine)
+        {
+            return Task.CompletedTask; //TODO: for now, we don't support multiline editing
+        }
+
+        switch (data.InputType)
+        {
+            case "insertFromDrop":
+            case "insertFromPaste":
+            case "insertFromPasteAsQuotation":
+            case "insertLink":
+            case "insertText":
+                startLine.Editing.InsertContent(data.Data, data.Selection.Start.Offset, data.Selection.End.Offset, Formatter);
+                return js.InvokeVoidAsync("console.log", "insert: " + data.InputType).AsTask();
+            case "insertLineBreak":
+                return js.InvokeVoidAsync("console.log", "line break: " + data.InputType).AsTask();
+            case "deleteByCut":
+            case "deleteByDrag":
+            case "deleteContentBackward":
+            case "deleteContent":
+                startLine.Editing.DeleteContent(data.Selection.Start.Offset, data.Selection.End.Offset, Formatter);
+                return js.InvokeVoidAsync("console.log", "delete: " + data.InputType).AsTask();
+            case "deleteContentForward":
+                startLine.Editing.DeleteContent(data.Selection.Start.Offset, data.Selection.End.Offset, Formatter, true);
+                return js.InvokeVoidAsync("console.log", "delete forward: " + data.InputType).AsTask();
+            default:
+                return js.InvokeVoidAsync("console.log", "unknown: " + data.InputType).AsTask();
+        }
+    }
+}
