@@ -105,48 +105,58 @@ public class SheetCompositeLine : SheetLine
 
 		public static SheetDisplayLine Create(SheetCompositeLine owner, SheetDisplayLineBuilder builder) => new EditingAdapter(owner, builder).line;
 
-		public bool InsertContent(string content, int selectionStart, int selectionEnd, ISheetFormatter? formatter) => throw new NotImplementedException();
-		public bool DeleteContent(int selectionStart, int selectionEnd, ISheetFormatter? formatter, bool forward = false)
+		public LineEditResult InsertContent(string content, SimpleRange selectionRange, ISheetFormatter? formatter)
 		{
 			if (line is SheetDisplayTextLine)
 			{
-				//Finde die Selection
-				var selectionLength = selectionEnd - selectionStart;
-				if (selectionLength != 0)
+				//Finde die Elemente links und rechts von der Selection
+				var elements = line.GetElementsIn(new SimpleRange(selectionRange.Start - 1, selectionRange.End + 1), formatter).ToList();
+
+				//Prüfe alle Elemente in dem Bereich
+				SheetDisplayLineElement? elementBefore = null;
+				var inserted = false;
+				foreach ((var offset, var element) in elements)
 				{
-					//Finde alle Elemente, die in der Selection liegen
-					var selectedElements = line.GetElementsIn(selectionStart, selectionEnd, formatter).ToList();
-					foreach ((var offset, var element) in selectedElements)
+					//Liegt das Element vor der Selection?
+					var overlap = selectionRange.CheckOverlap(offset, element.GetLength(formatter));
+					if (overlap == RangeOverlap.OutsideBeforeStart)
 					{
-						if (element.Source != null)
-							element.Source.IsSelected = true;
+						//Speichere das Element, falls es erweitert werden soll
+						elementBefore = element;
+						continue;
+					}
 
-						//Liegt das Element komplett in der Selection?
-						var elementLength = element.GetLength(formatter);
-						if (offset >= selectionStart && offset + elementLength <= selectionEnd)
+					//Liegt der Start der Selection in dem Element?
+					if (overlap == RangeOverlap.OverlapsStart || offset == selectionRange.Start)
+					{
+						//Füge den Inhalt in das Element ein
+						if (element.Source is SheetCompositeLineComponent compositeLineComponent)
 						{
-							//Lösche das Element
-							if (element.Source is SheetCompositeLineComponent compositeLineComponent)
-								owner.Components.Remove(compositeLineComponent);
-							continue;
+							compositeLineComponent.InsertContent(selectionRange.Start - offset, content, formatter);
 						}
 
-						//Überschneidet sich das Element mit der Selection?
-						var elementOverlapsStart = offset < selectionStart && offset + elementLength > selectionStart;
-						var elementOverlapsEnd = offset < selectionEnd && offset + elementLength > selectionEnd;
+						inserted = true;
+						continue;
+					}
 
-						//Berechne Länge der Kürzung
-						var cutOffset = 0;
-						var cutLength = selectionEnd - selectionStart;
-						if (elementOverlapsStart)
-						{
-							cutOffset = selectionStart - offset;
-							cutLength -= cutOffset;
-						}
-						if (elementOverlapsEnd)
-						{
-							cutLength -= offset + elementLength - selectionEnd;
-						}
+					//Liegt das Element komplett in der Selection?
+					var elementLength = element.GetLength(formatter);
+					if (overlap == RangeOverlap.InsideRange)
+					{
+						//Lösche das Element
+						if (element.Source is SheetCompositeLineComponent compositeLineComponent)
+							owner.Components.Remove(compositeLineComponent);
+						continue;
+					}
+
+					//Überschneidet sich das Element mit der Selection?
+					if ((overlap | RangeOverlap.OverlapFlag) != 0)
+					{
+						//Berechne Länge und Offset der Kürzung
+						var cutStartOffset = Math.Max(offset, selectionRange.Start);
+						var cutEndOffset = Math.Min(offset + elementLength, selectionRange.End);
+						var cutOffset = cutStartOffset - offset;
+						var cutLength = cutEndOffset - cutStartOffset;
 
 						if (cutLength > 0)
 						{
@@ -172,8 +182,84 @@ public class SheetCompositeLine : SheetLine
 					}
 				}
 			}
+		}
 
-			return true;
+		public LineEditResult DeleteContent(SimpleRange selectionRange, ISheetFormatter? formatter, bool forward = false)
+		{
+			if (line is SheetDisplayTextLine)
+			{
+#if DEBUG
+				foreach (var element in line.GetElements())
+					if (element.Source != null)
+						element.Source.IsSelected = false;
+#endif
+
+				//Behandle leere Selection wie eine Selection mit Länge 1
+				if (selectionRange.Length == 0)
+					selectionRange = forward ? new SimpleRange(selectionRange.Start, selectionRange.Start + 1)
+						: new SimpleRange(selectionRange.Start, selectionRange.Start - 1);
+
+				//Finde alle Elemente, die in der Selection liegen
+				var selectedElements = line.GetElementsIn(selectionRange, formatter).ToList();
+				var modified = new List<SheetLineComponent>();
+				foreach ((var offset, var element) in selectedElements)
+				{
+#if DEBUG
+					if (element.Source != null)
+						element.Source.IsSelected = true;
+#endif
+
+					//Liegt das Element komplett in der Selection?
+					var elementLength = element.GetLength(formatter);
+					var overlap = selectionRange.CheckOverlap(offset, elementLength);
+					if (overlap == RangeOverlap.InsideRange)
+					{
+						//Lösche das Element
+						if (element.Source is SheetCompositeLineComponent compositeLineComponent)
+						{
+							owner.Components.Remove(compositeLineComponent);
+							modified.Add(compositeLineComponent);
+						}
+						continue;
+					}
+
+					//Überschneidet sich das Element mit der Selection?
+					if ((overlap | RangeOverlap.OverlapFlag) != 0)
+					{
+						//Berechne Länge und Offset der Kürzung
+						var cutStartOffset = Math.Max(offset, selectionRange.Start);
+						var cutEndOffset = Math.Min(offset + elementLength, selectionRange.End);
+						var cutOffset = cutStartOffset - offset;
+						var cutLength = cutEndOffset - cutStartOffset;
+
+						if (cutLength > 0)
+						{
+							//Kürze das Element
+							if (element.Source != null)
+							{
+								modified.Add(element.Source);
+								var cutResult = element.Source.CutContent(cutOffset, cutLength, formatter);
+
+								//Entferne oder ersetze ggf. das Element
+								if (element.Source is SheetCompositeLineComponent compositeLineComponent)
+								{
+									if (cutResult.Replacement is SheetCompositeLineComponent replacement)
+									{
+										owner.Components.Replace(compositeLineComponent, replacement);
+										modified.Add(replacement);
+									}
+									else if (cutResult.Remove)
+									{
+										owner.Components.Remove((SheetCompositeLineComponent)element.Source);
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+
+			return new LineEditResult(true, new SimpleRange(selectionRange.Start, selectionRange.Start));
 		}
 	}
 

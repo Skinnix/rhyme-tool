@@ -63,6 +63,8 @@ function handleBeforeInput(element, reference, event) {
 		inputType: event.inputType,
 		data: data,
 		selection: selection,
+	}).then(function (newSelection) {
+		setSelectionRange(element, newSelection.metaline, newSelection.line, newSelection.range);
 	});
 }
 
@@ -113,6 +115,78 @@ function getSelectionRange(wrapper, elementCondition) {
 		end: end
 	};
 }
+
+function setSelectionRange(wrapper, metaline, line, selectionRange) {
+	//find metaline
+	var metalineElement = wrapper.querySelector('.metaline[data-metaline="' + metaline + '"]');
+
+	//find line
+	var lineElement = metalineElement.querySelector('.line[data-line-index="' + line + '"]');
+
+	//find selection anchors
+	function findNodeAndOffset(element, offset) {
+		var currentOffset = 0;
+		for (var i = 0; i < element.childNodes.length; i++) {
+			var child = element.childNodes[i];
+			var afterOffset = currentOffset + child.textContent.length;
+			if (offset < afterOffset)
+				return findNodeAndOffset(child, offset - currentOffset);
+
+			currentOffset = afterOffset;
+		}
+
+		return {
+			node: element,
+			offset: offset
+		};
+	}
+
+	var start = findNodeAndOffset(lineElement, selectionRange.start);
+	var end = selectionRange.start == selectionRange.end ? start : findNodeAndOffset(lineElement, selectionRange.end);
+
+	//set selection
+	var range = new Range();
+	range.setStart(start.node, start.offset);
+	range.setEnd(end.node, end.offset);
+
+	document.getSelection().removeAllRanges();
+	document.getSelection().addRange(range);
+}
+
+
+
+//global event handlers
+window.addEventListener('load', function () {
+	var dragTargets = new Set();
+
+	document.documentElement.addEventListener('dragenter', function (e) {
+		document.documentElement.classList.add('dragover');
+		dragTargets.add(e.target);
+
+		console.log('dragenter');
+		console.log(e.target);
+	});
+
+	document.documentElement.addEventListener('dragleave', function (e) {
+		dragTargets.delete(e.target);
+
+		if (dragTargets.size == 0) {
+			document.documentElement.classList.remove('dragover');
+		}
+
+		console.log('dragleave');
+		console.log(e.target);
+	});
+
+	document.documentElement.addEventListener('drop', function (e) {
+		dragTargets.clear()
+		document.documentElement.classList.remove('dragover');
+	});
+});
+
+
+
+
 
 
 function initializeEditor(content, editor, reference, serverSide) {

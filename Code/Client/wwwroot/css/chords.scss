@@ -3,6 +3,8 @@ $anchorTextColor: var(--bs-info-text-emphasis);
 $separatorColor: #6c757d;
 
 .chord-sheet {
+	overflow: auto;
+
 	pre {
 		margin: 0;
 		padding: 0;
@@ -32,7 +34,7 @@ $separatorColor: #6c757d;
 	.metaline.metaline-lines {
 		display: flex;
 		flex-direction: column;
-		overflow-x: auto;
+		overflow: visible;
 
 		.line {
 			overflow: visible;

@@ -2,6 +2,13 @@
 
 public interface ISheetDisplayLineEditing
 {
-	public bool InsertContent(string content, int selectionStart, int selectionEnd, ISheetFormatter? formatter);
-	public bool DeleteContent(int selectionStart, int selectionEnd, ISheetFormatter? formatter, bool forward = false);
+	public LineEditResult InsertContent(string content, SimpleRange selectionRange, ISheetFormatter? formatter);
+	public LineEditResult DeleteContent(SimpleRange selectionRange, ISheetFormatter? formatter, bool forward = false);
 }
+
+public record LineEditResult(bool Success, SimpleRange Selection)
+{
+	public List<SheetDisplayLineElement> ModifiedElements { get; init; } = new();
+}
+
+public record MetalineEditResult(int Line, LineEditResult LineResult);

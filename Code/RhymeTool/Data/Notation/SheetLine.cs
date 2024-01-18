@@ -36,6 +36,6 @@ public class SheetEmptyLine : SheetLine, ISheetDisplayLineEditing
 	//    yield return new SheetDisplayContentBlock(new SheetDisplayEmptyLine());
 	//}
 
-	public bool DeleteContent(int selectionStart, int selectionEnd, ISheetFormatter? formatter, bool forward = false) => throw new NotImplementedException();
-	public bool InsertContent(string content, int selectionStart, int selectionEnd, ISheetFormatter? formatter) => throw new NotImplementedException();
+	public LineEditResult DeleteContent(SimpleRange selectionRange, ISheetFormatter? formatter, bool forward = false) => throw new NotImplementedException();
+	public LineEditResult InsertContent(string content, SimpleRange selectionRange, ISheetFormatter? formatter) => throw new NotImplementedException();
 }

@@ -1,20 +1,45 @@
-﻿@page "/renderer"
+﻿@page "/chords"
+@page "/"
+
 @using Skinnix.RhymeTool.Data.Notation
 @using Skinnix.RhymeTool.Data.Notation.Display
-@using Skinnix.RhymeTool.Client.Components.Rendering
+@using Skinnix.RhymeTool.Client.Components.Editing
 
 @layout MainLayout
 
 @inject HttpClient http
 @inject IJSRuntime js
+@inject NavigationManager navigation
 
 <SectionContent SectionName="NavbarMain">
+    <label>
+        <button class="btn btn-secondary" role="button" onclick="document.getElementById('openFileInput').click()">
+            <i class="fas fa-file-import"></i>
+        </button>
+    </label>
+
     <button class="navbar-toggler d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#rendererMenu" aria-controls="rendererMenu">
         <span class="navbar-toggler-icon"></span>
     </button>
 </SectionContent>
 
-<div class="col sheet-wrapper">
+<div class="dropzone dropzone-overlay">
+    <div class="dropzone-overlay-background"></div>
+
+    <div class="dropzone-overlay-content d-flex flex-column align-items-center">
+        <div class="dropzone-overlay-icon fs-1">
+            <i class="fas fa-file-import"></i>
+        </div>
+
+        <div class="dropzone-overlay-text">
+            <p>Droppe eine Datei hier, um sie zu öffnen.</p>
+        </div>
+    </div>
+
+    <InputFile OnChange="UploadFile" id="openFileInput" />
+</div>
+
+<div class="col sheet-wrapper" style="font-size: @(fontSize)px;">
     <SheetRenderer Document="document" DisplayMode="SheetDisplayMode.Lines" Formatter="formatter" />
 </div>
 
@@ -30,15 +55,45 @@
                 <h4>Tools</h4>
                 <div class="row mb-3">
                     <label class="form-label">
+                        <button class="btn btn-sm rounded" data-bs-toggle="collapse" data-bs-target="#fontSizeWrapper">
+                            <i class="fas fa-toggle-off"></i>
+                        </button>
+
+                        Schriftgröße
+                    </label>
+                    <div class="col collapse show" id="fontSizeWrapper">
+                        <div class="input-group" role="group">
+                            <button type="button" class="btn btn-outline-secondary"
+                                    @onclick="() => SetFontSize(fontSize - 1)">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            
+                            <input inputmode="numeric" class="form-control text-center"
+                                   @bind:get="fontSize"
+                                   @bind:set="SetFontSize" />
+
+                            <button type="button" class="btn btn-outline-secondary"
+                                    @onclick="() => SetFontSize(fontSize + 1)">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <label class="form-label">
+                        <button class="btn btn-sm rounded" data-bs-toggle="collapse" data-bs-target="#transposeWrapper">
+                            <i class="fas fa-toggle-off"></i>
+                        </button>
+
                         Transponieren
                     </label>
-                    <div class="col">
+                    <div class="col collapse show" id="transposeWrapper">
                         <div class="input-group" role="group">
                             <button type="button" class="btn btn-outline-secondary"
                                     @onclick="DecrementTranspose">
                                 <i class="fas fa-minus"></i>
                             </button>
-                            
+
                             <input inputmode="numeric" class="form-control text-center"
                                    @bind:get="formatter.Transformation?.Transpose ?? 0"
                                    @bind:set="SetTranspose" />
@@ -58,7 +113,7 @@
                     }
                     @foreach (var segment in document.Segments)
                     {
-                        <a class="nav-link" href="#sheetSegment@(segmentIndex++)">
+                        <a class="nav-link" href="@(navigation.Uri)#sheetSegment@(segmentIndex++)">
                             @segment.Title
                         </a>
                     }
@@ -70,6 +125,7 @@
 
 @code {
     private SheetDocument? document;
+    private int fontSize = 16;
 
     private DefaultSheetFormatter formatter = new DefaultSheetFormatter()
     {
@@ -80,12 +136,15 @@
     {
         await base.OnParametersSetAsync();
 
-        using (var stream = await http.GetStreamAsync("/Data/test-sas.txt"))
+        #if DEBUG
+        using (var stream = await http.GetStreamAsync("Data/test-sas.txt"))
         using (var reader = new StreamReader(stream))
         {
             //Lese Sheet
             document = SheetReader.ReadSheet(reader);
+            StateHasChanged();
         }
+        #endif
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -93,6 +152,13 @@
         await base.OnAfterRenderAsync(firstRender);
 
         await js.InvokeVoidAsync("startScrollSpy", "pageNavigation");
+    }
+
+    private void SetFontSize(int value)
+    {
+        if (value <= 0) return;
+
+        fontSize = value;
     }
 
     private void DecrementTranspose()
@@ -119,5 +185,16 @@
                     Transpose = value
                 }
             };
+    }
+
+    private async Task UploadFile(InputFileChangeEventArgs e)
+    {
+        using (var stream = e.File.OpenReadStream())
+        using (var reader = new StreamReader(stream))
+        {
+            //Lese Sheet
+            document = await SheetReader.ReadSheetAsync(reader);
+            StateHasChanged();
+        }
     }
 }

@@ -7,6 +7,7 @@
     <AssemblyName>Skinnix.RhymeTool.Client</AssemblyName>
     <RootNamespace>Skinnix.RhymeTool.Client</RootNamespace>
     <Configurations>Debug;Release;Server Side</Configurations>
+		<StaticWebAssetBasePath>chords</StaticWebAssetBasePath>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -16,10 +17,6 @@
   <PropertyGroup Condition="'$(Configuration)'=='Server Side'">
     <DefineConstants>$(DefineConstants)TRACE;DEBUG</DefineConstants>
   </PropertyGroup>
-
-  <ItemGroup>
-    <Content Remove="wwwroot\Data\test-sas.txt" />
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="LibSassBuilder" Version="3.0.0" />

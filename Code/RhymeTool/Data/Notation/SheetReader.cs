@@ -28,7 +28,10 @@ public class SheetReader
     public static SheetDocument ReadSheet(TextReader reader)
         => new SheetReader(reader).ReadSheet();
 
-    private SheetDocument ReadSheet()
+	public static Task<SheetDocument> ReadSheetAsync(TextReader reader)
+		=> new SheetReader(reader).ReadSheetAsync();
+
+	private SheetDocument ReadSheet()
     {
         //Ignoriere Leerzeilen am Anfang des Dokuments
         string? line = reader.ReadLine();
@@ -57,7 +60,36 @@ public class SheetReader
         return new SheetDocument(segments);
     }
 
-    private void ReadLine(string line)
+	private async Task<SheetDocument> ReadSheetAsync()
+	{
+		//Ignoriere Leerzeilen am Anfang des Dokuments
+		string? line = await reader.ReadLineAsync();
+		while (line != null && string.IsNullOrWhiteSpace(line))
+			line = await reader.ReadLineAsync();
+
+		//Lese das Dokument zeilenweise
+		for (; line != null; line = await reader.ReadLineAsync())
+		{
+			//Schneide Zeilenumbrüche ab
+			if (line.StartsWith("\r\n"))
+				line = line[2..];
+			else if (line.StartsWith("\n"))
+				line = line[1..];
+			else if (line.StartsWith("\r"))
+				line = line[1..];
+
+			//Lese die Zeile
+			ReadLine(line);
+		}
+
+		//Schließe das letzte Segment
+		CloseCurrentSegment();
+
+		//Erzeuge das Dokument
+		return new SheetDocument(segments);
+	}
+
+	private void ReadLine(string line)
     {
         //Ist die Zeile leer?
         if (string.IsNullOrWhiteSpace(line))
