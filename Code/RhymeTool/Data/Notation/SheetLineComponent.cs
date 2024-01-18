@@ -5,6 +5,8 @@ namespace Skinnix.RhymeTool.Data.Notation;
 
 public abstract class SheetLineComponent : DeepObservableBase
 {
+	public bool IsSelected { get; set; }
+
 	public abstract SheetLineComponentCutResult CutContent(int cutOffset, int cutLength, ISheetFormatter? formatter);
 }
 

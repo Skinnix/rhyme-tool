@@ -118,6 +118,9 @@ public class SheetCompositeLine : SheetLine
 					var selectedElements = line.GetElementsIn(selectionStart, selectionEnd, formatter).ToList();
 					foreach ((var offset, var element) in selectedElements)
 					{
+						if (element.Source != null)
+							element.Source.IsSelected = true;
+
 						//Liegt das Element komplett in der Selection?
 						var elementLength = element.GetLength(formatter);
 						if (offset >= selectionStart && offset + elementLength <= selectionEnd)

@@ -52,7 +52,14 @@
                 break;
 
             case SheetDisplayLineText text:
-                @text.Text
+                @if (text.Source?.IsSelected == true)
+                {
+                    <span class="text-primary">@text.Text</span>
+                }
+                else
+                {
+                    @text.Text
+                }
                 break;
 
             case SheetDisplayLineAnchorText anchorText:
@@ -165,6 +172,7 @@
             case "deleteContentBackward":
             case "deleteContent":
                 startLine.Editing.DeleteContent(data.Selection.Start.Offset, data.Selection.End.Offset, Formatter);
+                StateHasChanged();
                 return js.InvokeVoidAsync("console.log", "delete: " + data.InputType).AsTask();
             case "deleteContentForward":
                 startLine.Editing.DeleteContent(data.Selection.Start.Offset, data.Selection.End.Offset, Formatter, true);
