@@ -58,7 +58,8 @@ function handleBeforeInput(element, reference, event) {
 			offset: selectionRange.end.offset
 		}
 	};
-	
+
+	document.getSelection().removeAllRanges();
 	reference.invokeMethodAsync('OnBeforeInput', {
 		inputType: event.inputType,
 		data: data,
@@ -149,7 +150,6 @@ function setSelectionRange(wrapper, metaline, line, selectionRange) {
 	range.setStart(start.node, start.offset);
 	range.setEnd(end.node, end.offset);
 
-	document.getSelection().removeAllRanges();
 	document.getSelection().addRange(range);
 }
 

@@ -45,12 +45,8 @@
                 @("".PadRight(space.GetLength(Formatter)))
                 break;
 
-            case SheetDisplayLineText text:
-                @text.Text
-                break;
-
             case SheetDisplayLineAnchorText anchorText:
-                <span class="anchor-text">@anchorText.Text</span>
+                <span class="anchor-text">@anchorText.ToString(Formatter)</span>
                 break;
         }
     }
@@ -82,16 +78,6 @@
                 break;
         }
     }
-
-    void RenderBlock(SheetDisplayBlock block)
-    {
-        <div class="block">
-            @foreach (var line in block.GetLines())
-            {
-                RenderLine(line);
-            }
-        </div>
-    }
 }
 
 <div class="chord-sheet">
@@ -117,18 +103,6 @@
                                 RenderLine(display);
                             }
                         </div>
-                    }
-                }
-                else if (DisplayMode == SheetDisplayMode.ColumnBlocks)
-                {
-                    foreach (var line in segment.Lines)
-                    {
-                        // <div class="metaline metaline-blocks">
-                        //     @foreach (var display in line.CreateDisplayBlocks(Formatter))
-                        //     {
-                        //         RenderBlock(display);
-                        //     }
-                        // </div>
                     }
                 }
             </div>

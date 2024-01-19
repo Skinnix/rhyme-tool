@@ -1,4 +1,5 @@
 ﻿@page "/editor"
+@page "/chords/editor"
 
 @using Skinnix.RhymeTool.Data.Notation
 @using Skinnix.RhymeTool.Data.Notation.Display
@@ -49,7 +50,7 @@
     {
         await base.OnParametersSetAsync();
 
-        using (var stream = await http.GetStreamAsync("/Data/test-sas.txt"))
+        using (var stream = await http.GetStreamAsync("Data/test-sas.txt"))
         using (var reader = new StreamReader(stream))
         {
             //Lese Sheet

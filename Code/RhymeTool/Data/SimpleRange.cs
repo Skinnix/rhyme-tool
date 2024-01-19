@@ -32,8 +32,16 @@ public readonly struct SimpleRange
 
 	public SimpleRange(int start, int end)
 	{
-		Start = start;
-		End = end;
+		if (start > end)
+		{
+			Start = end;
+			End = start;
+		}
+		else
+		{
+			Start = start;
+			End = end;
+		}
 	}
 
 	public RangeOverlap CheckOverlap(int offset, int length)

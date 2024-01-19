@@ -8,7 +8,7 @@ public abstract record SheetDisplayLine
 
     public abstract IEnumerable<SheetDisplayLineElement> GetElements();
 
-	public IEnumerable<(int Offset, SheetDisplayLineElement Element)> GetElementsIn(SimpleRange range, ISheetFormatter? formatter)
+	public IEnumerable<(int Offset, int Length, SheetDisplayLineElement Element)> GetElementsIn(SimpleRange? range, ISheetFormatter? formatter)
 	{
 		var currentOffset = 0;
 		foreach (var element in GetElements())
@@ -21,14 +21,14 @@ public abstract record SheetDisplayLine
 			currentOffset += length;
 
 			//Wenn das Element vor dem Start liegt, überspringe es
-			if (currentOffset <= range.Start)
+			if (currentOffset <= range?.Start)
 				continue;
 
 			//Gib das Element zurück
-			yield return (startOffset, element);
+			yield return (startOffset, length, element);
 
 			//Wenn das Element über das Ende hinaus geht, beende die Suche
-			if (currentOffset >= range.End)
+			if (currentOffset >= range?.End)
 				break;
 		}
 	}

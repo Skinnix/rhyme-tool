@@ -273,9 +273,9 @@ public class SheetReader
         return chords;
     }
 
-    private List<SheetCompositeLineComponent> ParseTextLine(ReadOnlySpan<char> line, IEnumerable<ChordInLine>? chordLine)
+    private List<SheetComplexWord> ParseTextLine(ReadOnlySpan<char> line, IEnumerable<ChordInLine>? chordLine)
     {
-        var components = new List<SheetCompositeLineComponent>();
+        var components = new List<SheetComplexWord>();
         var offset = 0;
         var chordEnumerator = (chordLine ?? Enumerable.Empty<ChordInLine>()).GetEnumerator();
         ChordInLine nextChord = chordEnumerator.MoveNext() ? chordEnumerator.Current : default;
@@ -292,7 +292,7 @@ public class SheetReader
             //Leerzeichen gefunden?
             if (spaceOffset > offset)
             {
-                components.Add(new SheetSpace(spaceOffset - offset));
+                components.Add(SheetComplexWord.CreateSpace(spaceOffset - offset));
                 offset = spaceOffset;
             }
 
@@ -362,7 +362,7 @@ public class SheetReader
             //Verlängere die Zeile um Leerzeichen
             if (nextChordOffset > offset)
             {
-                components.Add(new SheetSpace(nextChordOffset - offset));
+                components.Add(SheetComplexWord.CreateSpace(nextChordOffset - offset));
                 offset = nextChordOffset;
             }
 

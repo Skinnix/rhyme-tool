@@ -8,7 +8,6 @@ public abstract class SheetLine : DeepObservableBase
 	public Guid Guid { get; set; } = Guid.NewGuid();
 
     public abstract IEnumerable<SheetDisplayLine> CreateDisplayLines(ISheetFormatter? formatter = null);
-    //public abstract IEnumerable<SheetDisplayBlock> CreateDisplayBlocks(ISheetFormatter? formatter = null);
 }
 
 public class SheetEmptyLine : SheetLine, ISheetDisplayLineEditing
@@ -30,11 +29,6 @@ public class SheetEmptyLine : SheetLine, ISheetDisplayLineEditing
 			};
 		}
     }
-
-	//public override IEnumerable<SheetDisplayBlock> CreateDisplayBlocks(ISheetFormatter? formatter = null)
-	//{
-	//    yield return new SheetDisplayContentBlock(new SheetDisplayEmptyLine());
-	//}
 
 	public LineEditResult DeleteContent(SimpleRange selectionRange, ISheetFormatter? formatter, bool forward = false) => throw new NotImplementedException();
 	public LineEditResult InsertContent(string content, SimpleRange selectionRange, ISheetFormatter? formatter) => throw new NotImplementedException();

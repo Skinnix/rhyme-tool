@@ -3,8 +3,12 @@ using Skinnix.RhymeTool.Data.Notation.Display;
 
 namespace Skinnix.RhymeTool.Data.Notation;
 
-public class WordComponent : DeepObservableBase
+public class WordComponent : DeepObservableBase, ISheetDisplayLineElementSource, IHasCollectionParent<SheetComplexWord>
 {
+	public SheetComplexWord? Parent { get; private set; }
+
+	public bool IsSpace => string.IsNullOrWhiteSpace(Text);
+
 	private string text;
 	public string Text
 	{
@@ -12,19 +16,52 @@ public class WordComponent : DeepObservableBase
 		set => Set(ref text, value);
 	}
 
-	public ModifiableObservableCollection<WordComponentAttachment> Attachments { get; }
+	public ModifiableObservableCollectionWithParent<WordComponentAttachment, WordComponent> Attachments { get; }
 
 	public int Length => Text.Length;
 
 	public WordComponent(string text)
 	{
 		this.text = text;
-		Attachments = Register(new ModifiableObservableCollection<WordComponentAttachment>());
+		Attachments = Register(new ModifiableObservableCollectionWithParent<WordComponentAttachment, WordComponent>(this));
+	}
+
+	void IHasCollectionParent<SheetComplexWord>.SetParent(SheetComplexWord? parent)
+	{
+		Parent = parent;
+	}
+
+	public bool CutContent(SimpleRange range, ISheetFormatter? formatter)
+	{
+		//Ist die Auswahl größer als die Komponente?
+		if (range.End > Length)
+			return false;
+
+		//Von wo kürzen?
+		if (range.Start == 0)
+		{
+			//Kürze die Komponente von links
+			Text = Text[range.End..];
+		}
+		else if (range.End == Length)
+		{
+			//Kürze die Komponente von rechts
+			Text = Text[..range.Start];
+		}
+		else
+		{
+			//Kürze die Komponente von beiden Seiten
+			Text = Text[..range.Start] + Text[range.End..];
+		}
+
+		return true;
 	}
 }
 
-public abstract class WordComponentAttachment : SheetLineComponent
+public abstract class WordComponentAttachment : SheetLineComponent, IHasCollectionParent<WordComponent>
 {
+	public WordComponent? Parent { get; private set; }
+
 	private int offset;
 	public int Offset
 	{
@@ -34,9 +71,14 @@ public abstract class WordComponentAttachment : SheetLineComponent
 
 	public abstract object GetAttachment();
 	public abstract SheetCompositeLineBlockRow CreateDisplayBlockLine();
+
+	void IHasCollectionParent<WordComponent>.SetParent(WordComponent? parent)
+	{
+		Parent = parent;
+	}
 }
 
-public class WordComponentChord : WordComponentAttachment
+public class WordComponentChord : WordComponentAttachment, ISheetDisplayLineElementSource
 {
 	private Chord chord;
 	public Chord Chord
@@ -54,11 +96,9 @@ public class WordComponentChord : WordComponentAttachment
 	public override SheetCompositeLineBlockRow<SheetDisplayChordLine.Builder> CreateDisplayBlockLine()
 		=> new SheetCompositeLineBlockRow<SheetDisplayChordLine.Builder>(
 			new SheetDisplayLineChord(this, Chord));
-
-	public override SheetLineComponentCutResult CutContent(int cutOffset, int cutLength, ISheetFormatter? formatter) => throw new NotImplementedException();
 }
 
-public class WordComponentText : WordComponentAttachment
+public class WordComponentText : WordComponentAttachment, ISheetDisplayLineElementSource
 {
 	private string text;
 	public string Text
@@ -75,7 +115,5 @@ public class WordComponentText : WordComponentAttachment
 	public override string GetAttachment() => Text;
 	public override SheetCompositeLineBlockRow<SheetDisplayChordLine.Builder> CreateDisplayBlockLine()
 		=> new SheetCompositeLineBlockRow<SheetDisplayChordLine.Builder>(
-			new SheetDisplayLineText(this, Text));
-
-	public override SheetLineComponentCutResult CutContent(int cutOffset, int cutLength, ISheetFormatter? formatter) => throw new NotImplementedException();
+			new SheetDisplayLineAnchorText(this, Text));
 }

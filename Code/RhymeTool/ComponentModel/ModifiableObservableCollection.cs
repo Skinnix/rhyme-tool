@@ -15,10 +15,21 @@ public class ModifiableObservableCollection<T> : ObservableCollection<T>, IModif
 
 	public ModifiableObservableCollection() { }
 
-	public ModifiableObservableCollection(IEnumerable<T> collection) : base(collection) { }
+	public ModifiableObservableCollection(IEnumerable<T> collection)
+		: base(collection)
+	{
+		RegisterRange(this);
+	}
+
+	protected ModifiableObservableCollection(IEnumerable<T> collection, bool registerItems)
+		: base(collection)
+	{
+		if (registerItems)
+			RegisterRange(this);
+	}
 
 	#region Register/Deregister
-	protected T Register(T child)
+	protected virtual T Register(T child)
 	{
 		if (child is IModifiable modifiable)
 		{
@@ -51,7 +62,7 @@ public class ModifiableObservableCollection<T> : ObservableCollection<T>, IModif
 		return children;
 	}
 
-	private T Deregister(T child)
+	protected virtual T Deregister(T child)
 	{
 		if (child is IModifiable modifiable)
 		{
@@ -116,6 +127,7 @@ public class ModifiableObservableCollection<T> : ObservableCollection<T>, IModif
 	}
 	#endregion
 
+	#region Overrides
 	protected override void InsertItem(int index, T item)
 	{
 		Register(item);
@@ -148,4 +160,5 @@ public class ModifiableObservableCollection<T> : ObservableCollection<T>, IModif
 
 		base.ClearItems();
 	}
+	#endregion
 }

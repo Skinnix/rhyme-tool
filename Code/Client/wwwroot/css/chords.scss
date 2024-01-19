@@ -88,3 +88,28 @@ $separatorColor: #6c757d;
 		display: none;
 	}
 }
+
+.chord-sheet.debug {
+	.line.line-text {
+		.anchor-text {
+			border-left: 1px dotted red;
+			border-right: 1px dotted green;
+			margin-left: -1px;
+			margin-right: -1px;
+		}
+
+		.word {
+			border-left: 1px solid black;
+			border-right: 1px solid black;
+			margin-left: -1px;
+			margin-right: -1px;
+
+			.word-component {
+				border-left: 1px dotted red;
+				border-right: 1px dotted green;
+				margin-left: -1px;
+				margin-right: -1px;
+			}
+		}
+	}
+}
