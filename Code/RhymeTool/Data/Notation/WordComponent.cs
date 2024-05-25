@@ -7,6 +7,7 @@ public class WordComponent : DeepObservableBase, ISheetDisplayLineElementSource,
 {
 	public SheetComplexWord? Parent { get; private set; }
 
+	public bool IsEmpty => string.IsNullOrEmpty(Text) && Attachments.Count == 0;
 	public bool IsSpace => string.IsNullOrWhiteSpace(Text);
 
 	private string text;
@@ -56,6 +57,8 @@ public class WordComponent : DeepObservableBase, ISheetDisplayLineElementSource,
 
 		return true;
 	}
+
+	public override string ToString() => Text;
 }
 
 public abstract class WordComponentAttachment : SheetLineComponent, IHasCollectionParent<WordComponent>
@@ -76,6 +79,8 @@ public abstract class WordComponentAttachment : SheetLineComponent, IHasCollecti
 	{
 		Parent = parent;
 	}
+
+	public override abstract string ToString();
 }
 
 public class WordComponentChord : WordComponentAttachment, ISheetDisplayLineElementSource
@@ -96,6 +101,8 @@ public class WordComponentChord : WordComponentAttachment, ISheetDisplayLineElem
 	public override SheetCompositeLineBlockRow<SheetDisplayChordLine.Builder> CreateDisplayBlockLine()
 		=> new SheetCompositeLineBlockRow<SheetDisplayChordLine.Builder>(
 			new SheetDisplayLineChord(this, Chord));
+
+	public override string ToString() => Chord.ToString();
 }
 
 public class WordComponentText : WordComponentAttachment, ISheetDisplayLineElementSource
@@ -116,4 +123,6 @@ public class WordComponentText : WordComponentAttachment, ISheetDisplayLineEleme
 	public override SheetCompositeLineBlockRow<SheetDisplayChordLine.Builder> CreateDisplayBlockLine()
 		=> new SheetCompositeLineBlockRow<SheetDisplayChordLine.Builder>(
 			new SheetDisplayLineAnchorText(this, Text));
+
+	public override string ToString() => Text;
 }

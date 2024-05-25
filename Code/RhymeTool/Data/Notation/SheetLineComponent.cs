@@ -51,7 +51,7 @@ public sealed class SheetSpace : SheetCompositeLineComponent, ISheetDisplayLineE
 
 	internal override SheetCompositeLineComponentOptimizationResult Optimize(ISheetFormatter? formatter)
 	{
-		return new SheetCompositeLineComponentOptimizationResult()
+		return new SheetCompositeLineComponentOptimizationResult(this)
 		{
 			RemoveComponent = Length <= 0
 		};

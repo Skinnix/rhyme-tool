@@ -1,4 +1,5 @@
-﻿using Skinnix.RhymeTool.ComponentModel;
+﻿using System.Windows.Markup;
+using Skinnix.RhymeTool.ComponentModel;
 using Skinnix.RhymeTool.Data.Notation.Display;
 
 namespace Skinnix.RhymeTool.Data.Notation;
@@ -236,98 +237,147 @@ public class SheetCompositeLine : SheetLine
 
 		private void OptimizeRow(ISheetFormatter? formatter, IReadOnlyCollection<SheetCompositeLineComponent>? modifiedElements, SheetCompositeLineComponent? newElement = null)
 		{
-			//Gehe durch die gesamte Zeile
-			var deleteComponents = new List<SheetCompositeLineComponent>();
-			SheetDisplayLineElement? elementBefore = default;
-			foreach ((var offset, var length, var element) in line.GetElementsIn(null, formatter))
-			{
-				//Kann das Element mit dem vorherigen zusammengefasst werden?
-				var skipElement = false;
-				if (elementBefore?.Source is WordComponent wordComponentBefore && element.Source is WordComponent wordComponent
-					&& wordComponentBefore.Parent is SheetComplexWord wordBefore && wordComponent.Parent is SheetComplexWord word
-					&& wordBefore != word)
-				{
-					if (wordBefore.IsSpace == word.IsSpace)
-					{
-						//Füge die Komponenten zusammen
-						wordBefore.Append(word);
+			//Zuerst werden leere Wörter an die darauffolgenden angefügt. Dabei werden alle Elemente optimiert und ggf. aufgetrennt).
+			//Danach werden leere Wörter gelöscht und die Optimierungen (Löschungen und Einfügungen) ausgeführt.
+			//Schließlich werden Wörter, die zusammengefügt werden können, zusammengefügt.
 
-						//Entferne das zweite Wort
-						deleteComponents.Add(word);
-					}
-
-					//Ignoriere leere Komponenten
-					if (wordComponent.Length == 0)
-						skipElement = true;
-				}
-
-				//Ignoriere Elemente, die sowieso gelöscht werden sollen
-				if (!skipElement)
-					elementBefore = element;
-			}
-
-			//Entferne alle Elemente, die zusammengefasst wurden
-			foreach (var element in deleteComponents)
-				owner.Components.Remove(element);
-
-			//Lösche nach dem nächsten Schritt auch die zur Löschung markierten Komponenten
-			deleteComponents.Clear();
-
-			//Optimiere die verbleibenden Komponenten
-			var insertComponents = new List<(int Index, SheetCompositeLineComponent Component)>();
-			var currentIndex = 0;
+			//Füge leere Wörter an die darauffolgenden an
+			var optimizations = new List<(int Index, SheetCompositeLineComponentOptimizationResult Optimization)>();
+			SheetComplexWord? mergeWord = null;
+			var index = -1;
 			foreach (var component in owner.Components)
 			{
-				//Optimiere die Komponente
-				var optimization = component.Optimize(formatter);
-
-				//Entferne ggf. später die Komponente
-				if (optimization.RemoveComponent)
+				index++;
+				if (component is SheetComplexWord word)
 				{
-					deleteComponents.Add(component);
-					currentIndex--;
+					//Füge ggf. das vorherige leere Wort an dieses an
+					if (mergeWord != null)
+					{
+						//Füge das leere Wort an
+						word.Append(mergeWord);
+					}
+					else
+					{
+						//ist das Wort leer?
+						word.CheckFeatures(out var zeroLength, out var hasAttachments, out _);
+						if (zeroLength)
+						{
+							//Hat es trotzdem Attachments?
+							if (hasAttachments)
+							{
+								//Merke leere Wörter mit Attachments für den nächsten Durchgang
+								mergeWord = word;
+								continue;
+							}
+							else
+							{
+								//Entferne komplett leere Wörter
+								optimizations.Add((index, new SheetCompositeLineComponentOptimizationResult(word) { RemoveComponent = true }));
+								continue;
+							}
+						}
+					}
 				}
 
-				//Füge ggf. später die neuen Komponenten ein
-				foreach (var newComponent in optimization.NewComponentsAfter)
-					owner.Components.Insert(++currentIndex, newComponent);
+				//Lösche das leere Wort
+				if (mergeWord != null)
+				{
+					//Lösche das leere Wort später
+					optimizations.Add((index, new SheetCompositeLineComponentOptimizationResult(mergeWord) { RemoveComponent = true }));
+					mergeWord = null;
+				}
 
-				currentIndex++;
+				//Optimiere die Komponente
+				var optimization = component.Optimize(formatter);
+				if (!optimization.IsEmpty)
+					optimizations.Add((index, optimization));
 			}
 
-			//Entferne alle Komponenten, die wegoptimiert wurden
-			foreach (var element in deleteComponents)
-				owner.Components.Remove(element);
+			//Das leere Wort am Ende wurde nicht angefügt
+			if (mergeWord != null)
+			{
+				//Lösche das leere Wort später
+				optimizations.Add((index, new SheetCompositeLineComponentOptimizationResult(mergeWord) { RemoveComponent = true }));
+			}
 
-			//Füge alle neuen Komponenten ein
-			foreach ((var index, var component) in insertComponents)
-				owner.Components.Insert(index, component);
+			//Führe die Optimierungen (und Löschungen) aus
+			ExecuteOptimizations(optimizations);
+
+			//Fasse Komponenten zusammen
+			optimizations.Clear();
+			SheetCompositeLineComponent? componentBefore = default;
+			index = -1;
+			foreach (var component in owner.Components)
+			{
+				index++;
+
+				//Zwei Wörter?
+				if (componentBefore is SheetComplexWord wordBefore && component is SheetComplexWord word)
+				{
+					//Kann das Element mit dem vorherigen zusammengefasst werden?
+					if (wordBefore.IsSpace == word.IsSpace)
+					{
+						//Füge die Komponenten zusammen und Optimiere
+						wordBefore.Append(word);
+						var optimization = wordBefore.Optimize(formatter);
+
+						//Speichere ggf. die Optimierung
+						if (!optimization.IsEmpty)
+							optimizations.Add((index, optimization));
+
+						//Entferne das zweite Wort
+						optimizations.Add((index, new SheetCompositeLineComponentOptimizationResult(word) { RemoveComponent = true }));
+					}
+				}
+
+				componentBefore = component;
+			}
+
+			//Führe noch einmal Optimierungen (und Löschungen) aus
+			ExecuteOptimizations(optimizations);
+		}
+
+		private void ExecuteOptimizations(IEnumerable<(int index, SheetCompositeLineComponentOptimizationResult Optimization)> optimizations)
+		{
+			//Führe die Optimierungen (und Löschungen) aus
+			var indexAdjustment = 0;
+			foreach ((var index, var optimization) in optimizations)
+			{
+				var currentIndex = index + indexAdjustment;
+#if DEBUG
+				//currentIndex muss dem Index der Komponente entsprechen
+				System.Diagnostics.Debug.Assert(currentIndex == owner.Components.IndexOf(optimization.Component));
+#endif
+
+				//Füge neue Elemente ein
+				var replaced = false;
+				foreach (var newComponent in optimization.NewComponentsAfter)
+				{
+					//Falls das Element entfernt werden soll, ersetze es einfach
+					if (optimization.RemoveComponent && !replaced)
+					{
+						owner.Components[currentIndex] = newComponent;
+						replaced = true;
+					}
+					else
+					{
+						//Füge das Element ein
+						owner.Components.Insert(currentIndex++, newComponent);
+						indexAdjustment++;
+					}
+				}
+
+				//Entferne ggf. das Element
+				if (!replaced)
+				{
+					owner.Components.RemoveAt(currentIndex);
+					indexAdjustment--;
+				}
+			}
 		}
 
 		public LineEditResult InsertContent(string content, SimpleRange selectionRange, ISheetFormatter? formatter)
 		{
-			//Finde die Elemente in, direkt links und direkt rechts von der Selection
-			var elements = line.GetElementsIn(new SimpleRange(selectionRange.Start - 1, selectionRange.End + 1), formatter).ToList();
-
-			//Finde ggf. ein Element vor der Selection
-			var leftOutsideElement = elements.FirstOrDefault(e => e.Offset + e.Length < selectionRange.Start);
-
-			//Finde ggf. ein Element, das mit der Selection beginnt
-			var leftInsideElement = elements.FirstOrDefault(e => e.Offset == selectionRange.Start);
-
-			//Finde ggf. ein Element, das mit der Selection endet
-			var rightInsideElement = elements.FirstOrDefault(e => e.Offset + e.Length == selectionRange.End);
-
-			//Finde ggf. ein Element nach der Selection
-			var rightOutsideElement = elements.FirstOrDefault(e => e.Offset > selectionRange.End);
-
-			//Falls alle 4 gesetzt sind, ignoriere rightInsideElement
-			if (leftOutsideElement.Element != null && leftInsideElement.Element != null && rightInsideElement.Element != null && rightOutsideElement.Element != null)
-				rightInsideElement = default;
-
-			//Jetzt gibt es maximal 3 relevante Elemente
-			var relevantElements = new[] { leftInsideElement, leftOutsideElement, rightInsideElement, rightOutsideElement }.Where(e => e.Element != null).ToList();
-
 			//Kürze ggf. Inhalt
 			DeleteContentResult? deleteResult = null;
 			if (selectionRange.Length > 0)
@@ -337,26 +387,64 @@ public class SheetCompositeLine : SheetLine
 					return new LineEditResult(false, selectionRange);
 			}
 
-			//Gibt es ein Element vor der Selection?
-			SheetDisplayLineElement? elementBefore = leftOutsideElement.Element
-				?? elements.FirstOrDefault().Element;
-			var index = elementBefore?.Source is SheetCompositeLineComponent component ? owner.Components.IndexOf(component) : -1;
-			SheetCompositeLineComponent newContent;
-			if (index >= 0)
+			//Finde die Elemente in, direkt links und direkt rechts von der Selection
+			var elements = line.GetElementsIn(new SimpleRange(selectionRange.Start - 1, selectionRange.End + 1), formatter).ToList();
+
+			//Liegt die Position mitten in einem Element?
+			var insertOffset = selectionRange.Start;
+			var fullyInsideElement = elements.Find(e => e.Offset < selectionRange.Start && e.Offset + e.Length > selectionRange.End);
+			if (fullyInsideElement.Element != null)
 			{
-				//Füge den neuen Content danach ein
-				owner.Components.Insert(index + 1, newContent = CreateElementFromContent(content));
+				//Muss Word sein
+				if (fullyInsideElement.Element.Source is not SheetCompositeLineComponent sourceComponent || sourceComponent is not SheetComplexWord word)
+				{
+					return new LineEditResult(false, selectionRange);
+				}
+
+				//Füge den Content in das Element ein
+				var wordOffset = selectionRange.Start - fullyInsideElement.Offset;
+				word.Insert(wordOffset, content);
 			}
 			else
 			{
-				//Füge ggf. Leerzeichen ein
-				var lastElementOffset = line.GetElementsIn(null, formatter).LastOrDefault().Offset;
-				var spaceLength = selectionRange.Start - lastElementOffset;
-				if (spaceLength > 0)
-					owner.Components.Add(SheetComplexWord.CreateSpace(spaceLength));
+				//Finde ggf. ein Element vor der Selection
+				var leftOutsideElement = elements.FirstOrDefault(e => e.Offset + e.Length < selectionRange.Start);
 
-				//Füge den neuen Content am Ende ein
-				owner.Components.Add(newContent = CreateElementFromContent(content));
+				//Finde ggf. ein Element, das mit der Selection beginnt
+				var leftInsideElement = elements.FirstOrDefault(e => e.Offset == selectionRange.Start);
+
+				//Finde ggf. ein Element, das mit der Selection endet
+				var rightInsideElement = elements.FirstOrDefault(e => e.Offset + e.Length == selectionRange.End);
+
+				//Finde ggf. ein Element nach der Selection
+				var rightOutsideElement = elements.FirstOrDefault(e => e.Offset > selectionRange.End);
+
+				//Falls alle 4 gesetzt sind, ignoriere rightInsideElement
+				if (leftOutsideElement.Element != null && leftInsideElement.Element != null && rightInsideElement.Element != null && rightOutsideElement.Element != null)
+					rightInsideElement = default;
+
+				//Jetzt gibt es maximal 3 relevante Elemente
+				var relevantElements = new[] { leftInsideElement, leftOutsideElement, rightInsideElement, rightOutsideElement }.Where(e => e.Element != null).ToList();
+
+				//Gibt es ein Element vor der Selection?
+				var index = leftOutsideElement.Element?.Source is SheetCompositeLineComponent component ? owner.Components.IndexOf(component) : -1;
+				SheetCompositeLineComponent newContent;
+				if (index >= 0)
+				{
+					//Füge den neuen Content danach ein
+					owner.Components.Insert(index + 1, newContent = CreateElementFromContent(content));
+				}
+				else
+				{
+					//Füge ggf. Leerzeichen ein
+					var lastElementOffset = line.GetElementsIn(null, formatter).LastOrDefault().Offset;
+					var spaceLength = selectionRange.Start - lastElementOffset;
+					if (spaceLength > 0)
+						owner.Components.Add(SheetComplexWord.CreateSpace(spaceLength));
+
+					//Füge den neuen Content am Ende ein
+					owner.Components.Add(newContent = CreateElementFromContent(content));
+				}
 			}
 
 			//Optimiere die Zeile
@@ -500,12 +588,13 @@ public sealed class SheetChord : SheetCompositeLineComponent, ISheetDisplayLineE
 	}
 
 	internal override SheetCompositeLineComponentOptimizationResult Optimize(ISheetFormatter? formatter)
-		=> new SheetCompositeLineComponentOptimizationResult();
+		=> new SheetCompositeLineComponentOptimizationResult(this);
 }
 
 public sealed class SheetComplexWord : SheetCompositeLineComponent
 {
-	public bool IsSpace => !Components.Any(c => !c.IsSpace);
+	public bool IsEmpty => Components.All(c => c.IsEmpty);
+	public bool IsSpace => Components.All(c => c.IsSpace);
 
 	public ModifiableObservableCollectionWithParent<WordComponent, SheetComplexWord> Components { get; }
 
@@ -523,6 +612,31 @@ public sealed class SheetComplexWord : SheetCompositeLineComponent
 	public static SheetComplexWord CreateSpace(int length)
 		=> new SheetComplexWord(new WordComponent(string.Empty.PadRight(length)));
 
+	public void CheckFeatures(out bool zeroLength, out bool hasAttachments, out bool isSpace)
+	{
+		zeroLength = true;
+		hasAttachments = false;
+		isSpace = true;
+
+		foreach (var component in Components)
+		{
+			if (!component.IsSpace)
+			{
+				isSpace = false;
+				zeroLength = false;
+			}
+			else if (component.Text.Length != 0)
+			{
+				zeroLength = false;
+			}
+
+			if (component.Attachments.Count != 0)
+			{
+				hasAttachments = true;
+			}
+		}
+	}
+
 	public override IEnumerable<SheetCompositeLineBlock> CreateBlocks()
 	{
 		foreach (var component in Components)
@@ -539,6 +653,14 @@ public sealed class SheetComplexWord : SheetCompositeLineComponent
 
 			yield return new SheetCompositeLineBlock(attachmentRows.Prepend(textRow));
 		}
+	}
+
+	public void Prepend(SheetComplexWord word)
+	{
+		//Füge die Komponenten hinzu
+		var i = 0;
+		foreach (var component in word.Components)
+			Components.Insert(i++, component);
 	}
 
 	public void Append(SheetComplexWord word)
@@ -589,56 +711,101 @@ public sealed class SheetComplexWord : SheetCompositeLineComponent
 		foreach (var component in deleteComponents)
 			Components.Remove(component);
 
-		//Trenne das Wort an Leerzeichen
+		//Trenne das Wort an Leerzeichen und füge Komponenten zusammen
 		deleteComponents.Clear();
 		var enumerator = Components.GetEnumerator();
 		if (enumerator.MoveNext())
 		{
 			//Erste Komponente
 			var firstComponent = enumerator.Current;
-			var lastComponentWasSpace = firstComponent.IsSpace;
 
-			//Überspringe alle Komponenten, die passen
-			while (enumerator.MoveNext() && enumerator.Current.IsSpace == lastComponentWasSpace)
+			//Füge Komponenten zusammen
+			bool hasNext;
+			while (hasNext = enumerator.MoveNext())
 			{
-				//Lass die Komponente im aktuellen Wort
+				//Können die Komponenten zusammengefügt werden?
+				if (CanCombine(firstComponent, enumerator.Current))
+				{
+					//Füge die Komponenten zusammen
+					firstComponent.Text += enumerator.Current.Text;
+
+					//Entferne die zweite Komponente
+					deleteComponents.Add(enumerator.Current);
+				}
+				else if (enumerator.Current.IsSpace == firstComponent.IsSpace)
+				{
+					//Lass die Komponenten getrennt
+				}
+				else
+				{
+					//Beginne ein neues Wort
+					break;
+				}
 			}
 
 			//Erzeuge neue Wörter aus den restlichen Komponenten
-			if (enumerator.MoveNext())
+			if (hasNext)
 			{
 				//Erzeuge erstes neues Wort
 				var newWords = new List<SheetComplexWord>();
-				var currentNewWord = new SheetComplexWord(enumerator.Current);
+				var currentComponent = enumerator.Current;
+				var currentNewWord = new SheetComplexWord(currentComponent);
 				newWords.Add(currentNewWord);
-				lastComponentWasSpace = enumerator.Current.IsSpace;
 
 				//Gehe durch die restlichen Komponenten
 				while (enumerator.MoveNext())
 				{
-					var component = enumerator.Current;
-					if (component.IsSpace == lastComponentWasSpace)
+					//Können die Komponenten zusammengefügt werden?
+					if (CanCombine(currentComponent, enumerator.Current))
+					{
+						//Füge die Komponenten zusammen
+						currentComponent.Text += enumerator.Current.Text;
+
+						//Ignoriere die zweite Komponente
+					}
+					else if (enumerator.Current.IsSpace == currentComponent.IsSpace)
 					{
 						//Füge die Komponente dem neuen Wort hinzu
-						currentNewWord.Components.Add(component);
+						currentNewWord.Components.Add(enumerator.Current);
 					}
 					else
 					{
 						//Beginne ein neues Wort
-						currentNewWord = new SheetComplexWord(component);
+						currentNewWord = new SheetComplexWord(enumerator.Current);
 						newWords.Add(currentNewWord);
 					}
 				}
 
-				return new SheetCompositeLineComponentOptimizationResult()
+				//Entferne ggf. Komponenten
+				foreach (var component in deleteComponents)
+					Components.Remove(component);
+
+				return new SheetCompositeLineComponentOptimizationResult(this)
 				{
 					NewComponentsAfter = newWords,
 				};
 			}
 		}
 
-		return new SheetCompositeLineComponentOptimizationResult();
+		//Entferne ggf. Komponenten
+		foreach (var component in deleteComponents)
+			Components.Remove(component);
+
+		return new SheetCompositeLineComponentOptimizationResult(this);
 	}
+
+	private bool CanCombine(WordComponent c1, WordComponent c2)
+	{
+		if (c1.IsSpace != c2.IsSpace)
+			return false;
+
+		if (c2.Attachments.Count != 0)
+			return false;
+
+		return true;
+	}
+
+	public override string ToString() => string.Join(string.Empty, Components.Select(c => c.Text));
 
 	//public override SheetLineComponentCutResult CutContent(SimpleRange range, ISheetFormatter? formatter)
 	//{
@@ -696,8 +863,10 @@ public sealed class SheetComplexWord : SheetCompositeLineComponent
 	//}
 }
 
-internal record SheetCompositeLineComponentOptimizationResult
+internal record SheetCompositeLineComponentOptimizationResult(SheetCompositeLineComponent Component)
 {
+	public bool IsEmpty => !RemoveComponent && NewComponentsAfter.Count == 0;
+
 	public bool RemoveComponent { get; init; }
 	public IReadOnlyCollection<SheetCompositeLineComponent> NewComponentsAfter { get; init; } = Array.Empty<SheetCompositeLineComponent>();
 }
