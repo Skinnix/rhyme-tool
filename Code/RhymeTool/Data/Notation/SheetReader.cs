@@ -157,13 +157,13 @@ public class SheetReader
         //Trenne die Zeile in Wörter auf
         var textLineComponents = ParseTextLine(line, lastChordLine).ToList();
         lastChordLine = null;
-        var textLine = new SheetCompositeLine(textLineComponents);
+		var textLine = new SheetVarietyLine(textLineComponents);
         currentSegmentLines.Add(textLine);
     }
 
-	private SheetCompositeLine CreateChordLine(IEnumerable<ChordInLine> chords)
+	private SheetVarietyLine CreateChordLine(IEnumerable<ChordInLine> chords)
 	{
-		var chordLine = new SheetCompositeLine();
+		var components = new List<SheetVarietyLine.Component>();
 		var offset = 0;
 		foreach (var chord in chords)
 		{
@@ -171,18 +171,25 @@ public class SheetReader
 			{
 				//Füge Leerzeichen hinzu
 				var spaceLength = chord.Offset - offset;
-				chordLine.Components.Add(new SheetSpace(spaceLength));
+				components.Add(SheetVarietyLine.VarietyComponent.CreateSpace(spaceLength));
 				offset += spaceLength;
 			}
 
 			//Füge den Akkord hinzu
-			chordLine.Components.Add(new SheetChord(chord.Chord)
+			if (chord.Chord is not null)
+				components.Add(new SheetVarietyLine.VarietyComponent(chord.Chord));
+			if (chord.Suffix is not null)
 			{
-				Suffix = chord.Suffix
-			});
-			offset += chord.Length + (chord.Suffix?.Length ?? 0);
+				if (chord.SuffixOffset > 0)
+					components.Add(SheetVarietyLine.VarietyComponent.CreateSpace(chord.SuffixOffset));
+
+				components.Add(new SheetVarietyLine.VarietyComponent(chord.Suffix));
+			}
+
+			offset += chord.Length + + chord.SuffixOffset + (chord.Suffix?.Length ?? 0);
 		}
-		return chordLine;
+
+		return new(components);
 	}
 
     private void CloseCurrentSegment()
@@ -273,108 +280,88 @@ public class SheetReader
         return chords;
     }
 
-    private List<SheetComplexWord> ParseTextLine(ReadOnlySpan<char> line, IEnumerable<ChordInLine>? chordLine)
+    private List<SheetVarietyLine.Component> ParseTextLine(ReadOnlySpan<char> line, IEnumerable<ChordInLine>? chordLine)
     {
-        var components = new List<SheetComplexWord>();
+        var components = new List<SheetVarietyLine.Component>();
         var offset = 0;
         var chordEnumerator = (chordLine ?? Enumerable.Empty<ChordInLine>()).GetEnumerator();
         ChordInLine nextChord = chordEnumerator.MoveNext() ? chordEnumerator.Current : default;
         var nextChordOffset = nextChord.Chord != null ? nextChord.Offset : int.MaxValue;
         while (offset < line.Length)
         {
-            //Zähle Leerzeichen
-            var spaceOffset = offset;
-            while (spaceOffset < line.Length && spaceOffset < nextChordOffset && char.IsWhiteSpace(line[spaceOffset]))
-            {
-                spaceOffset++;
-            }
-
-            //Leerzeichen gefunden?
-            if (spaceOffset > offset)
-            {
-                components.Add(SheetComplexWord.CreateSpace(spaceOffset - offset));
-                offset = spaceOffset;
-            }
-
-            //Ende der Zeile?
-            if (offset >= line.Length)
-                break;
-
             //Whitespaces oder Zeichen?
             var isWordWhitespace = char.IsWhiteSpace(line[offset]);
 
-            //Lese eine Wortkomponente pro Akkord
-            var lastComponentOffset = offset;
-            var wordComponents = new List<WordComponent>();
-            ChordInLine nextComponentChord = default;
-            for (; offset < line.Length && char.IsWhiteSpace(line[offset]) == isWordWhitespace; offset++)
-            {
-                if (offset >= nextChordOffset)
-                {
-                    //Erzeuge ggf. eine Komponente für das bisher gelesene
-                    if (offset > lastComponentOffset)
-                    {
-                        var wordComponent = new WordComponent(new string(line[lastComponentOffset..offset]));
-                        wordComponents.Add(wordComponent);
-                        lastComponentOffset = offset;
+			//Lese bis zum nächsten Whitespace-Wechsel
+			var startOffset = offset;
+			for (; offset < line.Length && char.IsWhiteSpace(line[offset]) == isWordWhitespace; offset++) ;
 
-                        //Ordne ggf. den bisherigen Akkord zu
-                        if (nextComponentChord.Chord != null)
-                        {
-                            wordComponent.Attachments.Add(new WordComponentChord(nextComponentChord.Chord) { Offset = nextComponentChord.Offset - lastComponentOffset });
-                            if (nextComponentChord.Suffix != null)
-                                wordComponent.Attachments.Add(new WordComponentText(nextComponentChord.Suffix) { Offset = nextComponentChord.SuffixOffset - lastComponentOffset });
-                        }
-                    }
+			//Finde alle Attachments, die in diesem Bereich liegen
+			var attachments = new List<SheetVarietyLine.VarietyComponent.Attachment>();
+			while (nextChord.Length != 0 && nextChord.Offset < offset)
+			{
+				//Füge den Akkord hinzu
+				if (nextChord.Chord is not null)
+					attachments.Add(new SheetVarietyLine.VarietyComponent.VarietyAttachment(nextChord.Offset - startOffset, nextChord.Chord));
 
-                    //Ordne den Akkord der kommenden Wortkomponente zu
-                    nextComponentChord = nextChord;
+				//Füge ggf. Text hinzu
+				if (nextChord.Suffix is not null)
+					attachments.Add(new SheetVarietyLine.VarietyComponent.VarietyAttachment(nextChord.SuffixOffset - startOffset + nextChord.SuffixOffset, nextChord.Suffix));
 
-                    //Wechle zum nächsten Akkord
-                    nextChord = chordEnumerator.MoveNext() ? chordEnumerator.Current : default;
-                    nextChordOffset = nextChord.Chord != null ? nextChord.Offset : int.MaxValue;
-                }
-            }
+				//Wechle zum nächsten Akkord
+				nextChord = chordEnumerator.MoveNext() ? chordEnumerator.Current : default;
+				nextChordOffset = nextChord.Chord != null ? nextChord.Offset : int.MaxValue;
+			}
 
-            //Merke ggf. letzte Komponente
-            if (offset > lastComponentOffset)
-            {
-                //Erzeuge eine Komponente für das bisher gelesene
-                var wordComponent = new WordComponent(new string(line[lastComponentOffset..offset]));
-                wordComponents.Add(wordComponent);
+			//Erzeuge den String
+			SheetVarietyLine.VarietyComponent component;
+			if (!isWordWhitespace)
+			{
+				component = SheetVarietyLine.VarietyComponent.FromString(new string(line[startOffset..offset]), SheetVarietyLine.AllowedType.None);
+			}
+			else
+			{
+				var spaceLength = 0;
+				foreach (var c in line[startOffset..offset])
+				{
+					//Tabulatoren zählen als 4 Leerzeichen, alles andere als 1
+					if (c == '\t')
+						spaceLength += 4;
+					else
+						spaceLength++;
+				}
+				component = SheetVarietyLine.VarietyComponent.CreateSpace(spaceLength, SheetVarietyLine.AllowedType.None);
+			}
 
-                //Ordne ggf. den bisherigen Akkord zu
-                if (nextComponentChord.Chord != null)
-                {
-                    wordComponent.Attachments.Add(new WordComponentChord(nextComponentChord.Chord) { Offset = nextComponentChord.Offset - lastComponentOffset });
-                    if (nextChord.Suffix != null)
-                        wordComponent.Attachments.Add(new WordComponentText(nextChord.Suffix) { Offset = nextChord.SuffixOffset - lastComponentOffset });
-                }
-            }
+			//Füge die Attachments hinzu
+			component.AddAttachments(attachments);
 
-            //Speichere das Wort
-            components.Add(new SheetComplexWord(wordComponents));
-        }
+			//Füge die Komponente hinzu
+			components.Add(component);
+		}
 
-        //Verlänge ggf. die Zeile, um die nächsten Akkorde zu erfassen
-        while (nextChord.Chord != null)
+		//Verlänge ggf. die Zeile, um die nächsten Akkorde zu erfassen
+		while (nextChord.Chord != null)
         {
             //Verlängere die Zeile um Leerzeichen
             if (nextChordOffset > offset)
             {
-                components.Add(SheetComplexWord.CreateSpace(nextChordOffset - offset));
+                components.Add(SheetVarietyLine.VarietyComponent.CreateSpace(nextChordOffset - offset, SheetVarietyLine.AllowedType.None));
                 offset = nextChordOffset;
             }
 
             //Füge ein einzelnes Leerzeichen als Wort hinzu
-            var word = new WordComponent(" ");
+			var word = new SheetVarietyLine.VarietyComponent(" ", SheetVarietyLine.AllowedType.None);
             offset++;
 
-            //Füge den Akkord und ggf. Suffix hinzu
-            word.Attachments.Add(new WordComponentChord(nextChord.Chord));
-            if (nextChord.Suffix != null)
-                word.Attachments.Add(new WordComponentText(nextChord.Suffix) { Offset = nextChord.SuffixOffset - nextChord.Offset });
-            components.Add(new SheetComplexWord(word));
+			//Füge den Akkord und ggf. Suffix hinzu
+			if (nextChord.Chord is not null)
+				word.AddAttachment(new SheetVarietyLine.VarietyComponent.VarietyAttachment(0, nextChord.Chord));
+			if (nextChord.Suffix is not null)
+				word.AddAttachment(new SheetVarietyLine.VarietyComponent.VarietyAttachment(nextChord.SuffixOffset, nextChord.Suffix));
+
+			//Füge das Wort hinzu
+			components.Add(word);
 
             //Wechle zum nächsten Akkord
             nextChord = chordEnumerator.MoveNext() ? chordEnumerator.Current : default;

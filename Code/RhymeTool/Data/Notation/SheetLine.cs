@@ -7,7 +7,7 @@ public abstract class SheetLine : DeepObservableBase
 {
 	public Guid Guid { get; set; } = Guid.NewGuid();
 
-    public abstract IEnumerable<SheetDisplayLine> CreateDisplayLines(ISheetFormatter? formatter = null);
+    public abstract IEnumerable<SheetDisplayLine> CreateDisplayLines(ISheetBuilderFormatter? formatter = null);
 }
 
 public class SheetEmptyLine : SheetLine, ISheetDisplayLineEditing
@@ -19,7 +19,7 @@ public class SheetEmptyLine : SheetLine, ISheetDisplayLineEditing
 		set => Set(ref count, value);
 	}
 
-	public override IEnumerable<SheetDisplayLine> CreateDisplayLines(ISheetFormatter? formatter = null)
+	public override IEnumerable<SheetDisplayLine> CreateDisplayLines(ISheetBuilderFormatter? formatter = null)
     {
         for (int i = 0; i < Count; i++)
 		{

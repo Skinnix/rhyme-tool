@@ -91,7 +91,7 @@ $separatorColor: #6c757d;
 
 .chord-sheet.debug {
 	.line.line-text {
-		.anchor-text {
+		.anchor-text, .text {
 			border-left: 1px dotted red;
 			border-right: 1px dotted green;
 			margin-left: -1px;

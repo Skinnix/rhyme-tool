@@ -20,14 +20,14 @@ public class SheetLineCache : DeepObservableBase
 		Line = Register(line);
 	}
 
-	protected override void OnModified(ModifiedEventArgs args)
+	protected override void RaiseModified(ModifiedEventArgs args)
 	{
-		base.OnModified(args);
+		base.RaiseModified(args);
 
 		displayLines = null;
 	}
 
-	public IReadOnlyList<SheetDisplayLine> GetDisplayLines(ISheetFormatter? formatter = null)
+	public IReadOnlyList<SheetDisplayLine> GetDisplayLines(ISheetBuilderFormatter? formatter = null)
 	{
 		if (this.formatter != formatter)
 			displayLines = null;

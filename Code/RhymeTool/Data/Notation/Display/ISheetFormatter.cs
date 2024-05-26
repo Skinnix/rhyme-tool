@@ -23,8 +23,11 @@ public interface ISheetFormatter
 
     string Format(ChordAlteration alteration);
     string Format(ChordAlterationType type);
+}
 
-    int SpaceBefore(SheetLine line, SheetDisplayLineBuilder lineBuilder, SheetDisplayLineElement element);
+public interface ISheetBuilderFormatter : ISheetFormatter
+{
+	int SpaceBefore(SheetLine line, SheetDisplayLineBuilder lineBuilder, SheetDisplayLineElement element);
 }
 
 public enum GermanNoteMode
@@ -37,7 +40,7 @@ public enum GermanNoteMode
     ExplicitH,
 }
 
-public record DefaultSheetFormatter : ISheetFormatter
+public record DefaultSheetFormatter : ISheetBuilderFormatter
 {
     public static readonly DefaultSheetFormatter Instance = new();
 
@@ -67,7 +70,7 @@ public record DefaultSheetFormatter : ISheetFormatter
 
     public GermanNoteMode GermanMode { get; init; } = GermanNoteMode.AlwaysB;
 
-    public int SpaceBetweenChordsOnCompositeLine { get; init; } = 1;
+    public int SpaceBetweenChordsOnVarietyLine { get; init; } = 1;
     public int SpaceBetweenChordsOnChordLine { get; init; } = 3;
 
     public SheetTransformation? Transformation { get; init; }
@@ -196,8 +199,8 @@ public record DefaultSheetFormatter : ISheetFormatter
     {
         if (lineBuilder.CurrentLength > 0 && element is SheetDisplayLineChord)
         {
-            if (line is SheetCompositeLine)
-                return SpaceBetweenChordsOnCompositeLine;
+            if (line is SheetVarietyLine)
+                return SpaceBetweenChordsOnVarietyLine;
             else
                 return 1;
         }

@@ -15,6 +15,6 @@ public abstract class DeepObservableCollectionBase : DeepObservableBase, INotify
 	protected virtual void OnCollectionChanged(NotifyCollectionChangedEventArgs e)
 	{
 		CollectionChanged?.Invoke(this, e);	
-		OnModified(new ModifiedEventArgs(this, this, e));
+		RaiseModified(new ModifiedEventArgs(this, this, e));
 	}
 }

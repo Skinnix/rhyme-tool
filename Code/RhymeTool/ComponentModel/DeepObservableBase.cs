@@ -78,17 +78,17 @@ public abstract class DeepObservableBase : INotifyPropertyChanged, IModifiable
 
 	private void OnChildPropertyChanged(object? sender, PropertyChangedEventArgs e)
 	{
-		OnPropertyChanged(e.PropertyName);
+		RaisePropertyChanged(e.PropertyName);
 	}
 
 	private void OnChildCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
 	{
-		OnModified(new ModifiedEventArgs(this, sender, e));
+		RaiseModified(new ModifiedEventArgs(this, sender, e));
 	}
 
 	private void OnChildModified(object? sender, EventArgs e)
 	{
-		OnModified(new ModifiedEventArgs(this, sender, e));
+		RaiseModified(new ModifiedEventArgs(this, sender, e));
 	}
 	#endregion
 
@@ -99,20 +99,20 @@ public abstract class DeepObservableBase : INotifyPropertyChanged, IModifiable
 			return value;
 
 		field = value;
-		OnPropertyChanged(propertyName);
+		RaisePropertyChanged(propertyName);
 		return value;
 	}
 	#endregion
 
-	protected void OnPropertyChanged(string? propertyName) => OnPropertyChanged(new PropertyChangedEventArgs(propertyName));
+	protected void RaisePropertyChanged(string? propertyName) => RaisePropertyChanged(new PropertyChangedEventArgs(propertyName));
 
-	protected virtual void OnPropertyChanged(PropertyChangedEventArgs e)
+	protected virtual void RaisePropertyChanged(PropertyChangedEventArgs e)
 	{
 		PropertyChanged?.Invoke(this, e);
-		OnModified(new ModifiedEventArgs(this, this, e));
+		RaiseModified(new ModifiedEventArgs(this, this, e));
 	}
 
-	protected virtual void OnModified(ModifiedEventArgs args)
+	protected virtual void RaiseModified(ModifiedEventArgs args)
 	{
 		Modified?.Invoke(this, args);
 	}

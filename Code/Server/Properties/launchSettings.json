@@ -13,7 +13,7 @@
     "https": {
       "commandName": "Project",
       "launchBrowser": true,
-      "launchUrl": "https://localhost:7105/chords/editor",
+      "launchUrl": "https://localhost:7105/editor",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },

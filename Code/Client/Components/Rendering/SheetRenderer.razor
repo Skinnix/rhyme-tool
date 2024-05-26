@@ -45,6 +45,10 @@
                 @("".PadRight(space.GetLength(Formatter)))
                 break;
 
+            case SheetDisplayLineText text:
+                <span class="text">@text.ToString(Formatter)</span>
+                break;
+
             case SheetDisplayLineAnchorText anchorText:
                 <span class="anchor-text">@anchorText.ToString(Formatter)</span>
                 break;
@@ -114,5 +118,5 @@
 @code {
     [Parameter] public SheetDocument? Document { get; set; }
     [Parameter] public SheetDisplayMode DisplayMode { get; set; }
-    [Parameter] public ISheetFormatter? Formatter { get; set; }
+    [Parameter] public ISheetBuilderFormatter? Formatter { get; set; }
 }

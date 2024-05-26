@@ -17,7 +17,7 @@ builder.Services.AddServerSideBlazor()
 		o.DetailedErrors = true;
 	});
 
-builder.Services.AddRhymeToolClient("https://localhost:7105/chords/");
+builder.Services.AddRhymeToolClient("http://localhost:5276/");
 #endif
 
 var app = builder.Build();
@@ -37,7 +37,7 @@ else
 app.UseHttpsRedirection();
 
 #if DEBUG
-app.UseBlazorFrameworkFiles("/chords");
+app.UseBlazorFrameworkFiles(); // "/chords");
 #endif
 
 app.UseStaticFiles();
@@ -53,7 +53,7 @@ app.Services.UseRhymeToolClient();
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
 #else
-app.MapFallbackToFile("/chords/index.html");
+app.MapFallbackToFile("/index.html");
 #endif
 
 app.Run();

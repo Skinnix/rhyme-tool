@@ -4,7 +4,7 @@ namespace Skinnix.RhymeTool.Data.Notation.Display;
 
 public interface ISheetDisplayLineElementSource;
 
-public abstract record SheetDisplayLineElement(ISheetDisplayLineElementSource? Source)
+public abstract record SheetDisplayLineElement
 {
     public abstract int GetLength(ISheetFormatter? formatter);
 
@@ -12,26 +12,25 @@ public abstract record SheetDisplayLineElement(ISheetDisplayLineElementSource? S
     public abstract string ToString(ISheetFormatter? formatter = null);
 }
 
-public record SheetDisplayLineVoid(ISheetDisplayLineElementSource? Source) : SheetDisplayLineElement(Source)
+public record SheetDisplayLineVoid : SheetDisplayLineElement
 {
     public override int GetLength(ISheetFormatter? formatter) => 0;
     public override string ToString(ISheetFormatter? formatter = null) => string.Empty;
 }
 
-public record SheetDisplayLineSpace(ISheetDisplayLineElementSource? Source, int Count) : SheetDisplayLineElement(Source)
+public record SheetDisplayLineSpace(int Count) : SheetDisplayLineElement
 {
     public override int GetLength(ISheetFormatter? formatter) => Count;
     public override string ToString(ISheetFormatter? formatter = null) => new string(' ', Count);
 }
 
-[Obsolete]
-public record SheetDisplayLineText(ISheetDisplayLineElementSource Source, string Text) : SheetDisplayLineElement(Source)
+public record SheetDisplayLineText(string Text) : SheetDisplayLineElement
 {
     public override int GetLength(ISheetFormatter? formatter) => Text.Length;
     public override string ToString(ISheetFormatter? formatter = null) => Text;
 }
 
-public record SheetDisplayLineAnchorText(ISheetDisplayLineElementSource Source, string Text) : SheetDisplayLineElement(Source)
+public record SheetDisplayLineAnchorText(string Text) : SheetDisplayLineElement
 {
     public IReadOnlyCollection<SheetDisplayLineElement> Targets { get; init; } = Array.Empty<SheetDisplayLineElement>();
 
@@ -39,7 +38,7 @@ public record SheetDisplayLineAnchorText(ISheetDisplayLineElementSource Source, 
     public override string ToString(ISheetFormatter? formatter = null) => Text;
 }
 
-public record SheetDisplayLineChord(ISheetDisplayLineElementSource Source, Chord Chord) : SheetDisplayLineElement(Source)
+public record SheetDisplayLineChord(Chord Chord) : SheetDisplayLineElement
 {
     public override int GetLength(ISheetFormatter? formatter) => Chord.ToString(formatter).Length;
     public override string ToString(ISheetFormatter? formatter = null) => Chord.ToString(formatter);

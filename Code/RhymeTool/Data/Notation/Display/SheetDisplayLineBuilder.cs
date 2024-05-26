@@ -40,7 +40,7 @@ public abstract class SheetDisplayTextLineBuilder<TLine> : SheetDisplayLineBuild
         if (currentLength >= totalLength)
             return;
 
-        var space = new SheetDisplayLineSpace(null, totalLength - currentLength);
+        var space = new SheetDisplayLineSpace(totalLength - currentLength);
         Elements.Add(space);
         currentLength = totalLength;
     }
