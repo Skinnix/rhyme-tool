@@ -9,30 +9,12 @@
 <div class="chord-sheet chord-sheet-editor chord-sheet-editing @(IsDebug ? "debug" : null)" contenteditable @ref="editorWrapper">
     @if (Document != null)
     {
-        var segmentIndex = 0;
-
         <CascadingValue TValue="ISheetFormatter" Value="Formatter">
             <CascadingValue TValue="SheetDocument" Value="Document">
 
-                @foreach (var segment in Document.Segments)
+                @foreach (var line in Document.Lines)
                 {
-                    <CascadingValue TValue="SheetSegment" Value="segment">
-
-                        <div class="segment" id="sheetSegment@(segmentIndex++)">
-                            @if (segment.Title != null)
-                            {
-                                <div class="segment-title">
-                                    <span class="segment-title-brackets">[</span>@segment.Title<span class="segment-title-brackets">]</span>
-                                </div>
-                            }
-
-                            @foreach (var line in segment.Lines)
-                            {
-                                <SheetEditorLine Line="line" @ref="lineEditorsSetter" />
-                            }
-                        </div>
-
-                    </CascadingValue>
+                    <SheetEditorLine Line="line" @key="line" @ref="lineEditorsSetter" />
                 }
 
             </CascadingValue>
@@ -74,19 +56,21 @@
     }
 
     [JSInvokable("OnBeforeInput")]
-    public async Task<MetalineSelectionRange?> OnBeforeInput(InputEventData data)
+    public async Task<MetalineEditResult> OnBeforeInput(InputEventData data)
     {
         var startEditor = lineEditors[data.Selection.Start.Metaline];
         if (data.Selection.End.Metaline != data.Selection.Start.Metaline)
-        {
-            return null; //TODO: for now, we don't support multi-line selections
-        };
+            return new MetalineEditResult(false, null); //TODO: for now, we don't support multi-line selections
 
         var editResult = await startEditor.HandleInput(data);
-        if (editResult == null) return null;
+        if (editResult == null)
+            return new MetalineEditResult(false, null);
 
-        return new MetalineSelectionRange(data.Selection.Start.Metaline, editResult.Line, editResult.LineResult.Selection);
+        var selection = editResult.LineResult.NewSelection == null ? null
+            : new MetalineSelectionRange(data.Selection.Start.Metaline, editResult.Line, editResult.LineResult.NewSelection.Value);
+        return new MetalineEditResult(editResult.Success, selection);
     }
 
+    public record MetalineEditResult(bool Success, MetalineSelectionRange? Selection);
     public record MetalineSelectionRange(Guid Metaline, int Line, SimpleRange Range);
 }

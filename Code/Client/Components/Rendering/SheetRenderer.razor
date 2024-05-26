@@ -33,7 +33,7 @@
         </span>
     }
 
-    void RenderElement(SheetDisplayLineElement element)
+    void RenderElement(SheetLine line, SheetDisplayLineElement element)
     {
         switch (element)
         {
@@ -52,33 +52,37 @@
             case SheetDisplayLineAnchorText anchorText:
                 <span class="anchor-text">@anchorText.ToString(Formatter)</span>
                 break;
+
+            case SheetDisplayLineSegmentTitleBracket titleBracket:
+                <span class="segment-title-bracket">@titleBracket.ToString(Formatter)</span>
+                break;
+
+            case SheetDisplayLineSegmentTitleText titleText:
+                <span class="segment-title" id="sheetSegment-@(line.Guid)">@titleText.ToString(Formatter)</span>
+                break;
         }
     }
 
-    void RenderElements(IEnumerable<SheetDisplayLineElement> elements)
+    void RenderElements(SheetLine line, IEnumerable<SheetDisplayLineElement> elements)
     {
         foreach (var element in elements)
-            RenderElement(element);
+            RenderElement(line, element);
     }
 
-    void RenderLine(SheetDisplayLine line)
+    void RenderLine(SheetLine line, SheetDisplayLine display)
     {
-        switch (line)
+        switch (display)
         {
             case SheetDisplayEmptyLine empty:
                 <pre class="line line-empty"></pre>
                 break;
 
-            // case SheetDisplaySpacerLine spacer:
-            //     <pre class="line line-space">@{ RenderElements(line.GetElements()); }</pre>
-            //     break;
-
             case SheetDisplayChordLine chords:
-                <pre class="line line-chords">@{ RenderElements(line.GetElements()); }</pre>
+                <pre class="line line-chords">@{ RenderElements(line, display.GetElements()); }</pre>
                 break;
 
             case SheetDisplayTextLine text:
-                <pre class="line line-text">@{ RenderElements(line.GetElements()); }</pre>
+                <pre class="line line-text">@{ RenderElements(line, display.GetElements()); }</pre>
                 break;
         }
     }
@@ -87,30 +91,17 @@
 <div class="chord-sheet">
     @if (Document != null)
     {
-        var segmentIndex = 0;
-        @foreach (var segment in Document.Segments)
+        @if (DisplayMode == SheetDisplayMode.Lines)
         {
-            <div class="segment" id="sheetSegment@(segmentIndex++)">
-                @if (segment.Title != null)
-                {
-                    <div class="segment-title">
-                        <span class="segment-title-brackets">[</span>@segment.Title<span class="segment-title-brackets">]</span>
-                    </div>
-                }
-                @if (DisplayMode == SheetDisplayMode.Lines)
-                {
-                    @foreach (var line in segment.Lines)
+            @foreach (var line in Document.Lines)
+            {
+                <div class="metaline metaline-lines">
+                    @foreach (var display in line.CreateDisplayLines(Formatter))
                     {
-                        <div class="metaline metaline-lines">
-                            @foreach (var display in line.CreateDisplayLines(Formatter))
-                            {
-                                RenderLine(display);
-                            }
-                        </div>
+                        RenderLine(line, display);
                     }
-                }
-            </div>
-            
+                </div>
+            }
         }
     }
 </div>

@@ -48,6 +48,23 @@ public sealed record SheetDisplayEmptyLine : SheetDisplayLine
 //    }
 //}
 
+public sealed record SheetDisplaySegmentTitleLine : SheetDisplayLine
+{
+	public string Title { get; init; }
+
+	public SheetDisplaySegmentTitleLine(string title)
+	{
+		Title = title;
+	}
+
+	public override IEnumerable<SheetDisplayLineElement> GetElements()
+		=> [
+			new SheetDisplayLineSegmentTitleBracket("["),
+			new SheetDisplayLineSegmentTitleText(Title),
+			new SheetDisplayLineSegmentTitleBracket("]"),
+		];
+}
+
 public sealed record SheetDisplayTextLine : SheetDisplayLine
 {
     private readonly SheetDisplayLineElement[] elements;

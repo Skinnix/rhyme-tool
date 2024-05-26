@@ -59,6 +59,14 @@
             case SheetDisplayLineAnchorText anchorText:
                 <span class="anchor-text">@anchorText.ToString(Formatter)</span>
                 break;
+
+            case SheetDisplayLineSegmentTitleBracket titleBracket:
+                <span class="segment-title-bracket">@titleBracket.ToString(Formatter)</span>
+                break;
+
+            case SheetDisplayLineSegmentTitleText titleText:
+                <span class="segment-title" id="sheetSegment-@(Line?.Guid)">@titleText.ToString(Formatter)</span>
+                break;
         }
     }
 
@@ -75,12 +83,6 @@
             case SheetDisplayEmptyLine empty:
                 <pre class="line line-empty" data-line-index="@lineIndex"></pre>
                 break;
-
-            // case SheetDisplaySpacerLine spacer:
-            //     <pre class="line line-space" data-line-index="@lineIndex">
-            //         @{ RenderElements(line.GetElements()); }
-            //     </pre>
-            //     break;
 
             case SheetDisplayChordLine chords:
                 <pre class="line line-chords" data-line-index="@lineIndex">
@@ -111,7 +113,6 @@
 
 @code {
     [CascadingParameter] public SheetDocument? Document { get; set; }
-    [CascadingParameter] public SheetSegment? Segment { get; set; }
     [CascadingParameter] public ISheetBuilderFormatter? Formatter { get; set; }
 
     [Parameter] public SheetLine? Line { get; set; }

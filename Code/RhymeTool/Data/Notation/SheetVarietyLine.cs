@@ -10,7 +10,7 @@ using Skinnix.RhymeTool.Data.Notation.Display;
 
 namespace Skinnix.RhymeTool.Data.Notation;
 
-public class SheetVarietyLine : SheetLine
+public class SheetVarietyLine : SheetLine, ISheetTitleLine
 {
 	private readonly List<Component> components;
 	private readonly ContentEditing contentEditing;
@@ -39,9 +39,25 @@ public class SheetVarietyLine : SheetLine
 			new SheetDisplayTextLine.Builder(),
 			new SheetDisplayChordLine.Builder());
 
-		//Gehe durch alle Komponenten
-		foreach (var component in components)
-			component.BuildLines(builders, formatter);
+		//Sonderfall: Titel?
+		if (IsTitleLine(out var title, out var afterTitleIndex))
+		{
+			//Füge Titel hinzu
+			builders.TextLine.Append(new SheetDisplayLineSegmentTitleBracket("["));
+			if (title is not null)
+				builders.TextLine.Append(new SheetDisplayLineSegmentTitleText(title));
+			builders.TextLine.Append(new SheetDisplayLineSegmentTitleBracket("]"));
+
+			//Füge Komponenten nach dem Titel hinzu
+			for (var i = afterTitleIndex; i < components.Count; i++)
+				components[i].BuildLines(builders, formatter);
+		}
+		else
+		{
+			//Gehe durch alle Komponenten
+			foreach (var component in components)
+				component.BuildLines(builders, formatter);
+		}
 
 		//Sind alle Zeilen leer?
 		if (builders.CurrentLength == 0)
@@ -56,6 +72,52 @@ public class SheetVarietyLine : SheetLine
 		if (builders.TextLine.CurrentLength > 0)
 			yield return builders.TextLine.CreateDisplayLine(contentEditing);
 	}
+
+	#region Title
+	public bool IsTitleLine(out string? title)
+		=> IsTitleLine(out title, out _);
+
+	public bool IsTitleLine(out string? title, out int afterTitleIndex)
+	{
+		//Alles, was von Klammern umschlossen ist und keine Attachments hat, ist es ein Titel
+		var titleBuilder = new StringBuilder();
+		var i = -1;
+		foreach (var component in components)
+		{
+			i++;
+
+			//Ist die Komponente keine VarietyComponent, kein Text oder hat Attachments?
+			if (component is not VarietyComponent variety || variety.Content.Text is null || variety.Attachments.Count != 0)
+			{
+				title = null;
+				afterTitleIndex = 0;
+				return false;
+			}
+
+			//Erste Komponente muss mit öffnender Klammer beginnen
+			if (i == 0 && !variety.Content.Text.StartsWith('['))
+			{
+				title = null;
+				afterTitleIndex = 0;
+				return false;
+			}
+
+			//Baue den Titel zusammen
+			titleBuilder.Append(variety.Content.Text);
+			if (variety.Content.Text.EndsWith(']'))
+			{
+				//Titel gefunden
+				title = titleBuilder.ToString(1, titleBuilder.Length - 2);
+				afterTitleIndex = i + 1;
+				return true;
+			}
+		}
+
+		title = null;
+		afterTitleIndex = 0;
+		return false;
+	}
+	#endregion
 
 	#region Editing
 	private class ContentEditing : ISheetDisplayLineEditing
@@ -350,13 +412,13 @@ public class SheetVarietyLine : SheetLine
 					stopCombining = true;
 			}
 
-			//Modified-Event
-			var modified = removedAnything || addedContentLength != 0;
-			if (modified)
-				owner.RaiseModified(new ModifiedEventArgs(owner));
+			//Nicht erfolgreich?
+			if (!removedAnything && addedContentLength == 0)
+				return new LineEditResult(false, null);
 
-			//Gib das Ergebnis zurück
-			return new LineEditResult(modified, new SimpleRange(selectionRange.Start + addedContentLength, selectionRange.Start + addedContentLength));
+			//Modified-Event
+			owner.RaiseModified(new ModifiedEventArgs(owner));
+			return new LineEditResult(true, new SimpleRange(selectionRange.Start + addedContentLength, selectionRange.Start + addedContentLength));
 		}
 
 		private List<VarietyComponent> CreateComponentsForContent(string content)
@@ -402,11 +464,39 @@ public class SheetVarietyLine : SheetLine
 			this.owner = owner;
 		}
 
-		public LineEditResult DeleteContent(SimpleRange selectionRange, ISheetFormatter? formatter, bool forward = false) => throw new NotImplementedException();
-		public LineEditResult InsertContent(string content, SimpleRange selectionRange, ISheetFormatter? formatter) => throw new NotImplementedException();
+		public LineEditResult DeleteContent(SimpleRange selectionRange, ISheetFormatter? formatter, bool forward = false)
+		{
+			//Ist der Bereich leer?
+			if (selectionRange.Length == 0)
+			{
+				if (forward)
+					selectionRange = new SimpleRange(selectionRange.Start, selectionRange.Start + 1);
+				else
+					selectionRange = new SimpleRange(selectionRange.Start - 1, selectionRange.Start);
+			}
+
+			return DeleteAndInsertContent(selectionRange, formatter, null);
+		}
+
+		public LineEditResult InsertContent(string content, SimpleRange selectionRange, ISheetFormatter? formatter)
+		{
+			return DeleteAndInsertContent(selectionRange, formatter, content);
+		}
+
+		private LineEditResult DeleteAndInsertContent(SimpleRange selectionRange, ISheetFormatter? formatter, string? content)
+		{
+			//Finde alle Attachments im Bereich
+			//var attachments = owner.components.OfType<VarietyComponent>()
+			//	.SelectMany(c => c.Attachments.Select(a => (Component: c, Attachment: a)))
+			//	.Where(a => a.Attachment.Offset >= selectionRange.Start && a.Attachment.Offset + a.Attachment.Length <= selectionRange.End)
+			//	.ToList();
+
+			throw new NotImplementedException();
+		}
 	}
 	#endregion
 
+	#region Content
 	[Flags]
 	public enum AllowedType
 	{
@@ -542,7 +632,9 @@ public class SheetVarietyLine : SheetLine
 		public override string? ToString() => Text ?? Chord?.ToString();
 		#endregion
 	}
+	#endregion
 
+	#region Components
 	public abstract class Component
 	{
 		public abstract bool IsEmpty { get; }
@@ -593,6 +685,7 @@ public class SheetVarietyLine : SheetLine
 			=> new VarietyComponent(MaybeChord.CreateSpace(length, allowedTypes));
 
 		#region Display
+		[Obsolete("Die Länge ist nicht klar definiert, da sich Komponenten überschneiden können")]
 		internal override int GetLength(ISheetFormatter? formatter)
 		{
 			//Erzeuge Display
@@ -622,6 +715,7 @@ public class SheetVarietyLine : SheetLine
 					: builders.TextLine;
 
 				//Stelle sicher, dass die Zeile lang genug ist
+				//var currentTextLength = block.Attachment is not null ? builders.CurrentLength : contentLine.CurrentLength;
 				var currentTextLength = contentLine.CurrentLength;
 				var spaceBefore = formatter?.SpaceBefore(builders.Owner, contentLine, block.Content) ?? 0;
 				contentLine.ExtendLength(contentLine.CurrentLength, spaceBefore);
@@ -876,4 +970,5 @@ public class SheetVarietyLine : SheetLine
 				=> Content.CreateElement(formatter);
 		}
 	}
+	#endregion
 }

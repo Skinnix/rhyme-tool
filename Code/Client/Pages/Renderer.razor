@@ -109,12 +109,9 @@
 
                 <h4>Navigation</h4>
                 <nav class="nav nav-pills flex-column" id="pageNavigation">
-                    @{
-                        var segmentIndex = 0;
-                    }
-                    @foreach (var segment in document.Segments)
+                    @foreach (var segment in document.FindSegments())
                     {
-                        <a class="nav-link" href="@(navigation.Uri)#sheetSegment@(segmentIndex++)">
+                        <a class="nav-link" href="@(navigation.Uri)#sheetSegment-@(segment.TitleLine.Guid)">
                             @segment.Title
                         </a>
                     }

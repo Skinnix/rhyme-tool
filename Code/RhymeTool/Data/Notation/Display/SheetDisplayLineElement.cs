@@ -43,3 +43,15 @@ public record SheetDisplayLineChord(Chord Chord) : SheetDisplayLineElement
     public override int GetLength(ISheetFormatter? formatter) => Chord.ToString(formatter).Length;
     public override string ToString(ISheetFormatter? formatter = null) => Chord.ToString(formatter);
 }
+
+public record SheetDisplayLineSegmentTitleText(string Text) : SheetDisplayLineElement
+{
+	public override int GetLength(ISheetFormatter? formatter) => Text.Length;
+	public override string ToString(ISheetFormatter? formatter = null) => Text;
+}
+
+public record SheetDisplayLineSegmentTitleBracket(string Text) : SheetDisplayLineElement
+{
+	public override int GetLength(ISheetFormatter? formatter) => Text.Length;
+	public override string ToString(ISheetFormatter? formatter = null) => Text;
+}

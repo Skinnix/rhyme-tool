@@ -3,7 +3,17 @@ using Skinnix.RhymeTool.Data.Notation.Display;
 
 namespace Skinnix.RhymeTool.Data.Notation;
 
-public abstract class SheetLine : DeepObservableBase
+public interface ISheetLine
+{
+	Guid Guid { get; }
+}
+
+public interface ISheetTitleLine : ISheetLine
+{
+	bool IsTitleLine(out string? title);
+}
+
+public abstract class SheetLine : DeepObservableBase, ISheetLine
 {
 	public Guid Guid { get; set; } = Guid.NewGuid();
 

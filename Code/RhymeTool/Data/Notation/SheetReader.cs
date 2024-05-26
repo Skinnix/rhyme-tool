@@ -14,10 +14,8 @@ public class SheetReader
     private static readonly string[] allowedChordSuffixes = [",", " ,", "->", " ->"];
 
     private readonly TextReader reader;
+    private readonly List<SheetLine> lines = new();
 
-    private List<SheetSegment> segments = new();
-    private List<SheetLine> currentSegmentLines = new();
-    private string? currentSegmentTitle = null;
     private List<ChordInLine>? lastChordLine = null;
 
     private SheetReader(TextReader reader)
@@ -53,11 +51,19 @@ public class SheetReader
             ReadLine(line);
         }
 
-        //Schließe das letzte Segment
-        CloseCurrentSegment();
+		//Gibt es noch eine gemerkte Akkordzeile am Ende?
+		if (lastChordLine != null)
+		{
+			//Die letzte Zeile bleibt eine reine Akkordzeile
+			var newChordLine = CreateChordLine(lastChordLine);
+			lines.Add(newChordLine);
+		}
+
+		//Finalisiere das Dokument
+		FinalizeLines();
 
         //Erzeuge das Dokument
-        return new SheetDocument(segments);
+        return new SheetDocument(lines);
     }
 
 	private async Task<SheetDocument> ReadSheetAsync()
@@ -82,11 +88,19 @@ public class SheetReader
 			ReadLine(line);
 		}
 
-		//Schließe das letzte Segment
-		CloseCurrentSegment();
+		//Gibt es noch eine gemerkte Akkordzeile am Ende?
+		if (lastChordLine != null)
+		{
+			//Die letzte Zeile bleibt eine reine Akkordzeile
+			var newChordLine = CreateChordLine(lastChordLine);
+			lines.Add(newChordLine);
+		}
+
+		//Finalisiere das Dokument
+		FinalizeLines();
 
 		//Erzeuge das Dokument
-		return new SheetDocument(segments);
+		return new SheetDocument(lines);
 	}
 
 	private void ReadLine(string line)
@@ -99,43 +113,43 @@ public class SheetReader
             {
 				//Die vorherige Zeile bleibt eine reine Akkordzeile
 				var newChordLine = CreateChordLine(lastChordLine);
-                currentSegmentLines.Add(newChordLine);
+                lines.Add(newChordLine);
                 lastChordLine = null;
             }
 
             //Füge eine Leerzeile hinzu
-            currentSegmentLines.Add(new SheetEmptyLine());
+            lines.Add(new SheetEmptyLine());
             return;
         }
 
-        //Versuche die Zeile als Überschrift zu lesen
-        var segmentTitle = TryParseSegmentTitle(line);
-        if (segmentTitle != null)
-        {
-            //Wurde vorher schon eine Akkordzeile gelesen?
-            if (lastChordLine != null)
-            {
-				//Die vorherige Zeile bleibt eine reine Akkordzeile
-				var newChordLine = CreateChordLine(lastChordLine);
-				currentSegmentLines.Add(newChordLine);
-                lastChordLine = null;
-            }
+    //    //Versuche die Zeile als Überschrift zu lesen
+    //    var segmentTitle = TryParseSegmentTitle(line);
+    //    if (segmentTitle != null)
+    //    {
+    //        //Wurde vorher schon eine Akkordzeile gelesen?
+    //        if (lastChordLine != null)
+    //        {
+				////Die vorherige Zeile bleibt eine reine Akkordzeile
+				//var newChordLine = CreateChordLine(lastChordLine);
+				//lines.Add(newChordLine);
+    //            lastChordLine = null;
+    //        }
 
-            //Erstes Segment?
-            if (segments.Count == 0 && currentSegmentTitle == null && currentSegmentLines.Count == 0)
-            {
-                //Überschrift des ersten Segments
-                currentSegmentTitle = segmentTitle;
-                return;
-            }
+    //        //Erstes Segment?
+    //        if (segments.Count == 0 && currentSegmentTitle == null && lines.Count == 0)
+    //        {
+    //            //Überschrift des ersten Segments
+    //            currentSegmentTitle = segmentTitle;
+    //            return;
+    //        }
 
-            //Schließe das bisherige Segment
-            CloseCurrentSegment();
+    //        //Schließe das bisherige Segment
+    //        CloseCurrentSegment();
 
-            //Merke die Überschrift für das nächste Segment
-            currentSegmentTitle = segmentTitle;
-            return;
-        }
+    //        //Merke die Überschrift für das nächste Segment
+    //        currentSegmentTitle = segmentTitle;
+    //        return;
+    //    }
 
         //Versuche die Zeile als Akkordzeile zu lesen
         var chordLine = TryParseChordLine(line);
@@ -146,7 +160,7 @@ public class SheetReader
             {
 				//Die vorherige Zeile bleibt eine reine Akkordzeile
 				var newChordLine = CreateChordLine(lastChordLine);
-				currentSegmentLines.Add(newChordLine);
+				lines.Add(newChordLine);
             }
 
             //Merke die Akkordzeile für ggf. nächste Textzeilen
@@ -158,7 +172,7 @@ public class SheetReader
         var textLineComponents = ParseTextLine(line, lastChordLine).ToList();
         lastChordLine = null;
 		var textLine = new SheetVarietyLine(textLineComponents);
-        currentSegmentLines.Add(textLine);
+        lines.Add(textLine);
     }
 
 	private SheetVarietyLine CreateChordLine(IEnumerable<ChordInLine> chords)
@@ -192,31 +206,28 @@ public class SheetReader
 		return new(components);
 	}
 
-    private void CloseCurrentSegment()
-    {
-        //Gibt es noch eine gemerkte Akkordzeile am Ende?
-        if (lastChordLine != null)
-        {
-			//Die letzte Zeile bleibt eine reine Akkordzeile
-			var newChordLine = CreateChordLine(lastChordLine);
-			currentSegmentLines.Add(newChordLine);
-        }
+  //  private void CloseCurrentSegment()
+  //  {
+  //      //Gibt es noch eine gemerkte Akkordzeile am Ende?
+  //      if (lastChordLine != null)
+  //      {
+		//	//Die letzte Zeile bleibt eine reine Akkordzeile
+		//	var newChordLine = CreateChordLine(lastChordLine);
+		//	lines.Add(newChordLine);
+  //      }
 
-        //Entferne Leerzeilen am Anfang und Ende
-        while (currentSegmentLines.Count > 0 && currentSegmentLines[0] is SheetEmptyLine)
-            currentSegmentLines.RemoveAt(0);
-        while (currentSegmentLines.Count > 0 && currentSegmentLines[^1] is SheetEmptyLine)
-            currentSegmentLines.RemoveAt(currentSegmentLines.Count - 1);
+  //      //Entferne Leerzeilen am Anfang und Ende
+  //      while (lines.Count > 0 && lines[0] is SheetEmptyLine)
+  //          lines.RemoveAt(0);
+  //      while (lines.Count > 0 && lines[^1] is SheetEmptyLine)
+  //          lines.RemoveAt(lines.Count - 1);
 
-        //Füge das Segment hinzu
-        segments.Add(new SheetSegment(currentSegmentLines)
-        {
-            Title = currentSegmentTitle
-        });
-
-        //Fange ein neues Segment an
-        currentSegmentLines = new List<SheetLine>();
-    }
+		////Füge das Segment hinzu
+		//var newSegment = new SheetSegment(lines);
+		//if (currentSegmentTitle)
+		//newSegment.TitleLine = currentSegmentTitle ?? string.Empty;
+		//segments.Add(newSegment);
+  //  }
 
     private string? TryParseSegmentTitle(string line)
     {
@@ -370,4 +381,13 @@ public class SheetReader
 
         return components;
     }
+
+	private void FinalizeLines()
+	{
+		////Entferne Leerzeilen am Anfang und Ende
+		//while (lines.Count > 0 && lines[0] is SheetEmptyLine)
+		//	lines.RemoveAt(0);
+		//while (lines.Count > 0 && lines[^1] is SheetEmptyLine)
+		//	lines.RemoveAt(lines.Count - 1);
+	}
 }

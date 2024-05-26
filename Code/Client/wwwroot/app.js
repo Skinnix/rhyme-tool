@@ -64,8 +64,9 @@ function handleBeforeInput(element, reference, event) {
 		inputType: event.inputType,
 		data: data,
 		selection: selection,
-	}).then(function (newSelection) {
-		setSelectionRange(element, newSelection.metaline, newSelection.line, newSelection.range);
+	}).then(function (result) {
+		if (result.selection)
+			setSelectionRange(element, result.selection.metaline, result.selection.line, result.selection.range);
 	});
 }
 
@@ -76,7 +77,7 @@ function getSelectionRange(wrapper, elementCondition) {
 
 		for (; !elementCondition(node); node = node.parentElement) {
 			for (var current = node.previousSibling; current; current = current.previousSibling) {
-				offset += current.textContent.length;
+				offset += current.textContent?.length || 0;
 			}
 		}
 
@@ -131,6 +132,10 @@ function setSelectionRange(wrapper, metaline, line, selectionRange) {
 			var child = element.childNodes[i];
 			var afterOffset = currentOffset + child.textContent.length;
 			if (offset < afterOffset)
+				return findNodeAndOffset(child, offset - currentOffset);
+
+			//end of content?
+			if (afterOffset == offset && i == element.childNodes.length - 1)
 				return findNodeAndOffset(child, offset - currentOffset);
 
 			currentOffset = afterOffset;
