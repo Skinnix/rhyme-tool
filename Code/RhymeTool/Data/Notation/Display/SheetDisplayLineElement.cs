@@ -55,3 +55,9 @@ public record SheetDisplayLineSegmentTitleBracket(string Text) : SheetDisplayLin
 	public override int GetLength(ISheetFormatter? formatter) => Text.Length;
 	public override string ToString(ISheetFormatter? formatter = null) => Text;
 }
+
+public record SheetDisplayLineHyphen(int Length) : SheetDisplayLineElement
+{
+	public override int GetLength(ISheetFormatter? formatter) => Length;
+	public override string ToString(ISheetFormatter? formatter = null) => "-".PadRight(Length);
+}

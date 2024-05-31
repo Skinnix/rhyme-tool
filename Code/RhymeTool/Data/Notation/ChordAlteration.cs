@@ -21,6 +21,8 @@ public enum ChordDegreeModifier
 
 public readonly record struct ChordDegree(byte Value, ChordDegreeModifier Modifier = ChordDegreeModifier.None)
 {
+	public static char MAJOR_SEVENTH_SUFFIX = 'Δ';
+
     public override string ToString()
         => Modifier == ChordDegreeModifier.None
         ? Value.ToString()
@@ -36,7 +38,21 @@ public readonly record struct ChordDegree(byte Value, ChordDegreeModifier Modifi
 
         //Lese Modifier
         var modifierLength = EnumExtensions.TryRead(s, out ChordDegreeModifier modifier);
-        var offset = modifierLength == -1 ? 0 : modifierLength;
+		int offset;
+		if (modifierLength != -1)
+		{
+			offset = modifierLength;
+		}
+		else if (s.Length > 0 && s[0] == MAJOR_SEVENTH_SUFFIX)
+		{
+			//Damit ist der Degree ein Major Seventh
+			degree = new(7, ChordDegreeModifier.Major);
+			return 1;
+		}
+		else
+		{
+			offset = 0;
+		}
 
         //Lese Stufe
         if (s.Length <= offset) return -1;

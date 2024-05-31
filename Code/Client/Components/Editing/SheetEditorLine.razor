@@ -9,10 +9,19 @@
 @inject IJSRuntime js
 
 @{
+    void RenderNote(Note note, bool isBassNote = false)
+    {
+        var format = (isBassNote ? Formatter?.FormatBassNote(note) : Formatter?.FormatNote(note))
+            ?? (note.Accidental == AccidentalType.None ? new(note.Type.GetDisplayName())
+            : new(note.Type.GetDisplayName(), note.Accidental.GetDisplayName()));
+
+        @(format.Type)<span class="accidental">@format.Accidental</span>
+    }
+
     void RenderChord(Chord chord)
     {
         <span class="element element-chord chord">
-            <span class="chord-root">@chord.Root.ToString(Formatter)</span><span class="chord-quality">@chord.Quality.ToString(Formatter)</span>
+            <span class="chord-root">@{ RenderNote(chord.Root); }</span><span class="chord-quality">@chord.Quality.ToString(Formatter)</span>
 
             @if (chord.Alterations.Count > 0)
             {
@@ -35,7 +44,7 @@
             {
                 <span class="chord-bass-separator">/</span>
 
-                <span class="chord-bass">@(Formatter?.FormatBass(chord.Bass.Value) ?? chord.Bass.Value.ToString())</span>
+                <span class="chord-bass">@{ RenderNote(chord.Bass.Value, true); }</span>
             }
         </span>
     }
@@ -67,6 +76,10 @@
             case SheetDisplayLineSegmentTitleText titleText:
                 <span class="segment-title" id="sheetSegment-@(Line?.Guid)">@titleText.ToString(Formatter)</span>
                 break;
+
+            case SheetDisplayLineHyphen hyphen:
+                <span class="hyphen">@hyphen.ToString(Formatter)</span>
+                break;
         }
     }
 
@@ -81,19 +94,19 @@
         switch (line)
         {
             case SheetDisplayEmptyLine empty:
-                <pre class="line line-empty" data-line-index="@lineIndex"></pre>
+                <div class="line line-empty" data-line-index="@lineIndex"></div>
                 break;
 
             case SheetDisplayChordLine chords:
-                <pre class="line line-chords" data-line-index="@lineIndex">
+                <div class="line line-chords" data-line-index="@lineIndex">
                     @{ RenderElements(line.GetElements()); }
-                </pre>
+                </div>
                 break;
 
             case SheetDisplayTextLine text:
-                <pre class="line line-text" data-line-index="@lineIndex">
+                <div class="line line-text" data-line-index="@lineIndex">
                     @{ RenderElements(line.GetElements()); }
-                </pre>
+                </div>
                 break;
         }
     }

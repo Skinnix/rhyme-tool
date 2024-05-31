@@ -250,6 +250,10 @@ public class SheetReader
             while (offset < line.Length && char.IsWhiteSpace(line[offset]))
                 offset++;
 
+			//Ist das Ende erreicht?
+			if (offset >= line.Length)
+				break;
+
             //Lese Akkord
             var chordLength = Chord.TryRead(line[offset..], out var chord);
             if (chordLength == -1 || chord == null)

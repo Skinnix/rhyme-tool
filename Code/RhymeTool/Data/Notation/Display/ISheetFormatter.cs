@@ -10,13 +10,21 @@ using Skinnix.RhymeTool.Data.Notation.Display;
 
 namespace Skinnix.RhymeTool.Data.Notation.Display;
 
+public record struct NoteFormat(string Type, string? Accidental = null)
+{
+	public override string ToString() => Type.ToString() + Accidental?.ToString();
+}
+
 public interface ISheetFormatter
 {
     string Format(Note note);
-    string FormatBass(Note value);
-    string Format(AccidentalType accidental);
+	string FormatBass(Note value);
+	string Format(AccidentalType accidental);
 
-    string Format(Chord chord);
+	NoteFormat FormatNote(Note note);
+	NoteFormat FormatBassNote(Note note);
+
+	string Format(Chord chord);
     string Format(ChordQuality quality);
     string Format(ChordDegree chordDegree);
     string Format(ChordDegreeModifier modifier);
@@ -149,8 +157,13 @@ public record DefaultSheetFormatter : ISheetBuilderFormatter
 
     public string FormatBass(Note value) => FormatBass(value, true);
     private string FormatBass(Note value, bool transform) => Format(value, transform);
-    public string Format(Note note) => Format(note, true);
-    private string Format(Note note, bool transform)
+	public NoteFormat FormatBassNote(Note note) => FormatBassNote(note, true);
+	private NoteFormat FormatBassNote(Note note, bool transform) => FormatNote(note, transform);
+
+	public string Format(Note note) => Format(note, true);
+    private string Format(Note note, bool transform) => FormatNote(note, transform).ToString();
+	public NoteFormat FormatNote(Note note) => FormatNote(note, true);
+	private NoteFormat FormatNote(Note note, bool transform)
     {
         if (transform && Transformation != null)
             note = Transformation.TransformNote(note);
@@ -161,38 +174,38 @@ public record DefaultSheetFormatter : ISheetBuilderFormatter
             switch (GermanMode)
             {
                 case GermanNoteMode.AlwaysH:
-                    return "H" + Format(note.Accidental);
+                    return new("H", Format(note.Accidental));
                 case GermanNoteMode.German:
                     if (note.Accidental == AccidentalType.Flat)
-                        return "B";
+                        return new("B");
                     else
-                        return "H" + Format(note.Accidental);
+                        return new("H", Format(note.Accidental));
                 case GermanNoteMode.Descriptive:
                     if (note.Accidental == AccidentalType.Flat)
-                        return "B" + Format(note.Accidental);
+                        return new("B", Format(note.Accidental));
                     else
-                        return "H" + Format(note.Accidental);
+                        return new("H", Format(note.Accidental));
                 case GermanNoteMode.ExplicitB:
                     return note.Accidental switch
                     {
-                        AccidentalType.None => "B" + ExplicitNaturalModifier,
-                        AccidentalType.Sharp => "B" + SharpAccidentalModifier,
-                        AccidentalType.Flat => "B" + FlatAccidentalModifier,
+                        AccidentalType.None => new("B", ExplicitNaturalModifier),
+                        AccidentalType.Sharp => new("B", SharpAccidentalModifier),
+                        AccidentalType.Flat => new("B", FlatAccidentalModifier),
                         _ => throw new NotImplementedException("unknown accidental type"),
                     };
                 case GermanNoteMode.ExplicitH:
                     return note.Accidental switch
                     {
-                        AccidentalType.None => "H" + ExplicitNaturalModifier,
-                        AccidentalType.Sharp => "H" + SharpAccidentalModifier,
-                        AccidentalType.Flat => "H" + FlatAccidentalModifier,
+                        AccidentalType.None => new("H", ExplicitNaturalModifier),
+                        AccidentalType.Sharp => new("H", SharpAccidentalModifier),
+                        AccidentalType.Flat => new("H", FlatAccidentalModifier),
                         _ => throw new NotImplementedException("unknown accidental type"),
                     };
 
             }
         }
 
-        return note.Type.GetDisplayName() + Format(note.Accidental);
+        return new(note.Type.GetDisplayName(), Format(note.Accidental));
     }
 
     public int SpaceBefore(SheetLine line, SheetDisplayLineBuilder lineBuilder, SheetDisplayLineElement element)

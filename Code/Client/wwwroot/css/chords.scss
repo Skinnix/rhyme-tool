@@ -2,13 +2,16 @@
 $anchorTextColor: var(--bs-info-text-emphasis);
 $separatorColor: #6c757d;
 
+@font-face {
+	font-family: 'Fira Code';
+	src: url('fonts/FiraCode-Regular.woff2') format('woff'), url('fonts/FiraCode-Regular.ttf') format('truetype');
+}
+
 .chord-sheet {
 	overflow: auto;
-
-	pre {
-		margin: 0;
-		padding: 0;
-	}
+	//font-family: 'Fira Code', monospace;
+	font-family: monospace;
+	line-height: 1.1em;
 
 	.segment:not(:first-child) {
 		margin-top: 1em;
@@ -37,7 +40,10 @@ $separatorColor: #6c757d;
 		overflow: visible;
 
 		.line {
+			margin: 0;
+			padding: 0;
 			overflow: visible;
+			white-space: pre;
 		}
 	}
 
@@ -60,6 +66,11 @@ $separatorColor: #6c757d;
 	.chord {
 		color: $chordColor;
 		white-space: normal;
+
+		.accidental:not(:empty) {
+			display: inline-block;
+			width: 1ch;
+		}
 
 		.chord-root {
 			font-weight: bold;

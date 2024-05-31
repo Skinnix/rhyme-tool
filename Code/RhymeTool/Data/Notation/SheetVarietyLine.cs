@@ -151,15 +151,10 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 		private LineEditResult DeleteAndInsertContent(SimpleRange selectionRange, ISheetFormatter? formatter, string? content)
 		{
 			//Finde alle Komponente im Bereich
-			var offset = 0;
 			Component? before = null;
-			var beforeIndex = 0;
-			var beforeLength = 0;
-			var tailLengthBefore = 0;
+			int beforeIndex = -1;
 			Component? after = null;
-			var afterIndex = 0;
-			var afterLength = 0;
-			var afterOverlap = 0;
+			int afterIndex = -1;
 			List<Component> fullyInside = new();
 			var rangeStartsOnComponent = false;
 			var index = -1;
@@ -167,58 +162,43 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			{
 				//Berechne Länge der Komponente
 				index++;
-				var length = component.GetLength(formatter);
+				var bounds = component.ContentRenderBounds;
 
 				//Liegt die Komponente komplett vor dem Bereich?
-				var endOffset = offset + length;
-				if (endOffset < selectionRange.Start)
-				{
-					offset += length;
+				if (bounds.EndOffset < selectionRange.Start)
 					continue;
-				}
 
 				//Liegt die Komponente komplett hinter dem Bereich?
-				if (offset > selectionRange.End)
+				if (bounds.StartOffset > selectionRange.End)
 					break;
 
 				//Beginnt die Komponente vor dem Bereich?
-				if (before is null && offset < selectionRange.Start)
+				if (before is null && bounds.StartOffset < selectionRange.Start)
 				{
 					//Die Komponente ist der linke Rand
 					before = component;
 					beforeIndex = index;
-					beforeLength = length;
-
-					//Wie weit ragt die Komponente heraus?
-					tailLengthBefore = selectionRange.Start - offset;
 				}
 
 				//Beginnt die Komponente mit dem Bereich?
-				if (offset == selectionRange.Start)
+				if (bounds.StartOffset == selectionRange.Start)
 					rangeStartsOnComponent = true;
 
 				//Endet die Komponente nach dem Bereich?
-				if (after is null && endOffset > selectionRange.End)
+				if (after is null && bounds.EndOffset > selectionRange.End)
 				{
 					//Die Komponente ist der rechte Rand
 					after = component;
 					afterIndex = index;
-					afterLength = length;
-
-					//Wie weit überlappt die Komponente mit dem Bereich?
-					afterOverlap = selectionRange.End - offset;
 				}
 
 				//Liegt die Komponente komplett im Bereich?
 				if (component != before && component != after
-					&& offset >= selectionRange.Start && endOffset <= selectionRange.End)
+					&& bounds.StartOffset >= selectionRange.Start && bounds.EndOffset <= selectionRange.End)
 				{
 					//Die Komponente liegt im Bereich
 					fullyInside.Add(component);
 				}
-
-				//Verschiebe den Offset
-				offset += length;
 			}
 
 			//Prüfe auf Änderungen
@@ -227,14 +207,13 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 			//Entferne Überlappung am linken Rand
 			List<VarietyComponent>? newContentComponents = null;
+			var skipTrimAfter = false;
 			if (before is not null)
 			{
 				//Kürze die Komponente
-				if (before.RemoveContent(tailLengthBefore, selectionRange.Length, formatter))
-				{
+				var tailLength = selectionRange.Start - before.ContentRenderBounds.StartOffset;
+				if (before.RemoveContent(tailLength, selectionRange.Length, formatter))
 					removedAnything = true;
-					beforeLength = before.GetLength(formatter);
-				}
 
 				//Gibt es einen Inhalt?
 				if (content is not null)
@@ -249,7 +228,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 						if (after == before && (newContentComponents.Count > 1 || repeat))
 						{
 							//Teile die Randkomponente in zwei Teile
-							var newAfter = before.SplitEnd(tailLengthBefore, formatter);
+							var newAfter = before.SplitEnd(tailLength, formatter);
 
 							//Füge den neuen rechten Rand ein
 							if (beforeIndex == owner.components.Count - 1)
@@ -259,11 +238,11 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 							//Der rechte Rand muss jetzt nicht mehr gekürzt werden
 							after = newAfter;
-							afterOverlap = 0;
+							skipTrimAfter = true;
 						}
 
 						//Versuche die erste Komponente hinten an den linken Rand anzufügen
-						if (before.TryMerge(newContentComponents[0], tailLengthBefore, formatter))
+						if (before.TryMerge(newContentComponents[0], tailLength, formatter))
 						{
 							//Erste Komponente hinzugefügt
 							newContentComponents.RemoveAt(0);
@@ -330,7 +309,8 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			if (after is not null && after != before)
 			{
 				//Kürze die Komponente
-				if (after.RemoveContent(0, afterOverlap, formatter))
+				var overlap = selectionRange.End - after.ContentRenderBounds.StartOffset;
+				if (!skipTrimAfter && after.RemoveContent(0, overlap, formatter))
 					removedAnything = true;
 
 				//Gibt es einen Inhalt?
@@ -553,6 +533,11 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			return subContent.CreateElement(formatter);
 		}
 
+		public int GetLength(ISheetFormatter? formatter)
+			=> Text?.Length
+			?? Chord?.ToString(formatter).Length
+			?? 0;
+
 		internal bool RemoveContent(int offset, int length, ISheetFormatter? formatter)
 		{
 			//Textinhalt
@@ -635,12 +620,19 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 	#endregion
 
 	#region Components
+	internal readonly record struct RenderBounds(int StartOffset, int EndOffset)
+	{
+		public int Length => EndOffset - StartOffset;
+	}
+
 	public abstract class Component
 	{
 		public abstract bool IsEmpty { get; }
 
+		internal abstract RenderBounds ContentRenderBounds { get; }
+		internal abstract RenderBounds TotalRenderBounds { get; }
+
 		public abstract void BuildLines(LineBuilders builders, ISheetBuilderFormatter? formatter);
-		internal abstract int GetLength(ISheetFormatter? formatter);
 
 		internal abstract bool RemoveContent(int offet, int length, ISheetFormatter? formatter);
 		internal abstract bool TryMerge(Component merge, int offset, ISheetFormatter? formatter);
@@ -654,14 +646,18 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 	public sealed class VarietyComponent : Component
 	{
-		private List<DisplayBlock>? displayBlocksCache;
-
 		private readonly List<Attachment> attachments = new();
 		public IReadOnlyList<Attachment> Attachments => attachments;
 
 		internal MaybeChord Content { get; }
 
 		public override bool IsEmpty => Content.IsEmpty;
+
+		private RenderBounds contentRenderBounds;
+		internal override RenderBounds ContentRenderBounds => contentRenderBounds;
+
+		private RenderBounds totalRenderBounds;
+		internal override RenderBounds TotalRenderBounds => totalRenderBounds;
 
 		private VarietyComponent(MaybeChord content)
 		{
@@ -685,111 +681,142 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			=> new VarietyComponent(MaybeChord.CreateSpace(length, allowedTypes));
 
 		#region Display
-		[Obsolete("Die Länge ist nicht klar definiert, da sich Komponenten überschneiden können")]
-		internal override int GetLength(ISheetFormatter? formatter)
-		{
-			//Erzeuge Display
-			var blocks = GetDisplay(formatter);
-
-			//Nur die Länge der Inhalte zählt
-			return blocks.Sum(b => b.Content.GetLength(formatter));
-
-			////Addiere die Längen der Blöcke
-			//return blocks.Sum(b => Math.Max(b.Content.GetLength(formatter), b.Attachment?.GetLength(formatter) ?? 0));
-		}
-
 		public override void BuildLines(LineBuilders builders, ISheetBuilderFormatter? formatter)
 		{
-			//Erzeuge Display
-			var blocks = GetDisplay(formatter);
+			//Berechne Textlänge
+			var contentLength = Content.GetLength(formatter);
 
-			//Prüfe die Blöcke auf Inhalt
-			var hasAttachments = blocks.Any(b => b.Attachment is not null);
-			var hasOnlyChords = !hasAttachments && blocks.All(b => b.Content is SheetDisplayLineChord);
-
-			//Gehe durch die Blöcke
-			foreach (var block in blocks)
+			//Finde das erste Attachment
+			var firstAttachment = attachments.FirstOrDefault(a => a.CreateDisplayAttachment(out _, formatter) is not null);
+			if (firstAttachment is not null)
 			{
-				//Wähle die Zeile für den Inhalt
-				SheetDisplayLineBuilder contentLine = block.Attachment is null && block.Content is SheetDisplayLineChord ? builders.ChordLine
-					: builders.TextLine;
+				//An welchen Offset soll das Attachment geschrieben werden?
+				var targetOffset = builders.ChordLine.CurrentLength + 1;
 
-				//Stelle sicher, dass die Zeile lang genug ist
-				//var currentTextLength = block.Attachment is not null ? builders.CurrentLength : contentLine.CurrentLength;
-				var currentTextLength = contentLine.CurrentLength;
-				var spaceBefore = formatter?.SpaceBefore(builders.Owner, contentLine, block.Content) ?? 0;
-				contentLine.ExtendLength(contentLine.CurrentLength, spaceBefore);
+				//Wie viel mehr Platz wird auf der Akkordzeile benötigt, damit das Attachment passt?
+				var difference = targetOffset - builders.TextLine.CurrentLength - firstAttachment.Offset;
 
-				//Füge den Inhalt hinzu
-				contentLine.Append(block.Content, formatter);
-
-				//Gibt es ein Attachment?
-				if (block.Attachment is not null)
-				{
-					//Attachments sind immer auf der Akkordzeile
-					var attachmentLine = builders.ChordLine;
-
-					//Stelle sicher, dass die Zeile lang genug ist
-					var spaceBeforeAttachment = formatter?.SpaceBefore(builders.Owner, attachmentLine, block.Attachment) ?? 0;
-					attachmentLine.ExtendLength(currentTextLength, spaceBeforeAttachment);
-
-					//Füge das Attachment hinzu
-					attachmentLine.Append(block.Attachment, formatter);
-				}
+				//Verlängere die Textzeile um diese Differenz
+				builders.TextLine.ExtendLength(0, difference);
 			}
-		}
 
-		private List<DisplayBlock> GetDisplay(ISheetFormatter? formatter)
-		{
-			if (displayBlocksCache is not null) return displayBlocksCache;
-
-			//Erzeuge neuen Cache
-			var cache = new List<DisplayBlock>();
+			//Speichere aktuelle Textlänge für Render Bounds
+			var textStartIndex = builders.TextLine.CurrentLength;
+			var chordStartIndex = builders.ChordLine.CurrentLength;
 
 			//Trenne den Text an Attachments
-			if (attachments.Count == 0)
+			Attachment? currentAttachment = null;
+			foreach (var nextAttachment in attachments.Prepend(new EmptyAttachmentStub(0)).Append(new EmptyAttachmentStub(contentLength)))
 			{
-				cache.Add(new DisplayBlock(Content.CreateElement(formatter)));
-			}
-			else if (attachments.Count == 1)
-			{
-				if (attachments[0].Offset == 0)
+				//Merke das erste Attachment
+				if (currentAttachment is null)
 				{
-					cache.Add(new DisplayBlock(Content.CreateElement(formatter),
-						attachments[0].CreateDisplayAttachment(formatter)));
+					currentAttachment = nextAttachment;
+					continue;
 				}
-				else
+
+				//Berechne Textlänge
+				var textLength = nextAttachment.Offset - currentAttachment.Offset;
+				if (textLength > 0)
 				{
-					cache.Add(new DisplayBlock(Content.CreateElement(0, attachments[0].Offset, formatter)));
-					cache.Add(new DisplayBlock(Content.CreateElement(attachments[0].Offset, int.MaxValue, formatter),
-						attachments[^1].CreateDisplayAttachment(formatter)));
+					//Wird ein Attachment geschrieben?
+					var displayAttachment = currentAttachment.CreateDisplayAttachment(out var setAttachmentRenderBounds, formatter);
+					if (displayAttachment is not null)
+					{
+						//Stelle sicher, dass die Textzeile bisher so lang wie die Akkordzeile ist, um Content und Attachment zusammenzuhalten
+						var textLineGap = builders.ChordLine.CurrentLength - builders.TextLine.CurrentLength;
+						if (builders.TextLine.CurrentLength >= 0) textLineGap++;
+						if (textLineGap > 0)
+						{
+							builders.TextLine.Append(new SheetDisplayLineHyphen(textLineGap), formatter);
+							builders.TextLine.ExtendLength(builders.ChordLine.CurrentLength, 0);
+						}
+					}
+
+					//Schreibe den Text
+					var contentElement = Content.CreateElement(currentAttachment.Offset, textLength, formatter);
+					var lengthBefore = builders.TextLine.CurrentLength;
+					builders.TextLine.Append(contentElement, formatter);
+					var contentBounds = new RenderBounds(lengthBefore, builders.TextLine.CurrentLength);
+					contentRenderBounds = contentBounds;
+
+					//Schreibe ggf. das Attachment
+					if (displayAttachment is not null)
+					{
+						//Stelle sicher, dass die Akkordzeile bisher so lang wie die Textzeile ist, um Content und Attachment zusammenzuhalten
+						builders.ChordLine.ExtendLength(lengthBefore, 0);
+
+						//Schreibe das Attachment
+						lengthBefore = builders.ChordLine.CurrentLength;
+						builders.ChordLine.Append(displayAttachment, formatter);
+						var attachmentBounds = new RenderBounds(lengthBefore, builders.ChordLine.CurrentLength);
+						setAttachmentRenderBounds(attachmentBounds);
+					}
 				}
-			}
-			else if (attachments[0].Offset == 0)
-			{
-				for (var i = 1; i < attachments.Count; i++)
-					cache.Add(new DisplayBlock(Content.CreateElement(attachments[i - 1].Offset, attachments[i].Offset - attachments[i - 1].Offset, formatter),
-						attachments[i - 1].CreateDisplayAttachment(formatter)));
 
-				cache.Add(new DisplayBlock(Content.CreateElement(attachments[^1].Offset, int.MaxValue, formatter),
-					attachments[^1].CreateDisplayAttachment(formatter)));
-			}
-			else
-			{
-				cache.Add(new DisplayBlock(Content.CreateElement(0, attachments[0].Offset, formatter)));
-				for (var i = 1; i < attachments.Count; i++)
-					cache.Add(new DisplayBlock(Content.CreateElement(attachments[i - 1].Offset, attachments[i].Offset - attachments[i - 1].Offset, formatter),
-						attachments[i - 1].CreateDisplayAttachment(formatter)));
-				cache.Add(new DisplayBlock(Content.CreateElement(attachments[^1].Offset, int.MaxValue, formatter),
-					attachments[^1].CreateDisplayAttachment(formatter)));
+				//Merke das Attachment
+				currentAttachment = nextAttachment;
 			}
 
-			//Speichere den Cache
-			return displayBlocksCache = cache;
+			//Berechne Render Bounds
+			contentRenderBounds = new(textStartIndex, builders.TextLine.CurrentLength);
+			totalRenderBounds = firstAttachment is null ? contentRenderBounds
+				: new(textStartIndex, builders.CurrentLength);
 		}
 
+		//private List<DisplayBlock> GetDisplay(ISheetFormatter? formatter)
+		//{
+		//	if (displayBlocksCache is not null) return displayBlocksCache;
+
+		//	//Erzeuge neuen Cache
+		//	var cache = new List<DisplayBlock>();
+
+		//	//Trenne den Text an Attachments
+		//	if (attachments.Count == 0)
+		//	{
+		//		cache.Add(new DisplayBlock(Content.CreateElement(formatter)));
+		//	}
+		//	else if (attachments.Count == 1)
+		//	{
+		//		if (attachments[0].Offset == 0)
+		//		{
+		//			cache.Add(new DisplayBlock(Content.CreateElement(formatter),
+		//				attachments[0].CreateDisplayAttachment(formatter)));
+		//		}
+		//		else
+		//		{
+		//			cache.Add(new DisplayBlock(Content.CreateElement(0, attachments[0].Offset, formatter)));
+		//			cache.Add(new DisplayBlock(Content.CreateElement(attachments[0].Offset, int.MaxValue, formatter),
+		//				attachments[^1].CreateDisplayAttachment(formatter)));
+		//		}
+		//	}
+		//	else if (attachments[0].Offset == 0)
+		//	{
+		//		for (var i = 1; i < attachments.Count; i++)
+		//			cache.Add(new DisplayBlock(Content.CreateElement(attachments[i - 1].Offset, attachments[i].Offset - attachments[i - 1].Offset, formatter),
+		//				attachments[i - 1].CreateDisplayAttachment(formatter)));
+
+		//		cache.Add(new DisplayBlock(Content.CreateElement(attachments[^1].Offset, int.MaxValue, formatter),
+		//			attachments[^1].CreateDisplayAttachment(formatter)));
+		//	}
+		//	else
+		//	{
+		//		cache.Add(new DisplayBlock(Content.CreateElement(0, attachments[0].Offset, formatter)));
+		//		for (var i = 1; i < attachments.Count; i++)
+		//			cache.Add(new DisplayBlock(Content.CreateElement(attachments[i - 1].Offset, attachments[i].Offset - attachments[i - 1].Offset, formatter),
+		//				attachments[i - 1].CreateDisplayAttachment(formatter)));
+		//		cache.Add(new DisplayBlock(Content.CreateElement(attachments[^1].Offset, int.MaxValue, formatter),
+		//			attachments[^1].CreateDisplayAttachment(formatter)));
+		//	}
+
+		//	//Speichere den Cache
+		//	return displayBlocksCache = cache;
+		//}
+
 		private void ResetDisplayCache()
-			=> displayBlocksCache = null;
+		{
+			//=> displayBlocksCache = null;
+		}
 
 		internal record DisplayBlock
 		{
@@ -810,13 +837,32 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				Attachment = attachment;
 			}
 		}
+
+		private sealed class EmptyAttachmentStub : Attachment
+		{
+			internal override RenderBounds RenderBounds { get; private protected set; }
+
+			public EmptyAttachmentStub(int offset)
+				: base(offset)
+			{
+				RenderBounds = new(Offset, Offset);
+			}
+
+			internal override SheetDisplayLineElement? CreateDisplayAttachment(out Action<RenderBounds> setRenderBounds, ISheetFormatter? formatter)
+			{
+				setRenderBounds = SetRenderBounds;
+				return null;
+			}
+
+			private static void SetRenderBounds(RenderBounds _) { }
+		}
 		#endregion
 
 		#region Editing
 		internal override bool RemoveContent(int offset, int length, ISheetFormatter? formatter)
 		{
 			//Speichere die Länge vor der Bearbeitung
-			var lengthBefore = GetLength(formatter);
+			var lengthBefore = Content.GetLength(formatter);
 			if (length == 0 || offset >= lengthBefore) return false;
 
 			//Entferne den Inhalt
@@ -825,10 +871,10 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 			//Berechne die Länge nach der Bearbeitung
 			ResetDisplayCache();
-			var lengthAfter = GetLength(formatter);
+			var lengthAfter = Content.GetLength(formatter);
 
 			//Hat sich die Länge des Inhalts unerwartet verändert?
-			var moved = lengthBefore + lengthAfter - length;
+			var moved = lengthBefore - lengthAfter - length;
 
 			//Entferne alle Attachments, die im Bereich liegen und verschiebe die Attachments, die dahinter liegen.
 			//Behalte Attachments, die auf Offset 0 liegen
@@ -843,7 +889,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 				//Verschiebe Attachments nach dem Bereich
 				if (moved != 0)
-					a.SetOffset(a.Offset + moved);
+				a.SetOffset(a.Offset + moved);
 				return false;
 			});
 			ResetDisplayCache();
@@ -861,13 +907,13 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				return false;
 
 			//Füge Inhalt zusammen
-			var lengthBefore = GetLength(formatter);
-			var mergeLengthBefore = varietyMerge.GetLength(formatter);
+			var lengthBefore = Content.GetLength(formatter);
+			var mergeLengthBefore = varietyMerge.Content.GetLength(formatter);
 			Content.MergeContents(varietyMerge.Content, offset, formatter);
 			ResetDisplayCache();
 
 			//Verschiebe alle Attachments nach dem Offset
-			var lengthNow = GetLength(formatter);
+			var lengthNow = Content.GetLength(formatter);
 			var moved = lengthNow - lengthBefore - mergeLengthBefore;
 			if (moved != 0)
 				foreach (var attachment in attachments)
@@ -930,6 +976,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 		public abstract class Attachment
 		{
 			public int Offset { get; protected set; }
+			internal abstract RenderBounds RenderBounds { get; private protected set; }
 
 			protected Attachment(int offset)
 			{
@@ -947,12 +994,14 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				Offset = offset;
 			}
 
-			internal abstract SheetDisplayLineElement? CreateDisplayAttachment(ISheetFormatter? formatter);
+			internal abstract SheetDisplayLineElement? CreateDisplayAttachment(out Action<RenderBounds> setRenderBounds, ISheetFormatter? formatter);
 		}
 
 		public sealed class VarietyAttachment : Attachment
 		{
 			internal MaybeChord Content { get; }
+
+			internal override RenderBounds RenderBounds { get; private protected set; }
 
 			public VarietyAttachment(int offset, string text)
 				: base(offset)
@@ -966,8 +1015,14 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				Content = new(chord);
 			}
 
-			internal override SheetDisplayLineElement? CreateDisplayAttachment(ISheetFormatter? formatter)
-				=> Content.CreateElement(formatter);
+			internal override SheetDisplayLineElement? CreateDisplayAttachment(out Action<RenderBounds> setRenderBounds, ISheetFormatter? formatter)
+			{
+				setRenderBounds = SetRenderBounds;
+				return Content.CreateElement(formatter);
+			}
+
+			private void SetRenderBounds(RenderBounds bounds)
+				=> RenderBounds = bounds;
 		}
 	}
 	#endregion

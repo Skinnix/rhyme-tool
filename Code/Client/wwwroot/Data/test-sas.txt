@@ -3,8 +3,10 @@ G5 G6b G6
 (Tempo >150)
 
 [Strophe]
-   Gm                                EbM7/11
-Es war einmal ein Fürstenspross, dem war sein Leben mies,
+Emaj7/11 Emaj7/11 Emaj7/11 Emaj7/11 Emaj7/11 Emaj7/11
+Xmaj7/11 Xmaj7/11 Xmaj7/11 Xmaj7/11 Xmaj7/11 Xmaj7/11
+   Gm7A                              EbΔ/11 EbΔ/11 A               A
+Es war einmal ein Fürstenspross, dem war seineineinein Leben mies, A
      F                                  C5
 Sein Blut war blau, doch wenig Sinn zum Herrschen er bewies.
    Gm                          EbM7/11

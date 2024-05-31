@@ -9,6 +9,16 @@ public abstract class SheetDisplayLineBuilder : IComparable<SheetDisplayLineBuil
 
     public abstract void Append(SheetDisplayLineElement element, ISheetFormatter? formatter = null);
     public abstract void ExtendLength(int totalLength, int minExtension);
+
+	public abstract Spacer AppendSpacer();
+
+	public abstract record Spacer : SheetDisplayLineElement
+	{
+		public override int GetLength(ISheetFormatter? formatter) => 0;
+		public override string ToString(ISheetFormatter? formatter = null) => string.Empty;
+
+		public abstract void SetLength(int length);
+	}
 }
 
 public abstract class SheetDisplayLineBuilder<TLine> : SheetDisplayLineBuilder
@@ -32,8 +42,18 @@ public abstract class SheetDisplayTextLineBuilder<TLine> : SheetDisplayLineBuild
         currentLength += length;
     }
 
-    public override void ExtendLength(int totalLength, int minExtension)
+	public override Spacer AppendSpacer()
+	{
+		var spacer = new SpacerImpl(this);
+		Elements.Add(spacer);
+		return spacer;
+	}
+
+	public override void ExtendLength(int totalLength, int minExtension)
     {
+		if (minExtension < 0) minExtension = 0;
+		if (totalLength < currentLength) totalLength = currentLength;
+
         if (currentLength + minExtension > totalLength)
             totalLength = currentLength + minExtension;
 
@@ -44,4 +64,32 @@ public abstract class SheetDisplayTextLineBuilder<TLine> : SheetDisplayLineBuild
         Elements.Add(space);
         currentLength = totalLength;
     }
+
+	private sealed record SpacerImpl : Spacer
+	{
+		private readonly SheetDisplayTextLineBuilder<TLine> owner;
+
+		public SpacerImpl(SheetDisplayTextLineBuilder<TLine> owner)
+		{
+			this.owner = owner;
+		}
+
+		public override void SetLength(int length)
+		{
+			if (length == 0)
+			{
+				owner.Elements.Remove(this);
+			}
+			else
+			{
+				owner.Elements.Replace(this, new SheetDisplayLineSpace(length));
+				owner.currentLength += length;
+			}
+		}
+
+		public bool Equals(SpacerImpl? other)
+			=> ReferenceEquals(this, other);
+
+		public override int GetHashCode() => 0;
+	}
 }

@@ -9,7 +9,7 @@ namespace Skinnix.RhymeTool.Data.Notation;
 
 public enum ChordQuality : byte
 {
-    [EnumName("", "M")]
+    [EnumName("")]
     Major,
 
     [EnumName("m", "min", "-", Blacklist = ["ma"])]
