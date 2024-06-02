@@ -43,7 +43,9 @@ function handleBeforeInput(element, reference, event) {
 	}
 
 	//get selection
-	var selectionRange = getSelectionRange(element, function (node) {
+	var originalSelection = getSelection();
+	var originalRange = originalSelection.rangeCount == 0 ? null : originalSelection.getRangeAt(0);
+	var selectionRange = getSelectionRange(originalSelection, element, function (node) {
 		return node && node.classList && node.classList.contains('line');
 	});
 	var selection = {
@@ -59,18 +61,24 @@ function handleBeforeInput(element, reference, event) {
 		}
 	};
 
+	//handle event
 	document.getSelection().removeAllRanges();
 	reference.invokeMethodAsync('OnBeforeInput', {
 		inputType: event.inputType,
 		data: data,
 		selection: selection,
 	}).then(function (result) {
-		if (result.selection)
+		if (result.selection) {
+			//set new range
 			setSelectionRange(element, result.selection.metaline, result.selection.line, result.selection.range);
+		} else {
+			//restore old range
+			getSelection().addRange(originalRange);
+		}
 	});
 }
 
-function getSelectionRange(wrapper, elementCondition) {
+function getSelectionRange(selection, wrapper, elementCondition) {
 	function getNodeAndOffset(wrapper, elementCondition, node, offset) {
 		if (!offset)
 			offset = 0;
@@ -86,8 +94,6 @@ function getSelectionRange(wrapper, elementCondition) {
 			offset: offset
 		};
 	};
-
-	var selection = window.getSelection();
 
 	if (selection.anchorNode === selection.extentNode && elementCondition(selection.anchorNode)) {
 		return {

@@ -874,7 +874,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			var lengthAfter = Content.GetLength(formatter);
 
 			//Hat sich die Länge des Inhalts unerwartet verändert?
-			var moved = lengthBefore - lengthAfter - length;
+			var moved = lengthAfter - lengthBefore;
 
 			//Entferne alle Attachments, die im Bereich liegen und verschiebe die Attachments, die dahinter liegen.
 			//Behalte Attachments, die auf Offset 0 liegen
@@ -914,7 +914,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 			//Verschiebe alle Attachments nach dem Offset
 			var lengthNow = Content.GetLength(formatter);
-			var moved = lengthNow - lengthBefore - mergeLengthBefore;
+			var moved = lengthNow - lengthBefore;
 			if (moved != 0)
 				foreach (var attachment in attachments)
 					if (attachment.Offset >= offset)

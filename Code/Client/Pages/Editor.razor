@@ -57,4 +57,11 @@
             document = SheetReader.ReadSheet(reader);
         }
     }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+
+        await js.InvokeVoidAsync("console.log", "rerender: " + this.GetType().Name);
+    }
 }

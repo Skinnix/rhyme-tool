@@ -132,8 +132,6 @@
 
     private SheetLineCache? lineCache;
 
-    private SimpleRange? selectionUpdate;
-
     protected override void OnParametersSet()
     {
         base.OnParametersSet();
@@ -151,16 +149,12 @@
     {
         await base.OnAfterRenderAsync(firstRender);
 
-        if (selectionUpdate != null)
-        {
-            await js.InvokeVoidAsync("setSelectionRange", selectionUpdate.Value.Start, selectionUpdate.Value.End);
-            selectionUpdate = null;
-        }
+        await js.InvokeVoidAsync("console.log", "rerender: " + this.GetType().Name);
     }
 
     private void OnLineModified(object? sender, ModifiedEventArgs args)
     {
-        //StateHasChanged();
+        StateHasChanged();
     }
 
     public async Task<MetalineEditResult?> HandleInput(InputEventData data)
@@ -199,21 +193,20 @@
             case "deleteContentBackward":
             case "deleteContent":
                 lineEditResult = startLine.Editing.DeleteContent(selectionRange, Formatter);
-                StateHasChanged();
-                await js.InvokeVoidAsync("console.log", "delete: " + data.InputType);
                 break;
             case "deleteContentForward":
                 lineEditResult = startLine.Editing.DeleteContent(selectionRange, Formatter, true);
-                await js.InvokeVoidAsync("console.log", "delete forward: " + data.InputType);
                 break;
             default:
                 await js.InvokeVoidAsync("console.log", "unknown: " + data.InputType);
                 break;
         }
 
-        StateHasChanged();
         if (lineEditResult == null)
             return null;
+
+        if (lineEditResult.Success)
+            StateHasChanged();
 
         return new MetalineEditResult(data.Selection.Start.Line, lineEditResult);
     }

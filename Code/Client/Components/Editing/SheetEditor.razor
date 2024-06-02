@@ -45,14 +45,16 @@
         }
     }
 
-    protected override void OnAfterRender(bool firstRender)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        base.OnAfterRender(firstRender);
+        await base.OnAfterRenderAsync(firstRender);
 
         if (firstRender)
         {
-            js.InvokeVoidAsync("registerBeforeInput", editorWrapper, DotNetObjectReference.Create(this));
+            await js.InvokeVoidAsync("registerBeforeInput", editorWrapper, DotNetObjectReference.Create(this));
         }
+
+        await js.InvokeVoidAsync("console.log", "rerender: " + this.GetType().Name);
     }
 
     [JSInvokable("OnBeforeInput")]
