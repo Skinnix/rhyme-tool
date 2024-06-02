@@ -17,7 +17,7 @@ builder.Services.AddServerSideBlazor()
 		o.DetailedErrors = true;
 	});
 
-builder.Services.AddRhymeToolClient("http://localhost:5276/");
+builder.Services.AddRhymeToolClient("https://localhost:7105/chords/");
 #endif
 
 var app = builder.Build();
@@ -37,23 +37,49 @@ else
 app.UseHttpsRedirection();
 
 #if DEBUG
-app.UseBlazorFrameworkFiles(); // "/chords");
+app.UseBlazorFrameworkFiles("/chords");
 #endif
 
 app.UseStaticFiles();
 
 app.UseRouting();
 
-app.MapRazorPages();
-app.MapControllers();
+//app.MapRazorPages();
+//app.MapControllers();
 
 #if SERVER_SIDE
 app.Services.UseRhymeToolClient();
 
-app.MapBlazorHub();
+
+app.MapWhen(ctx => ctx.Request.Path.StartsWithSegments("/chords"), chords =>
+{
+	chords.UseBlazorFrameworkFiles("/chords");
+	chords.UseRouting();
+	chords.UseEndpoints(endpoints =>
+	{
+		endpoints.MapFallbackToPage("/chords/{*path:nonfile}", "/_Host");
+	});
+});
+
+app.MapBlazorHub("/chords/_blazor");
 app.MapFallbackToPage("/_Host");
 #else
-app.MapFallbackToFile("/index.html");
+
+app.MapWhen(ctx => ctx.Request.Path.StartsWithSegments("/chords"), chords =>
+{
+	chords.UseBlazorFrameworkFiles("/chords");
+	chords.UseRouting();
+	chords.UseEndpoints(endpoints =>
+	{
+		endpoints.MapFallbackToFile("/chords/{*path:nonfile}", "/chords/index.html");
+	});
+});
+
+app.MapFallback(context =>
+{
+	context.Response.Redirect("/chords");
+	return Task.CompletedTask;
+});
 #endif
 
 app.Run();

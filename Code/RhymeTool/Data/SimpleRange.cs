@@ -44,6 +44,8 @@ public readonly struct SimpleRange
 		}
 	}
 
+	public static SimpleRange CursorAt(int offset) => new(offset, offset);
+
 	public RangeOverlap CheckOverlap(int offset, int length)
 	{
 		if (offset > End) return RangeOverlap.OutsideAfterEnd;

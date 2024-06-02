@@ -332,7 +332,7 @@ public class SheetReader
 			SheetVarietyLine.VarietyComponent component;
 			if (!isWordWhitespace)
 			{
-				component = SheetVarietyLine.VarietyComponent.FromString(new string(line[startOffset..offset]), SheetVarietyLine.AllowedType.None);
+				component = SheetVarietyLine.VarietyComponent.FromString(new string(line[startOffset..offset]), SheetVarietyLine.SpecialContentType.None);
 			}
 			else
 			{
@@ -345,7 +345,7 @@ public class SheetReader
 					else
 						spaceLength++;
 				}
-				component = SheetVarietyLine.VarietyComponent.CreateSpace(spaceLength, SheetVarietyLine.AllowedType.None);
+				component = SheetVarietyLine.VarietyComponent.CreateSpace(spaceLength, SheetVarietyLine.SpecialContentType.None);
 			}
 
 			//Füge die Attachments hinzu
@@ -361,12 +361,12 @@ public class SheetReader
             //Verlängere die Zeile um Leerzeichen
             if (nextChordOffset > offset)
             {
-                components.Add(SheetVarietyLine.VarietyComponent.CreateSpace(nextChordOffset - offset, SheetVarietyLine.AllowedType.None));
+                components.Add(SheetVarietyLine.VarietyComponent.CreateSpace(nextChordOffset - offset, SheetVarietyLine.SpecialContentType.None));
                 offset = nextChordOffset;
             }
 
             //Füge ein einzelnes Leerzeichen als Wort hinzu
-			var word = new SheetVarietyLine.VarietyComponent(" ", SheetVarietyLine.AllowedType.None);
+			var word = new SheetVarietyLine.VarietyComponent(" ", SheetVarietyLine.SpecialContentType.None);
             offset++;
 
 			//Füge den Akkord und ggf. Suffix hinzu

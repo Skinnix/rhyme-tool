@@ -8,6 +8,8 @@ public interface ISheetDisplayLineEditing
 
 public record LineEditResult(bool Success, SimpleRange? NewSelection)
 {
+	public static LineEditResult Fail => new(false, null);
+
 	public List<SheetDisplayLineElement> ModifiedElements { get; init; } = new();
 }
 

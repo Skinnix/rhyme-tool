@@ -4,12 +4,15 @@ namespace Skinnix.RhymeTool.Data.Notation.Display;
 
 public interface ISheetDisplayLineElementSource;
 
-public abstract record SheetDisplayLineElement
+public abstract record SheetDisplayLineElementBase
+{
+	public override string ToString() => ToString(formatter: null);
+	public abstract string ToString(ISheetFormatter? formatter = null);
+}
+
+public abstract record SheetDisplayLineElement : SheetDisplayLineElementBase
 {
     public abstract int GetLength(ISheetFormatter? formatter);
-
-    public override string ToString() => ToString(formatter: null);
-    public abstract string ToString(ISheetFormatter? formatter = null);
 }
 
 public record SheetDisplayLineVoid : SheetDisplayLineElement

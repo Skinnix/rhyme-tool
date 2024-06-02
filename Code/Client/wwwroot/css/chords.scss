@@ -7,7 +7,7 @@ $separatorColor: #6c757d;
 	src: url('fonts/FiraCode-Regular.woff2') format('woff'), url('fonts/FiraCode-Regular.ttf') format('truetype');
 }
 
-.chord-sheet {
+.chord-sheet-wrapper {
 	overflow-x: auto;
 }
 
@@ -41,6 +41,14 @@ $separatorColor: #6c757d;
 		display: flex;
 		flex-direction: column;
 		overflow: visible;
+
+		&:not(:first-child) {
+			margin-top: 0.2em;
+		}
+
+		&:not(:last-child) {
+			margin-bottom: 0.2em;
+		}
 
 		.line {
 			margin: 0;
