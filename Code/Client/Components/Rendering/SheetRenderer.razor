@@ -108,11 +108,13 @@
         {
             @foreach (var line in Document.Lines)
             {
-                <div class="metaline metaline-lines">
-                    @foreach (var display in line.CreateDisplayLines(Formatter))
-                    {
-                        RenderLine(line, display);
-                    }
+                <div class="metaline">
+                    <div class="metaline-lines">
+                        @foreach (var display in line.CreateDisplayLines(Formatter))
+                        {
+                            RenderLine(line, display);
+                        }
+                    </div>
                 </div>
             }
         }

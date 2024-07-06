@@ -11,8 +11,18 @@ $separatorColor: #6c757d;
 	overflow-x: auto;
 }
 
+
+.btn.btn-tiny {
+	--bs-btn-font-size: .6rem;
+	padding: 0.3em 0.7em;
+}
+
 .chord-sheet {
 	//font-family: 'Fira Code', monospace;
+	display: grid;
+	grid-template-columns: min-content auto;
+	grid-gap: 0.4em 0.2em;
+	align-items: baseline;
 	font-family: monospace;
 	line-height: 1.1em;
 
@@ -37,24 +47,66 @@ $separatorColor: #6c757d;
 		border: 0 !important;
 	}
 
-	.metaline.metaline-lines {
-		display: flex;
-		flex-direction: column;
+	.metaline {
+		display: contents;
+		flex-direction: row;
+		justify-items: stretch;
 		overflow: visible;
 
-		&:not(:first-child) {
-			margin-top: 0.2em;
+		.metaline-controls {
+			grid-column: 1;
+			align-self: center;
+
+			.line-type {
+
+				.dropdown-toggle::after {
+					content: unset;
+				}
+			}
 		}
 
-		&:not(:last-child) {
-			margin-bottom: 0.2em;
-		}
-
-		.line {
-			margin: 0;
-			padding: 0;
+		.metaline-lines {
+			grid-column: 2;
+			display: grid;
+			grid-template-columns: min-content auto;
+			grid-gap: 0 0.2em;
+			align-items: baseline;
 			overflow: visible;
-			white-space: pre;
+
+			& {
+				//bracket
+				$bracket-color: #8080808f;
+				background-image: linear-gradient($bracket-color, $bracket-color), linear-gradient($bracket-color, $bracket-color);
+				background-repeat: no-repeat;
+				background-size: 0.4em 3px;
+				background-position: top left, bottom left;
+				border: solid $bracket-color;
+				border-width: 0 0 0 3px;
+				padding: 0.3em 0.3em 0.3em 0;
+			}
+
+			.line-controls {
+				grid-column: 1;
+
+				.line-type {
+					.btn {
+						width: 100%;
+					}
+
+					.dropdown-toggle::after {
+						//hide dropdown triangle
+						content: unset;
+					}
+				}
+			}
+
+			.line {
+				grid-column: 2;
+				margin: 0;
+				padding: 0;
+				overflow: visible;
+				white-space: pre;
+			}
 		}
 	}
 
@@ -70,7 +122,7 @@ $separatorColor: #6c757d;
 		}
 	}
 
-	.line.line-empty::before, .line:empty::before {
+	.line.line-emptyafter, .line:empty::after {
 		content: ' ';
 	}
 

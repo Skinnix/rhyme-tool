@@ -2,18 +2,55 @@
 
 public interface ISheetDisplayLineEditing
 {
-	public LineEditResult InsertContent(string content, SimpleRange selectionRange, ISheetFormatter? formatter);
-	public LineEditResult DeleteContent(SimpleRange selectionRange, ISheetFormatter? formatter, bool forward = false);
+	public SheetLine Line { get; }
+	public int LineId { get; }
+
+	public MetalineEditResult InsertContent(SheetDisplayLineEditingContext context, string content, ISheetFormatter? formatter = null);
+	public MetalineEditResult DeleteContent(SheetDisplayLineEditingContext context, bool forward = false, ISheetFormatter? formatter = null);
 }
 
-public record LineEditResult(bool Success, SimpleRange? NewSelection)
+public record struct SheetDisplayLineEditingContext(SimpleRange SelectionRange)
 {
-	public static LineEditResult Fail => new(false, null);
-
-	public List<SheetDisplayLineElement> ModifiedElements { get; init; } = new();
+	public Func<SheetLine?>? GetLineBefore { get; init; }
+	public Func<SheetLine?>? GetLineAfter { get; init; }
 }
 
-public record MetalineEditResult(int Line, LineEditResult LineResult)
+public record MetalineEditResult(bool Success, MetalineSelectionRange? NewSelection)
 {
-	public bool Success => LineResult.Success;
+	public static MetalineEditResult Fail => new(false, null);
+
+	public bool RemoveLine { get; init; }
+	public bool RemoveLineAfter { get; init; }
+	public bool RemoveLineBefore { get; init; }
+	public IReadOnlyList<SheetLine> InsertLinesBefore { get; init; } = [];
+	public IReadOnlyList<SheetLine> InsertLinesAfter { get; init; } = [];
+	public IReadOnlyList<SheetDisplayLineElement> ModifiedElements { get; init; } = [];
+}
+
+public record MetalineSelectionRange
+{
+	public SheetLine Metaline { get; init; }
+	public int? LineId { get; init; }
+	public int? LineIndex { get; init; }
+	public SimpleRange Range { get; init; }
+
+	public MetalineSelectionRange(ISheetDisplayLineEditing editing, SimpleRange range)
+	{
+		Metaline = editing.Line;
+		LineId = editing.LineId;
+		Range = range;
+	}
+
+	public MetalineSelectionRange(SheetLine metaline, SimpleRange range, int lineIndex)
+	{
+		Metaline = metaline;
+		Range = range;
+		LineIndex = lineIndex;
+	}
+}
+
+public static class SheetDisplayLineEditingExtensions
+{
+	public static MetalineEditResult CreateSuccessEditResult(this ISheetDisplayLineEditing editing, SimpleRange newSelection)
+		=> new MetalineEditResult(true, new MetalineSelectionRange(editing, newSelection));
 }

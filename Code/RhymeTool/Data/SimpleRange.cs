@@ -25,6 +25,8 @@ public enum RangeOverlap
 
 public readonly struct SimpleRange
 {
+	public static readonly SimpleRange Zero = new(0, 0);
+
 	public int Start { get; }
 	public int End { get; }
 
@@ -61,4 +63,14 @@ public readonly struct SimpleRange
 			| (overlapsStart ? RangeOverlap.StartFlag : default)
 			| (overlapsEnd ? RangeOverlap.EndFlag : default);
 	}
+}
+
+
+public readonly record struct ComponentRange
+{
+	public int? StartComponent { get; }
+	public int StartOffset { get; }
+
+	public int? EndComponent { get; }
+	public int EndOffset { get; }
 }

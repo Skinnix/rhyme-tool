@@ -15,13 +15,17 @@
             ?? (note.Accidental == AccidentalType.None ? new(note.Type.GetDisplayName())
             : new(note.Type.GetDisplayName(), note.Accidental.GetDisplayName()));
 
-        @(format.Type)<span class="accidental">@format.Accidental</span>
+        @(format.Type)
+
+        <span class="accidental">@format.Accidental</span>
     }
 
     void RenderChord(Chord chord)
     {
         <span class="element element-chord chord">
-            <span class="chord-root">@{ RenderNote(chord.Root); }</span><span class="chord-quality">@chord.Quality.ToString(Formatter)</span>
+            <span class="chord-root">@{
+                    RenderNote(chord.Root);
+                }</span><span class="chord-quality">@chord.Quality.ToString(Formatter)</span>
 
             @if (chord.Alterations.Count > 0)
             {
@@ -44,7 +48,9 @@
             {
                 <span class="chord-bass-separator">/</span>
 
-                <span class="chord-bass">@{ RenderNote(chord.Bass.Value, true); }</span>
+                <span class="chord-bass">@{
+                        RenderNote(chord.Bass.Value, true);
+                    }</span>
             }
         </span>
     }
@@ -89,38 +95,95 @@
             RenderElement(element);
     }
 
-    void RenderLine(SheetDisplayLine line, int lineIndex)
+    void RenderLine(SheetDisplayLine line)
     {
         switch (line)
         {
             case SheetDisplayEmptyLine empty:
-                <div class="line line-empty" data-line-index="@lineIndex"></div>
+                <div class="line line-empty" data-line-index="@line.Id">
+                    @(" ")
+                </div>
                 break;
 
             case SheetDisplayChordLine chords:
-                <div class="line line-chords" data-line-index="@lineIndex">
-                    @{ RenderElements(line.GetElements()); }
+                <div class="line line-chords" data-line-index="@line.Id">
+                    @{
+                        RenderElements(line.GetElements());
+                    }
                 </div>
                 break;
 
             case SheetDisplayTextLine text:
-                <div class="line line-text" data-line-index="@lineIndex">
-                    @{ RenderElements(line.GetElements()); }
+                <div class="line line-text" data-line-index="@line.Id">
+                    @{
+                        RenderElements(line.GetElements());
+                    }
                 </div>
                 break;
         }
+    }
+
+    void RenderLineTypeButton(SheetDisplayLine display)
+    {
+        <div class="dropdown line-type">
+            <button class="btn btn-tiny btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                @switch (display)
+                {
+                    case SheetDisplayChordLine _:
+                        <i class="fa-solid fa-music"></i>
+                        break;
+                    case SheetDisplayTextLine _:
+                        <i class="fa-solid fa-font"></i>
+                        break;
+                    default:
+                        <i class="fa-solid fa-ellipsis"></i>
+                        break;
+                }
+            </button>
+            <ul class="dropdown-menu">
+                <li><button class="dropdown-item" href="#"><i class="fa-solid fa-font"></i> Text</button></li>
+                <li><button class="dropdown-item" href="#"><i class="fa-solid fa-music"></i> Akkord</button></li>
+            </ul>
+        </div>
     }
 }
 
 @if (lineCache != null)
 {
-    var lineIndex = 0;
+    var displayLines = lineCache.GetDisplayLines(Formatter);
 
-    <div class="metaline metaline-lines" data-metaline="@(lineCache.Line.Guid)">
-        @foreach (var display in lineCache.GetDisplayLines(Formatter))
-        {
-            RenderLine(display, lineIndex++);
-        }
+    <div class="metaline" data-metaline="@(lineCache.Line.Guid)" data-type="@Line?.GetType()?.Name">
+        <div class="metaline-controls" contenteditable="false">
+            <div class="dropdown metaline-type">
+                @switch (Line)
+                {
+                    case SheetVarietyLine:
+                        <a href="#" class="btn btn-sm btn-outline-secondary dropdown-toggle fa-solid fa-font" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        </a>
+                        break;
+                    default:
+                        <a href="#" class="btn btn-sm btn-outline-secondary dropdown-toggle fa-solid fa-ellipsis" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        </a>
+                        break;
+                }
+                <ul class="dropdown-menu">
+                    <li><button class="dropdown-item" href="#"><i class="fa-solid fa-font"></i> Text</button></li>
+                    <li><button class="dropdown-item" href="#"><i class="fa-solid fa-music"></i> Akkord</button></li>
+                </ul>
+            </div>
+        </div>
+        <div class="metaline-lines">
+            @foreach (var display in lineCache.GetDisplayLines(Formatter))
+            {
+                <div class="line-controls" contenteditable="false">
+                    @{
+                        RenderLineTypeButton(display);
+                    }
+                </div>
+
+                RenderLine(display);
+            }
+        </div>
     </div>
 }
 
@@ -159,22 +222,27 @@
 
     public async Task<MetalineEditResult?> HandleInput(InputEventData data)
     {
-        if (lineCache == null) throw new InvalidOperationException("editor not initialized");
+        if (Line is null || lineCache is null || Document is null) throw new InvalidOperationException("Editor not initialized");
 
         //find lines
         var lines = lineCache.GetDisplayLines();
-        var startLine = lines[data.Selection.Start.Line];
-        var endLine = lines[data.Selection.End.Line];
+        var startLine = lines.FirstOrDefault(l => l.Id == data.Selection.Start.Line);
+        var endLine = lines.FirstOrDefault(l => l.Id == data.Selection.End.Line);
 
-        if (startLine != endLine)
+        if (startLine is null || endLine is null || startLine != endLine)
         {
             return null; //TODO: for now, we don't support multiline editing
         }
 
         //selection range
         var selectionRange = new SimpleRange(data.Selection.Start.Offset, data.Selection.End.Offset);
+        var context = new SheetDisplayLineEditingContext(selectionRange)
+        {
+            GetLineBefore = () => Document.Lines.GetLineBefore(Line),
+            GetLineAfter = () => Document.Lines.GetLineAfter(Line),
+        };
 
-        LineEditResult? lineEditResult = null;
+        MetalineEditResult? editResult = null;
         switch (data.InputType)
         {
             case "insertFromDrop":
@@ -182,32 +250,69 @@
             case "insertFromPasteAsQuotation":
             case "insertLink":
             case "insertText":
-                lineEditResult = startLine.Editing.InsertContent(data.Data, selectionRange, Formatter);
+                editResult = startLine.Editing.InsertContent(context, data.Data, Formatter);
                 await js.InvokeVoidAsync("console.log", "insert: " + data.InputType);
                 break;
             case "insertLineBreak":
+            case "insertParagraph":
+                editResult = startLine.Editing.InsertContent(context, "\n", Formatter);
                 await js.InvokeVoidAsync("console.log", "line break: " + data.InputType);
                 break;
             case "deleteByCut":
             case "deleteByDrag":
             case "deleteContentBackward":
             case "deleteContent":
-                lineEditResult = startLine.Editing.DeleteContent(selectionRange, Formatter);
+                editResult = startLine.Editing.DeleteContent(context, false, Formatter);
                 break;
             case "deleteContentForward":
-                lineEditResult = startLine.Editing.DeleteContent(selectionRange, Formatter, true);
+                editResult = startLine.Editing.DeleteContent(context, true, Formatter);
                 break;
             default:
                 await js.InvokeVoidAsync("console.log", "unknown: " + data.InputType);
                 break;
         }
 
-        if (lineEditResult == null)
+        if (editResult == null)
             return null;
 
-        if (lineEditResult.Success)
-            StateHasChanged();
+        if (!editResult.Success)
+            return editResult;
 
-        return new MetalineEditResult(data.Selection.Start.Line, lineEditResult);
+        //Füge ggf. Zeilen hinzu oder entferne sie
+        Document.Lines.InsertAndRemove(Line, editResult.RemoveLine, editResult.RemoveLineBefore, editResult.RemoveLineAfter,
+            editResult.InsertLinesBefore, editResult.InsertLinesAfter);
+
+        StateHasChanged();
+        return editResult;
+    }
+
+    private MetalineType GetEffectiveType(IReadOnlyList<SheetDisplayLine> displayLines)
+    {
+        if (displayLines.Count == 0)
+            return MetalineType.Unknown;
+
+        var type = MetalineType.Unknown;
+        foreach (var display in displayLines)
+        {
+            switch (display)
+            {
+                case SheetDisplayChordLine:
+                    type |= MetalineType.Chords;
+                    break;
+                case SheetDisplayTextLine:
+                    type |= MetalineType.Text;
+                    break;
+            }
+        }
+
+        return type;
+    }
+
+    private enum MetalineType
+    {
+        Unknown = 0,
+        Text = 1,
+        Chords = 2,
+        TextAndChords = Text | Chords,
     }
 }

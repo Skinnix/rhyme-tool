@@ -5,7 +5,7 @@ public abstract class SheetDisplayLineBuilder : IComparable<SheetDisplayLineBuil
     public abstract int CurrentLength { get; }
 
     public abstract int CompareTo(SheetDisplayLineBuilder? other);
-    public abstract SheetDisplayLine CreateDisplayLine(ISheetDisplayLineEditing editing);
+    public abstract SheetDisplayLine CreateDisplayLine(int id, ISheetDisplayLineEditing editing);
 
     public abstract void Append(SheetDisplayLineElement element, ISheetFormatter? formatter = null);
     public abstract void ExtendLength(int totalLength, int minExtension);
@@ -24,7 +24,7 @@ public abstract class SheetDisplayLineBuilder : IComparable<SheetDisplayLineBuil
 public abstract class SheetDisplayLineBuilder<TLine> : SheetDisplayLineBuilder
     where TLine : SheetDisplayLine
 {
-    public abstract override TLine CreateDisplayLine(ISheetDisplayLineEditing editing);
+    public abstract override TLine CreateDisplayLine(int id, ISheetDisplayLineEditing editing);
 }
 
 public abstract class SheetDisplayTextLineBuilder<TLine> : SheetDisplayLineBuilder<TLine>

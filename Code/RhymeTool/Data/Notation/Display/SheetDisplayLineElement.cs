@@ -4,8 +4,12 @@ namespace Skinnix.RhymeTool.Data.Notation.Display;
 
 public interface ISheetDisplayLineElementSource;
 
+public record struct SheetDisplaySliceInfo(int SliceIndex, int SlicePartIndex, int ContentOffset, bool IsVirtual = false);
+
 public abstract record SheetDisplayLineElementBase
 {
+	public required SheetDisplaySliceInfo Slice { get; init; }
+
 	public override string ToString() => ToString(formatter: null);
 	public abstract string ToString(ISheetFormatter? formatter = null);
 }

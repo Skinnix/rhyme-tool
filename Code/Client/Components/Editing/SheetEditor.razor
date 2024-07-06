@@ -1,5 +1,6 @@
 ﻿@namespace Skinnix.RhymeTool.Client.Components.Editing
 
+@using Skinnix.RhymeTool.ComponentModel
 @using Skinnix.RhymeTool.Data
 @using Skinnix.RhymeTool.Data.Notation
 @using Skinnix.RhymeTool.Data.Notation.Display
@@ -25,13 +26,15 @@
 @code {
     private static readonly bool IsDebug =
 #if DEBUG
-        true;
+    true;
 #else
         false;
 #endif
 
     [Parameter] public SheetDocument? Document { get; set; }
     [Parameter] public ISheetFormatter? Formatter { get; set; }
+
+    private SheetDocument? loadedDocument;
 
     private ElementReference editorWrapper;
 
@@ -42,6 +45,23 @@
         {
             if (value.Line != null)
                 lineEditors[value.Line.Guid] = value;
+        }
+    }
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        if (Document != loadedDocument)
+        {
+            if (loadedDocument is not null)
+                loadedDocument.Lines.Modified -= OnLinesModified;
+
+            lineEditors.Clear();
+            loadedDocument = Document;
+
+            if (loadedDocument is not null)
+                loadedDocument.Lines.Modified += OnLinesModified;
         }
     }
 
@@ -57,22 +77,27 @@
         await js.InvokeVoidAsync("console.log", "rerender: " + this.GetType().Name);
     }
 
+    private void OnLinesModified(object? sender, ModifiedEventArgs args)
+    {
+        StateHasChanged();
+    }
+
     [JSInvokable("OnBeforeInput")]
-    public async Task<MetalineEditResult> OnBeforeInput(InputEventData data)
+    public async Task<JsMetalineEditResult> OnBeforeInput(InputEventData data)
     {
         var startEditor = lineEditors[data.Selection.Start.Metaline];
         if (data.Selection.End.Metaline != data.Selection.Start.Metaline)
-            return new MetalineEditResult(false, null); //TODO: for now, we don't support multi-line selections
+            return new JsMetalineEditResult(false, null); //TODO: for now, we don't support multi-line selections
 
         var editResult = await startEditor.HandleInput(data);
         if (editResult == null)
-            return new MetalineEditResult(false, null);
+            return new JsMetalineEditResult(false, null);
 
-        var selection = editResult.LineResult.NewSelection == null ? null
-            : new MetalineSelectionRange(data.Selection.Start.Metaline, editResult.Line, editResult.LineResult.NewSelection.Value);
-        return new MetalineEditResult(editResult.Success, selection);
+        var selection = editResult.NewSelection is null ? null
+            : new JsMetalineSelectionRange(editResult.NewSelection.Metaline.Guid, editResult.NewSelection.LineId, editResult.NewSelection.LineIndex, editResult.NewSelection.Range);
+        return new JsMetalineEditResult(editResult.Success, selection);
     }
 
-    public record MetalineEditResult(bool Success, MetalineSelectionRange? Selection);
-    public record MetalineSelectionRange(Guid Metaline, int Line, SimpleRange Range);
+    public record JsMetalineEditResult(bool Success, JsMetalineSelectionRange? Selection);
+    public record JsMetalineSelectionRange(Guid Metaline, int? LineId, int? LineIndex, SimpleRange Range);
 }

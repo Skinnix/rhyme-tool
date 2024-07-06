@@ -48,15 +48,17 @@ function handleBeforeInput(element, reference, event) {
 	var selectionRange = getSelectionRange(originalSelection, element, function (node) {
 		return node && node.classList && node.classList.contains('line');
 	});
+	var selectionStartLine = getLineId(selectionRange.start.node);
+	var selectionEndLine = getLineId(selectionRange.end.node);
 	var selection = {
 		start: {
-			metaline: selectionRange.start.node.parentElement.getAttribute('data-metaline'),
-			line: parseInt(selectionRange.start.node.getAttribute('data-line-index')),
+			metaline: selectionStartLine.metaline,
+			line: selectionStartLine.line,
 			offset: selectionRange.start.offset
 		},
 		end: {
-			metaline: selectionRange.end.node.parentElement.getAttribute('data-metaline'),
-			line: parseInt(selectionRange.end.node.getAttribute('data-line-index')),
+			metaline: selectionEndLine.metaline,
+			line: selectionEndLine.line,
 			offset: selectionRange.end.offset
 		}
 	};
@@ -70,12 +72,29 @@ function handleBeforeInput(element, reference, event) {
 	}).then(function (result) {
 		if (result.selection) {
 			//set new range
-			setSelectionRange(element, result.selection.metaline, result.selection.line, result.selection.range);
+			setSelectionRange(element, result.selection.metaline, result.selection.lineId, result.selection.lineIndex, result.selection.range);
 		} else {
 			//restore old range
 			getSelection().addRange(originalRange);
 		}
 	});
+}
+
+function getLineId(node) {
+	var metalineId;
+	var lineId;
+	for (; node; node = node.parentElement) {
+		if (metalineId == null)
+			metalineId = node.getAttribute('data-metaline');
+		if (lineId == null)
+			lineId = node.getAttribute('data-line-index');
+
+		if (metalineId && lineId)
+			return {
+				metaline: metalineId,
+				line: parseInt(lineId)
+			};
+	}
 }
 
 function getSelectionRange(selection, wrapper, elementCondition) {
@@ -124,32 +143,64 @@ function getSelectionRange(selection, wrapper, elementCondition) {
 	};
 }
 
-function setSelectionRange(wrapper, metaline, line, selectionRange) {
+function setSelectionRange(wrapper, metaline, lineId, lineIndex, selectionRange) {
 	//find metaline
 	var metalineElement = wrapper.querySelector('.metaline[data-metaline="' + metaline + '"]');
 
 	//find line
-	var lineElement = metalineElement.querySelector('.line[data-line-index="' + line + '"]');
+	var lineElement;
+	if (lineId != null) {
+		lineElement = metalineElement.querySelector('.line[data-line-index="' + lineId + '"]');
+	} else {
+		var lines = metalineElement.querySelectorAll('.line');
+		lineElement = lineIndex < 0 ? lines[lines.length + lineIndex] : lines[lineIndex];
+	}
 
 	//find selection anchors
 	function findNodeAndOffset(element, offset) {
-		var currentOffset = 0;
+		if (offset < 0)
+			return findNodeAndOffsetFromEnd(element, -offset - 1);
+		else
+			return findNodeAndOffsetFromStart(element, offset);
+	}
+	function findNodeAndOffsetFromStart(element, offsetFromStart) {
+		var currentOffsetFromStart = 0;
 		for (var i = 0; i < element.childNodes.length; i++) {
 			var child = element.childNodes[i];
-			var afterOffset = currentOffset + child.textContent.length;
-			if (offset < afterOffset)
-				return findNodeAndOffset(child, offset - currentOffset);
+			var afterOffset = currentOffsetFromStart + child.textContent.length;
+			if (offsetFromStart < afterOffset)
+				return findNodeAndOffset(child, offsetFromStart - currentOffsetFromStart);
 
 			//end of content?
-			if (afterOffset == offset && i == element.childNodes.length - 1)
-				return findNodeAndOffset(child, offset - currentOffset);
+			if (afterOffset == offsetFromStart && i == element.childNodes.length - 1)
+				return findNodeAndOffset(child, offsetFromStart - currentOffsetFromStart);
 
-			currentOffset = afterOffset;
+			currentOffsetFromStart = afterOffset;
 		}
 
 		return {
 			node: element,
-			offset: offset
+			offset: offsetFromStart
+		};
+	}
+	function findNodeAndOffsetFromEnd(element, offsetFromEnd) {
+		var currentOffsetFromEnd = 0;
+		for (var i = element.childNodes.length - 1; i >= 0; i--) {
+			var child = element.childNodes[i];
+			var beforeOffset = currentOffsetFromEnd + child.textContent.length;
+			if (offsetFromEnd > beforeOffset)
+				return findNodeAndOffsetFromEnd(child, offsetFromEnd - currentOffsetFromEnd);
+
+			//start of content?
+			if (beforeOffset == offsetFromEnd && i == 0)
+				return findNodeAndOffsetFromEnd(child, offsetFromEnd - currentOffsetFromEnd);
+
+			currentOffsetFromStart = beforeOffset;
+		}
+
+		return {
+			node: element,
+			offset: element.textContent.length - offsetFromEnd
 		};
 	}
 

@@ -2,7 +2,7 @@
 
 namespace Skinnix.RhymeTool.Data.Notation.Display;
 
-public abstract record SheetDisplayLine
+public abstract record SheetDisplayLine(int Id)
 {
 	public required ISheetDisplayLineEditing Editing { get; init; }
 
@@ -34,7 +34,7 @@ public abstract record SheetDisplayLine
 	}
 }
 
-public sealed record SheetDisplayEmptyLine : SheetDisplayLine
+public sealed record SheetDisplayEmptyLine(int Id) : SheetDisplayLine(Id)
 {
 	public override IEnumerable<SheetDisplayLineElement> GetElements()
         => Enumerable.Empty<SheetDisplayLineElement>();
@@ -52,7 +52,8 @@ public sealed record SheetDisplaySegmentTitleLine : SheetDisplayLine
 {
 	public string Title { get; init; }
 
-	public SheetDisplaySegmentTitleLine(string title)
+	public SheetDisplaySegmentTitleLine(int id, string title)
+		: base(id)
 	{
 		Title = title;
 	}
@@ -69,8 +70,9 @@ public sealed record SheetDisplayTextLine : SheetDisplayLine
 {
     private readonly SheetDisplayLineElement[] elements;
 
-    public SheetDisplayTextLine(params SheetDisplayLineElement[] elements) : this((IEnumerable<SheetDisplayLineElement>)elements) { }
-    public SheetDisplayTextLine(IEnumerable<SheetDisplayLineElement> elements)
+    public SheetDisplayTextLine(int id, params SheetDisplayLineElement[] elements) : this(id, (IEnumerable<SheetDisplayLineElement>)elements) { }
+    public SheetDisplayTextLine(int id, IEnumerable<SheetDisplayLineElement> elements)
+		: base(id)
     {
         this.elements = elements.ToArray();
     }
@@ -79,7 +81,7 @@ public sealed record SheetDisplayTextLine : SheetDisplayLine
 
     public class Builder : SheetDisplayTextLineBuilder<SheetDisplayTextLine>
     {
-        public override SheetDisplayTextLine CreateDisplayLine(ISheetDisplayLineEditing editing) => new(Elements)
+        public override SheetDisplayTextLine CreateDisplayLine(int id, ISheetDisplayLineEditing editing) => new(id, Elements)
 		{
 			Editing = editing
 		};
@@ -98,8 +100,9 @@ public sealed record SheetDisplayChordLine : SheetDisplayLine
 {
     private readonly SheetDisplayLineElement[] elements;
 
-    public SheetDisplayChordLine(params SheetDisplayLineElement[] elements) : this((IEnumerable<SheetDisplayLineElement>)elements) { }
-    public SheetDisplayChordLine(IEnumerable<SheetDisplayLineElement> elements)
+    public SheetDisplayChordLine(int id, params SheetDisplayLineElement[] elements) : this(id, (IEnumerable<SheetDisplayLineElement>)elements) { }
+    public SheetDisplayChordLine(int id, IEnumerable<SheetDisplayLineElement> elements)
+		: base(id)
     {
         this.elements = elements.ToArray();
     }
@@ -108,7 +111,7 @@ public sealed record SheetDisplayChordLine : SheetDisplayLine
 
     public class Builder : SheetDisplayTextLineBuilder<SheetDisplayChordLine>
     {
-        public override SheetDisplayChordLine CreateDisplayLine(ISheetDisplayLineEditing editing) => new(Elements)
+        public override SheetDisplayChordLine CreateDisplayLine(int id, ISheetDisplayLineEditing editing) => new(id, Elements)
 		{
 			Editing = editing
 		};

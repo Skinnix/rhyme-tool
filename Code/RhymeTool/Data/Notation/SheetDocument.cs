@@ -5,14 +5,17 @@ public class SheetDocument
     public string? Label { get; set; }
 
 	//public List<SheetSegment> Segments { get; } = new();
-	public List<SheetLine> Lines { get; } = new();
+	public SheetLineCollection Lines { get; }
 
-    public SheetDocument() { }
+    public SheetDocument()
+	{
+		Lines = new(this);
+	}
 
     public SheetDocument(params SheetLine[] lines) : this((IEnumerable<SheetLine>)lines) { }
     public SheetDocument(IEnumerable<SheetLine> lines)
     {
-        Lines.AddRange(lines);
+		Lines = new(this, lines);
     }
 
 	public IEnumerable<SheetSegment> FindSegments()
