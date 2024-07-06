@@ -1,5 +1,7 @@
-﻿namespace Skinnix.RhymeTool.Client.Components.Editing;
+﻿using Skinnix.RhymeTool.Data.Notation.Display;
 
-public record InputEventData(string InputType, string Data, SheetSelectionRange Selection);
-public record SheetSelectionRange(SheetSelectionAnchor Start, SheetSelectionAnchor End);
-public record SheetSelectionAnchor(Guid Metaline, int Line, int Offset);
+namespace Skinnix.RhymeTool.Client.Components.Editing;
+
+public record JsInputEventData(string InputType, string Data, JsSheetSelectionRange Selection);
+public record JsSheetSelectionRange(JsSheetSelectionAnchor Start, JsSheetSelectionAnchor End);
+public record JsSheetSelectionAnchor(Guid Metaline, int Line, SliceSelectionAnchor Slice);

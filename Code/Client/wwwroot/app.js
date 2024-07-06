@@ -45,21 +45,48 @@ function handleBeforeInput(element, reference, event) {
 	//get selection
 	var originalSelection = getSelection();
 	var originalRange = originalSelection.rangeCount == 0 ? null : originalSelection.getRangeAt(0);
-	var selectionRange = getSelectionRange(originalSelection, element, function (node) {
-		return node && node.classList && node.classList.contains('line');
-	});
-	var selectionStartLine = getLineId(selectionRange.start.node);
-	var selectionEndLine = getLineId(selectionRange.end.node);
+	var range = originalRange;
+	if (!originalRange)
+		return;
+	
+	//is a single character being deleted inside the same line?
+	if (range.isCollapsed) {
+		switch (event.inputType) {
+			case "deleteByCut":
+			case "deleteByDrag":
+			case "deleteContentBackward":
+			case "deleteContent":
+				//extend the selection one character to the left
+				originalSelection.modify("extend", "backward", "character");
+				range = originalSelection.getRangeAt(0);
+				break;
+			case "deleteContentForward":
+				//extend the selection one character to the right
+				originalSelection.modify("extend", "forward", "character");
+				range = originalSelection.getRangeAt(0);
+				break;
+		}
+	}
+
+	//var selectionRange = getSelectionRange(originalSelection, element, function (node) {
+	//	return node && node.classList && node.classList.contains('line');
+	//});
+	var sliceSelection = getSliceSelection(range);
+	var selectionStartLine = getLineId(range.startContainer);
+	var selectionEndLine = getLineId(range.endContainer);
+
 	var selection = {
 		start: {
 			metaline: selectionStartLine.metaline,
 			line: selectionStartLine.line,
-			offset: selectionRange.start.offset
+			slice: sliceSelection.start,
+			//offset: selectionRange.start.offset
 		},
 		end: {
 			metaline: selectionEndLine.metaline,
 			line: selectionEndLine.line,
-			offset: selectionRange.end.offset
+			slice: sliceSelection.end,
+			//offset: selectionRange.end.offset
 		}
 	};
 
@@ -84,9 +111,9 @@ function getLineId(node) {
 	var metalineId;
 	var lineId;
 	for (; node; node = node.parentElement) {
-		if (metalineId == null)
+		if (metalineId == null && node.getAttribute)
 			metalineId = node.getAttribute('data-metaline');
-		if (lineId == null)
+		if (lineId == null && node.getAttribute)
 			lineId = node.getAttribute('data-line-index');
 
 		if (metalineId && lineId)
@@ -95,6 +122,55 @@ function getLineId(node) {
 				line: parseInt(lineId)
 			};
 	}
+}
+
+function getSliceSelection(range) {
+	function getSlice(element, offset) {
+		for (; !element.classList || !element.classList.contains('line'); element = element.parentElement) {
+			var componentIndex = !element.getAttribute ? null : element.getAttribute('data-component-index');
+			if (componentIndex != null) {
+				var blockIndex = element.getAttribute('data-block-index');
+				var sliceIndex = element.getAttribute('data-slice-index');
+				var contentOffset = element.getAttribute('data-content-offset');
+				var virtual = element.getAttribute('data-virtual');
+
+				return {
+					componentIndex: parseInt(componentIndex),
+					blockIndex: parseInt(blockIndex),
+					sliceIndex: parseInt(sliceIndex),
+					contentOffset: parseInt(contentOffset),
+					editOffset: offset,
+					virtual: virtual,
+				};
+			}
+
+			for (var previous = element.previousSibling; previous; previous = previous.previousSibling) {
+				offset += previous.textContent?.length || 0;
+			}
+		}
+
+		return {
+			componentIndex: -1,
+			blockIndex: 0,
+			sliceIndex: 0,
+			contentOffset: 0,
+			editOffset: offset
+		};
+	}
+
+	var start = getSlice(range.startContainer, range.startOffset);
+	var end = range.endContainer != range.startContainer ? getSlice(range.endContainer, range.endOffset) : {
+		componentIndex: start.component,
+		blockIndex: start.block,
+		sliceIndex: start.slice,
+		contentOffset: start.contentOffset,
+		editOffset: start.editOffset + range.endOffset - range.startOffset,
+	};
+
+	return {
+		start: start,
+		end: end
+	};
 }
 
 function getSelectionRange(selection, wrapper, elementCondition) {
@@ -136,7 +212,7 @@ function getSelectionRange(selection, wrapper, elementCondition) {
 
 	var start = getNodeAndOffset(wrapper, elementCondition, range.startContainer, range.startOffset);
 	var end = getNodeAndOffset(wrapper, elementCondition, range.endContainer, range.endOffset);
-	
+
 	return {
 		start: start,
 		end: end

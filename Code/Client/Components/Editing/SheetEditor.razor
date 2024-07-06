@@ -28,7 +28,7 @@
 #if DEBUG
     true;
 #else
-        false;
+    false;
 #endif
 
     [Parameter] public SheetDocument? Document { get; set; }
@@ -83,21 +83,16 @@
     }
 
     [JSInvokable("OnBeforeInput")]
-    public async Task<JsMetalineEditResult> OnBeforeInput(InputEventData data)
+    public async Task<MetalineEditResult> OnBeforeInput(JsInputEventData data)
     {
         var startEditor = lineEditors[data.Selection.Start.Metaline];
         if (data.Selection.End.Metaline != data.Selection.Start.Metaline)
-            return new JsMetalineEditResult(false, null); //TODO: for now, we don't support multi-line selections
+            return MetalineEditResult.Fail; //TODO: for now, we don't support multi-line selections
 
         var editResult = await startEditor.HandleInput(data);
         if (editResult == null)
-            return new JsMetalineEditResult(false, null);
+            return MetalineEditResult.Fail;
 
-        var selection = editResult.NewSelection is null ? null
-            : new JsMetalineSelectionRange(editResult.NewSelection.Metaline.Guid, editResult.NewSelection.LineId, editResult.NewSelection.LineIndex, editResult.NewSelection.Range);
-        return new JsMetalineEditResult(editResult.Success, selection);
+        return editResult;
     }
-
-    public record JsMetalineEditResult(bool Success, JsMetalineSelectionRange? Selection);
-    public record JsMetalineSelectionRange(Guid Metaline, int? LineId, int? LineIndex, SimpleRange Range);
 }

@@ -46,12 +46,16 @@
     {
         switch (element)
         {
-            case SheetDisplayLineChord chord:
-                RenderChord(chord.Chord);
+            case SheetDisplayLineFormatSpace formatSpace:
+                @("".PadRight(formatSpace.GetLength(Formatter)))
                 break;
 
             case SheetDisplayLineSpace space:
-                @("".PadRight(space.GetLength(Formatter)))
+                <span class="space">@space.ToString(Formatter)</span>
+                break;
+
+            case SheetDisplayLineChord chord:
+                RenderChord(chord.Chord);
                 break;
 
             case SheetDisplayLineText text:

@@ -56,14 +56,14 @@ public class SheetEmptyLine : SheetLine, ISheetDisplayLineEditing
 			if (lineAfter is SheetEmptyLine)
 			{
 				//Lösche die nächste Zeile
-				return new MetalineEditResult(true, new MetalineSelectionRange(this, SimpleRange.Zero))
+				return new MetalineEditResult(true, MetalineSliceSelection.CursorAt(MetalineSliceAnchor.EndOfLine(this)))
 				{
 					RemoveLineAfter = true,
 				};
 			}
 
 			//Lösche diese Zeile
-			return new MetalineEditResult(true, new MetalineSelectionRange(lineAfter, SimpleRange.Zero, 0))
+			return new MetalineEditResult(true, MetalineSliceSelection.CursorAt(new MetalineSliceAnchor(lineAfter, 0, null, 0)))
 			{
 				RemoveLine = true,
 			};
@@ -76,7 +76,7 @@ public class SheetEmptyLine : SheetLine, ISheetDisplayLineEditing
 				return MetalineEditResult.Fail;
 
 			//Lösche diese Zeile
-			return new MetalineEditResult(true, new MetalineSelectionRange(lineBefore, SimpleRange.Zero, -1))
+			return new MetalineEditResult(true, MetalineSliceSelection.CursorAt(new MetalineSliceAnchor(lineBefore, -1, null, -1)))
 			{
 				RemoveLine = true,
 			};
@@ -90,7 +90,7 @@ public class SheetEmptyLine : SheetLine, ISheetDisplayLineEditing
 		{
 			//Erstelle eine neue leere Zeile
 			var newLine = new SheetEmptyLine();
-			return new MetalineEditResult(true, new MetalineSelectionRange(newLine, SimpleRange.Zero))
+			return new MetalineEditResult(true, MetalineSliceSelection.CursorAt(MetalineSliceAnchor.StartOfLine(newLine)))
 			{
 				InsertLinesAfter = [newLine]
 			};

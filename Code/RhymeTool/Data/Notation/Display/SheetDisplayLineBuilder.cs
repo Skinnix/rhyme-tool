@@ -8,9 +8,9 @@ public abstract class SheetDisplayLineBuilder : IComparable<SheetDisplayLineBuil
     public abstract SheetDisplayLine CreateDisplayLine(int id, ISheetDisplayLineEditing editing);
 
     public abstract void Append(SheetDisplayLineElement element, ISheetFormatter? formatter = null);
-    public abstract void ExtendLength(int totalLength, int minExtension);
+    public abstract void ExtendLength(int totalLength, int minExtension, SheetDisplaySliceInfo slice);
 
-	public abstract Spacer AppendSpacer();
+	//public abstract Spacer AppendSpacer();
 
 	public abstract record Spacer : SheetDisplayLineElement
 	{
@@ -42,14 +42,14 @@ public abstract class SheetDisplayTextLineBuilder<TLine> : SheetDisplayLineBuild
         currentLength += length;
     }
 
-	public override Spacer AppendSpacer()
-	{
-		var spacer = new SpacerImpl(this);
-		Elements.Add(spacer);
-		return spacer;
-	}
+	//public override Spacer AppendSpacer()
+	//{
+	//	var spacer = new SpacerImpl(this);
+	//	Elements.Add(spacer);
+	//	return spacer;
+	//}
 
-	public override void ExtendLength(int totalLength, int minExtension)
+	public override void ExtendLength(int totalLength, int minExtension, SheetDisplaySliceInfo slice)
     {
 		if (minExtension < 0) minExtension = 0;
 		if (totalLength < currentLength) totalLength = currentLength;
@@ -60,36 +60,39 @@ public abstract class SheetDisplayTextLineBuilder<TLine> : SheetDisplayLineBuild
         if (currentLength >= totalLength)
             return;
 
-        var space = new SheetDisplayLineSpace(totalLength - currentLength);
+        var space = new SheetDisplayLineFormatSpace(totalLength - currentLength)
+		{
+			Slice = slice
+		};
         Elements.Add(space);
         currentLength = totalLength;
-    }
-
-	private sealed record SpacerImpl : Spacer
-	{
-		private readonly SheetDisplayTextLineBuilder<TLine> owner;
-
-		public SpacerImpl(SheetDisplayTextLineBuilder<TLine> owner)
-		{
-			this.owner = owner;
-		}
-
-		public override void SetLength(int length)
-		{
-			if (length == 0)
-			{
-				owner.Elements.Remove(this);
-			}
-			else
-			{
-				owner.Elements.Replace(this, new SheetDisplayLineSpace(length));
-				owner.currentLength += length;
-			}
-		}
-
-		public bool Equals(SpacerImpl? other)
-			=> ReferenceEquals(this, other);
-
-		public override int GetHashCode() => 0;
 	}
+
+	//private sealed record SpacerImpl : Spacer
+	//{
+	//	private readonly SheetDisplayTextLineBuilder<TLine> owner;
+
+	//	public SpacerImpl(SheetDisplayTextLineBuilder<TLine> owner)
+	//	{
+	//		this.owner = owner;
+	//	}
+
+	//	public override void SetLength(int length)
+	//	{
+	//		if (length == 0)
+	//		{
+	//			owner.Elements.Remove(this);
+	//		}
+	//		else
+	//		{
+	//			owner.Elements.Replace(this, new SheetDisplayLineSpace(length));
+	//			owner.currentLength += length;
+	//		}
+	//	}
+
+	//	public bool Equals(SpacerImpl? other)
+	//		=> ReferenceEquals(this, other);
+
+	//	public override int GetHashCode() => 0;
+	//}
 }

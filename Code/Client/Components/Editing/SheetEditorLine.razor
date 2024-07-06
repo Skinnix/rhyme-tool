@@ -20,9 +20,9 @@
         <span class="accidental">@format.Accidental</span>
     }
 
-    void RenderChord(Chord chord)
+    void RenderChord(Chord chord, SheetDisplaySliceInfo slice)
     {
-        <span class="element element-chord chord">
+        <span class="element element-chord chord" @attributes="GetSliceAttributes(slice)">
             <span class="chord-root">@{
                     RenderNote(chord.Root);
                 }</span><span class="chord-quality">@chord.Quality.ToString(Formatter)</span>
@@ -59,32 +59,36 @@
     {
         switch (element)
         {
-            case SheetDisplayLineChord chord:
-                RenderChord(chord.Chord);
+            case SheetDisplayLineFormatSpace formatSpace:
+                <span class="space space-format" @attributes="GetSliceAttributes(element.Slice)">@formatSpace.ToString(Formatter)</span>
                 break;
 
             case SheetDisplayLineSpace space:
-                @("".PadRight(space.GetLength(Formatter)))
+                <span class="space space-content" @attributes="GetSliceAttributes(element.Slice)">@space.ToString(Formatter)</span>
+                break;
+
+            case SheetDisplayLineChord chord:
+                RenderChord(chord.Chord, element.Slice);
                 break;
 
             case SheetDisplayLineText text:
-                <span class="text">@text.ToString(Formatter)</span>
+                <span class="text" @attributes="GetSliceAttributes(element.Slice)">@text.ToString(Formatter)</span>
                 break;
 
             case SheetDisplayLineAnchorText anchorText:
-                <span class="anchor-text">@anchorText.ToString(Formatter)</span>
+                <span class="anchor-text" @attributes="GetSliceAttributes(element.Slice)">@anchorText.ToString(Formatter)</span>
                 break;
 
             case SheetDisplayLineSegmentTitleBracket titleBracket:
-                <span class="segment-title-bracket">@titleBracket.ToString(Formatter)</span>
+                <span class="segment-title-bracket" @attributes="GetSliceAttributes(element.Slice)">@titleBracket.ToString(Formatter)</span>
                 break;
 
             case SheetDisplayLineSegmentTitleText titleText:
-                <span class="segment-title" id="sheetSegment-@(Line?.Guid)">@titleText.ToString(Formatter)</span>
+                <span class="segment-title" id="sheetSegment-@(Line?.Guid)" @attributes="GetSliceAttributes(element.Slice)">@titleText.ToString(Formatter)</span>
                 break;
 
             case SheetDisplayLineHyphen hyphen:
-                <span class="hyphen">@hyphen.ToString(Formatter)</span>
+                <span class="hyphen" @attributes="GetSliceAttributes(element.Slice)">@hyphen.ToString(Formatter)</span>
                 break;
         }
     }
@@ -220,7 +224,7 @@
         StateHasChanged();
     }
 
-    public async Task<MetalineEditResult?> HandleInput(InputEventData data)
+    public async Task<MetalineEditResult?> HandleInput(JsInputEventData data)
     {
         if (Line is null || lineCache is null || Document is null) throw new InvalidOperationException("Editor not initialized");
 
@@ -235,8 +239,8 @@
         }
 
         //selection range
-        var selectionRange = new SimpleRange(data.Selection.Start.Offset, data.Selection.End.Offset);
-        var context = new SheetDisplayLineEditingContext(selectionRange)
+        var selection = new SliceSelection(data.Selection.Start.Slice, data.Selection.End.Slice);
+        var context = new SheetDisplayLineEditingContext(selection)
         {
             GetLineBefore = () => Document.Lines.GetLineBefore(Line),
             GetLineAfter = () => Document.Lines.GetLineAfter(Line),
@@ -314,5 +318,14 @@
         Text = 1,
         Chords = 2,
         TextAndChords = Text | Chords,
+    }
+
+    private static IEnumerable<KeyValuePair<string, object>> GetSliceAttributes(SheetDisplaySliceInfo slice)
+    {
+        yield return new KeyValuePair<string, object>("data-component-index", slice.ComponentIndex);
+        yield return new KeyValuePair<string, object>("data-block-index", slice.BlockIndex);
+        yield return new KeyValuePair<string, object>("data-slice-index", slice.SliceIndex);
+        yield return new KeyValuePair<string, object>("data-content-offset", slice.ContentOffset);
+        yield return new KeyValuePair<string, object>("data-virtual", slice.IsVirtual);
     }
 }
