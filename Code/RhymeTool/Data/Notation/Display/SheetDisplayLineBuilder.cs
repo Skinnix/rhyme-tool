@@ -1,4 +1,6 @@
-﻿namespace Skinnix.RhymeTool.Data.Notation.Display;
+﻿using System.Diagnostics.CodeAnalysis;
+
+namespace Skinnix.RhymeTool.Data.Notation.Display;
 
 public abstract class SheetDisplayLineBuilder : IComparable<SheetDisplayLineBuilder>
 {
@@ -30,7 +32,8 @@ public abstract class SheetDisplayLineBuilder<TLine> : SheetDisplayLineBuilder
 public abstract class SheetDisplayTextLineBuilder<TLine> : SheetDisplayLineBuilder<TLine>
     where TLine : SheetDisplayLine
 {
-    protected List<SheetDisplayLineElement> Elements { get; } = new();
+	private readonly List<SheetDisplayLineElement> elements = new();
+	protected IReadOnlyList<SheetDisplayLineElement> Elements => elements;
 
     private int currentLength;
     public override int CurrentLength => currentLength;
@@ -38,14 +41,15 @@ public abstract class SheetDisplayTextLineBuilder<TLine> : SheetDisplayLineBuild
     public override void Append(SheetDisplayLineElement element, ISheetFormatter? formatter = null)
     {
         var length = element.GetLength(formatter);
-        Elements.Add(element);
+        elements.Add(element);
+		element.DisplayOffset = currentLength;
         currentLength += length;
     }
 
 	public override Spacer AppendSpacer()
 	{
 		var spacer = new SpacerImpl(this);
-		Elements.Add(spacer);
+		elements.Add(spacer);
 		return spacer;
 	}
 
@@ -60,8 +64,11 @@ public abstract class SheetDisplayTextLineBuilder<TLine> : SheetDisplayLineBuild
         if (currentLength >= totalLength)
             return;
 
-        var space = new SheetDisplayLineSpace(totalLength - currentLength);
-        Elements.Add(space);
+        var space = new SheetDisplayLineFormatSpace(totalLength - currentLength)
+		{
+			DisplayOffset = currentLength
+		};
+        elements.Add(space);
         currentLength = totalLength;
     }
 
@@ -69,20 +76,23 @@ public abstract class SheetDisplayTextLineBuilder<TLine> : SheetDisplayLineBuild
 	{
 		private readonly SheetDisplayTextLineBuilder<TLine> owner;
 
+		[SetsRequiredMembers]
 		public SpacerImpl(SheetDisplayTextLineBuilder<TLine> owner)
 		{
 			this.owner = owner;
+
+			Slice = null;
 		}
 
 		public override void SetLength(int length)
 		{
 			if (length == 0)
 			{
-				owner.Elements.Remove(this);
+				owner.elements.Remove(this);
 			}
 			else
 			{
-				owner.Elements.Replace(this, new SheetDisplayLineSpace(length));
+				owner.elements.Replace(this, new SheetDisplayLineFormatSpace(length));
 				owner.currentLength += length;
 			}
 		}

@@ -48,23 +48,23 @@ public sealed record SheetDisplayEmptyLine(int Id) : SheetDisplayLine(Id)
 //    }
 //}
 
-public sealed record SheetDisplaySegmentTitleLine : SheetDisplayLine
-{
-	public string Title { get; init; }
+//public sealed record SheetDisplaySegmentTitleLine : SheetDisplayLine
+//{
+//	public string Title { get; init; }
 
-	public SheetDisplaySegmentTitleLine(int id, string title)
-		: base(id)
-	{
-		Title = title;
-	}
+//	public SheetDisplaySegmentTitleLine(int id, string title)
+//		: base(id)
+//	{
+//		Title = title;
+//	}
 
-	public override IEnumerable<SheetDisplayLineElement> GetElements()
-		=> [
-			new SheetDisplayLineSegmentTitleBracket("["),
-			new SheetDisplayLineSegmentTitleText(Title),
-			new SheetDisplayLineSegmentTitleBracket("]"),
-		];
-}
+//	public override IEnumerable<SheetDisplayLineElement> GetElements()
+//		=> [
+//			new SheetDisplayLineSegmentTitleBracket("["),
+//			new SheetDisplayLineSegmentTitleText(Title),
+//			new SheetDisplayLineSegmentTitleBracket("]"),
+//		];
+//}
 
 public sealed record SheetDisplayTextLine : SheetDisplayLine
 {

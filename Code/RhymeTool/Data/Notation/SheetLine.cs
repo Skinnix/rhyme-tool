@@ -43,7 +43,7 @@ public class SheetEmptyLine : SheetLine, ISheetDisplayLineEditing
 		}
     }
 
-	public MetalineEditResult DeleteContent(SheetDisplayLineEditingContext context, bool forward = false, ISheetFormatter? formatter = null)
+	public MetalineEditResult DeleteContent(SheetDisplayLineEditingContext context, bool forward = false, ISheetBuilderFormatter? formatter = null)
 	{
 		if (forward)
 		{
@@ -83,7 +83,7 @@ public class SheetEmptyLine : SheetLine, ISheetDisplayLineEditing
 		}
 	}
 
-	public MetalineEditResult InsertContent(SheetDisplayLineEditingContext context, string content, ISheetFormatter? formatter = null)
+	public MetalineEditResult InsertContent(SheetDisplayLineEditingContext context, string content, ISheetBuilderFormatter? formatter = null)
 	{
 		//Wird nur ein Zeilenumbruch eingefügt?
 		if (content == "\n")
@@ -95,6 +95,12 @@ public class SheetEmptyLine : SheetLine, ISheetDisplayLineEditing
 				InsertLinesAfter = [newLine]
 			};
 		}
+
+		//Update den Context, damit die Auswahl immer auf Null steht
+		context = context with
+		{
+			SelectionRange = SimpleRange.Zero,
+		};
 
 		//Ersetze die Zeile mit einer VarietyLine und füge dann den Content ein
 		var varietyLine = new SheetVarietyLine();

@@ -1,14 +1,17 @@
-﻿using Skinnix.RhymeTool.Data.Notation;
+﻿using System.Diagnostics.CodeAnalysis;
+using Skinnix.RhymeTool.Data.Notation;
 
 namespace Skinnix.RhymeTool.Data.Notation.Display;
 
 public interface ISheetDisplayLineElementSource;
 
-public record struct SheetDisplaySliceInfo(int SliceIndex, int SlicePartIndex, int ContentOffset, bool IsVirtual = false);
+public record struct SheetDisplaySliceInfo(int ComponentIndex, int ContentOffset, bool IsVirtual = false);
 
 public abstract record SheetDisplayLineElementBase
 {
-	public required SheetDisplaySliceInfo Slice { get; init; }
+	public required SheetDisplaySliceInfo? Slice { get; init; }
+
+	public int DisplayOffset { get; internal set; }
 
 	public override string ToString() => ToString(formatter: null);
 	public abstract string ToString(ISheetFormatter? formatter = null);
@@ -29,6 +32,22 @@ public record SheetDisplayLineSpace(int Count) : SheetDisplayLineElement
 {
     public override int GetLength(ISheetFormatter? formatter) => Count;
     public override string ToString(ISheetFormatter? formatter = null) => new string(' ', Count);
+}
+
+public record SheetDisplayLineFormatSpace : SheetDisplayLineElement
+{
+	public int Count { get; init; }
+
+	[SetsRequiredMembers]
+	public SheetDisplayLineFormatSpace(int count)
+	{
+		Count = count;
+
+		Slice = null;
+	}
+
+	public override int GetLength(ISheetFormatter? formatter) => Count;
+	public override string ToString(ISheetFormatter? formatter = null) => new string(' ', Count);
 }
 
 public record SheetDisplayLineText(string Text) : SheetDisplayLineElement
