@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Buffers;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Linq;
 using System.Net.Mail;
@@ -542,7 +543,8 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 								//Setze den Cursor an das Ende des eingefügten Inhalts im rechten Rand
 								//cursorPosition = context.SelectionRange.Start + newContentComponents.Sum(c => c.Content.GetLength(formatter));
-								specialCursorPosition = SpecialCursorPosition.Before(rightEdge, lastNewComponent.Content.GetLength(formatter));
+								var cursorOffset = lastNewComponent.Content.GetLength(formatter);
+								specialCursorPosition = SpecialCursorPosition.FromStart(rightEdge, cursorOffset, SpecialCursorVirtualPositionType.KeepLeft);
 							}
 
 							//Füge die restlichen Komponenten dazwischen ein
@@ -571,7 +573,8 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 								{
 									//Setze den Cursor an das Ende des eingefügten Inhalts im linken Rand
 									//cursorPosition = context.SelectionRange.Start + newContentComponents.Sum(c => c.Content.GetLength(formatter));
-									specialCursorPosition = SpecialCursorPosition.Before(leftEdge, leftEdgeOverlap.ContentOffset + firstNewComponent.Content.GetLength(formatter));
+									var cursorOffset = leftEdgeOverlap.ContentOffset + firstNewComponent.Content.GetLength(formatter);
+									specialCursorPosition = SpecialCursorPosition.FromStart(leftEdge, cursorOffset, SpecialCursorVirtualPositionType.KeepLeft);
 								}
 							}
 
@@ -651,8 +654,9 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 						addedContent = true;
 
 						//Setze den Cursor an das Ende des eingefügten Inhalts
-						cursorPosition = context.SelectionRange.Start + newContentComponents.Sum(c => c.Content.GetLength(formatter));
-						specialCursorPosition = SpecialCursorPosition.Before(rightEdge, lastComponent.Content.GetLength(formatter));
+						//cursorPosition = context.SelectionRange.Start + newContentComponents.Sum(c => c.Content.GetLength(formatter));
+						var cursorOffset = lastComponent.Content.GetLength(formatter);
+						specialCursorPosition = SpecialCursorPosition.FromStart(rightEdge, cursorOffset, SpecialCursorVirtualPositionType.KeepLeft);
 					}
 				}
 			}
@@ -707,6 +711,9 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				var nextComponent = Line.components[current + 1];
 				if (component.TryMerge(nextComponent, int.MaxValue, formatter))
 				{
+					//Das sollte nicht passieren
+					Debugger.Break();
+
 					//Entferne die folgende Komponente
 					Line.components.RemoveAt(current + 1);
 					removedAnything = true;
@@ -753,23 +760,45 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			return this.CreateSuccessEditResult(SimpleRange.CursorAt(cursorPosition));
 		}
 
-		private readonly record struct SpecialCursorPosition(SpecialCursorPositionType Type, Component Component, int Offset = 0)
+		private readonly record struct SpecialCursorPosition(SpecialCursorPositionType Type, Component Component,
+			int ContentOffset = 0, SpecialCursorVirtualPositionType OffsetType = SpecialCursorVirtualPositionType.KeepLeft)
 		{
-			public static SpecialCursorPosition Before(Component component, int offset = 0) => new(SpecialCursorPositionType.Before, component, offset);
-			public static SpecialCursorPosition Behind(Component component, int offset = 0) => new(SpecialCursorPositionType.Behind, component, offset);
-			
-			public int Calculate(SheetVarietyLine line, ISheetBuilderFormatter? formatter) => Type switch
+			public static SpecialCursorPosition Before(Component component) => new(SpecialCursorPositionType.Before, component);
+			public static SpecialCursorPosition Behind(Component component) => new(SpecialCursorPositionType.Behind, component);
+
+			public static SpecialCursorPosition FromStart(Component component, int contentOffset, SpecialCursorVirtualPositionType offsetType)
+				=> new(SpecialCursorPositionType.Before, component, contentOffset, offsetType);
+
+			public int Calculate(SheetVarietyLine line, ISheetBuilderFormatter? formatter)
 			{
-				SpecialCursorPositionType.Before => Component.DisplayRenderBounds.StartOffset + Offset,
-				SpecialCursorPositionType.Behind => Component.DisplayRenderBounds.EndOffset + Offset,
-				_ => Component.DisplayRenderBounds.StartOffset + Offset,
-			};
+				//Finde den Anzeige-Offset zum Inhaltsoffset
+				var displayOffset = 0;
+				if (ContentOffset != 0)
+				{
+					//Berechne den Anzeige-Offset
+					displayOffset = Component.DisplayRenderBounds.GetDisplayOffset(ContentOffset, keepRight: OffsetType == SpecialCursorVirtualPositionType.KeepRight)
+						- Component.DisplayRenderBounds.StartOffset;
+				}
+
+				return Type switch
+				{
+					SpecialCursorPositionType.Before => Component.DisplayRenderBounds.StartOffset + displayOffset,
+					SpecialCursorPositionType.Behind => Component.DisplayRenderBounds.EndOffset + displayOffset,
+					_ => Component.DisplayRenderBounds.StartOffset + displayOffset,
+				};
+			}
 		}
 
 		private enum SpecialCursorPositionType
 		{
 			Before,
 			Behind,
+		}
+
+		private enum SpecialCursorVirtualPositionType
+		{
+			KeepLeft,
+			KeepRight,
 		}
 
 		private static List<VarietyComponent> CreateComponentsForContent(string content)
@@ -1541,6 +1570,56 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			//Berechne den tatsächlichen ContentOffset
 			var contentOffset = display.Slice.Value.ContentOffset + offsetFromStart;
 			return (contentOffset, 0);
+		}
+
+		public int GetDisplayOffset(int contentOffset, bool keepRight = false)
+		{
+			if (!keepRight)
+			{
+				//Finde das letzte nicht-virtuelle Element, das vor dem Offset liegt
+				var display = DisplayElements.LastOrDefault(d => !d.Slice!.Value.IsVirtual && d.Slice!.Value.ContentOffset <= contentOffset);
+
+				//Fallback, falls kein Element gefunden wurde
+				if (display is null)
+				{
+					if (contentOffset == 0)
+						return StartOffset;
+					else
+						return EndOffset;
+				}
+
+				//Berechne den Offset
+				return display.DisplayOffset + contentOffset - display.Slice!.Value.ContentOffset;
+			}
+			else
+			{
+				//Finde das letzte Element, das vor dem Offset liegt
+				var display = DisplayElements
+					.Select((d, i) => (Display: d, Index: i))
+					.LastOrDefault(d => d.Display.Slice!.Value.ContentOffset <= contentOffset);
+
+				//Fallback, falls kein Element gefunden wurde
+				if (display.Display is null)
+				{
+					if (contentOffset == 0)
+						return StartOffset;
+					else
+						return EndOffset;
+				}
+
+				//Ist das Element virtuell und entspricht genau dem Offset?
+				if (display.Display.Slice!.Value.IsVirtual && display.Display.Slice!.Value.ContentOffset == contentOffset)
+				{
+					//Gehe zum Anfang des nächsten Elements
+					if (display.Index + 1 < DisplayElements.Count)
+						return DisplayElements[display.Index + 1].DisplayOffset;
+					else
+						return EndOffset;
+				}
+
+				//Berechne den Offset
+				return display.Display.DisplayOffset + contentOffset - display.Display.Slice!.Value.ContentOffset;
+			}
 		}
 	}
 
