@@ -5,7 +5,9 @@ namespace Skinnix.RhymeTool.Data.Notation.Display;
 
 public interface ISheetDisplayLineElementSource;
 
-public record struct SheetDisplaySliceInfo(int ComponentIndex, int ContentOffset, bool IsVirtual = false);
+public readonly record struct VirtualContentOffset(ContentOffset ContentOffset, int VirtualOffset);
+
+public record struct SheetDisplaySliceInfo(int ComponentIndex, ContentOffset ContentOffset, bool IsVirtual = false);
 
 public abstract record SheetDisplayLineElementBase
 {

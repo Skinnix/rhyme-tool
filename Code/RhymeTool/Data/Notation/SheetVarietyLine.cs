@@ -212,7 +212,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 					//Prüfe, ob die Komponenten zusammengefügt werden können
 					if (lastComponent is not null && Line.components.Count > 0)
 					{
-						if (lastComponent.TryMerge(Line.components[0], int.MaxValue, formatter))
+						if (lastComponent.TryMerge(Line.components[0], ContentOffset.FarEnd, formatter))
 						{
 							//Entferne die zusammengefügte Komponente
 							varietyBefore.components.Remove(Line.components[0]);
@@ -256,7 +256,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 					//Prüfe, ob die Komponenten zusammengefügt werden können
 					if (lastComponent is not null && varietyAfter.components.Count > 0)
 					{
-						if (lastComponent.TryMerge(varietyAfter.components[0], int.MaxValue, formatter))
+						if (lastComponent.TryMerge(varietyAfter.components[0], ContentOffset.FarEnd, formatter))
 						{
 							//Entferne die zusammengefügte Komponente
 							Line.components.Remove(varietyAfter.components[0]);
@@ -271,13 +271,84 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 					};
 				}
 
+				//Prüfe Cursorposition relativ zu den umliegenden Komponenten
+				Component? prepreviousComponent = null;
+				Component? previousComponent = null;
+				Component? startComponent = null;
+				Component? endComponent = null;
+				Component? nextComponent = null;
+				foreach (var component in Line.components)
+				{
+					if (component.DisplayRenderBounds.EndOffset == context.SelectionRange.Start)
+					{
+						endComponent = component;
+					}
+					else if (component.DisplayRenderBounds.StartOffset == context.SelectionRange.Start)
+					{
+						startComponent = component;
+						nextComponent = component;
+						break;
+					}
+					else if (component.DisplayRenderBounds.StartOffset > context.SelectionRange.Start)
+					{
+						nextComponent = component;
+						break;
+					}
+
+					prepreviousComponent = previousComponent;
+					previousComponent = component;
+				}
+
+				//Lösche das Zeichen vor oder hinter dem Cursor
 				if (forward)
-					context.SelectionRange = new SimpleRange(context.SelectionRange.Start, context.SelectionRange.Start + 1);
+				{
+					//Steht der Cursor am Ende einer Komponente?
+					if (endComponent is not null && nextComponent is not null)
+					{
+						//Lösche das erste Zeichen der ersten Komponente danach
+						context.SelectionRange = new SimpleRange(endComponent.DisplayRenderBounds.EndOffset, nextComponent.DisplayRenderBounds.StartOffset + 1);
+					}
+
+					//Steht der Cursor mitten in einem langgestreckten Leerzeichen?
+					else if (endComponent is null && previousComponent?.DisplayRenderBounds.EndOffset <= context.SelectionRange.Start && nextComponent is not null
+						&& (previousComponent as VarietyComponent)?.Content.IsSpace == true)
+					{
+						//Lösche das erste Zeichen der ersten Komponente nach dem Leerzeichen
+						context.SelectionRange = new SimpleRange(previousComponent.DisplayRenderBounds.EndOffset, nextComponent.DisplayRenderBounds.StartOffset + 1);
+					}
+
+					//Erweitere einfach die Auswahl um ein Zeichen nach rechts
+					else
+					{
+						context.SelectionRange = new SimpleRange(context.SelectionRange.Start, context.SelectionRange.Start + 1);
+					}
+				}
 				else
-					context.SelectionRange = new SimpleRange(context.SelectionRange.Start - 1, context.SelectionRange.Start);
+				{
+					//Steht der Cursor am Anfang einer Komponente?
+					if (startComponent is not null && previousComponent is not null)
+					{
+						//Lösche das letzte Zeichen der ersten Komponente davor
+						context.SelectionRange = new SimpleRange(previousComponent.DisplayRenderBounds.EndOffset - 1, startComponent.DisplayRenderBounds.StartOffset);
+					}
+					
+					//Steht der Cursor mitten in einem langgestreckten Leerzeichen?
+					else if (startComponent is null && previousComponent?.DisplayRenderBounds.EndOffset <= context.SelectionRange.Start && prepreviousComponent is not null
+						&& (previousComponent as VarietyComponent)?.Content.IsSpace == true)
+					{
+						//Lösche das letzte Zeichen der ersten Komponente vor dem Leerzeichen
+						context.SelectionRange = new SimpleRange(previousComponent.DisplayRenderBounds.StartOffset, prepreviousComponent.DisplayRenderBounds.EndOffset - 1);
+					}
+					
+					//Erweitere einfach die Auswahl um ein Zeichen nach links
+					else
+					{
+						context.SelectionRange = new SimpleRange(context.SelectionRange.Start - 1, context.SelectionRange.Start);
+					}
+				}
 			}
 
-			return DeleteAndInsertContent(context, formatter, null);
+			return DeleteAndInsertContent(context, formatter, null, !forward);
 		}
 
 		public MetalineEditResult InsertContent(SheetDisplayLineEditingContext context, string content, ISheetBuilderFormatter? formatter)
@@ -359,10 +430,10 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				return MetalineEditResult.Fail;
 			}
 
-			return DeleteAndInsertContent(context, formatter, content);
+			return DeleteAndInsertContent(context, formatter, content, false);
 		}
 
-		private MetalineEditResult DeleteAndInsertContent(SheetDisplayLineEditingContext context, ISheetBuilderFormatter? formatter, string? content)
+		private MetalineEditResult DeleteAndInsertContent(SheetDisplayLineEditingContext context, ISheetBuilderFormatter? formatter, string? content, bool deleteBackward)
 		{
 			//Finde alle Komponente im Bereich
 			Component? leftEdge = null;
@@ -492,8 +563,9 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			if (leftEdge is not null)
 			{
 				//Kürze die Komponente
-				var leftEdgeOverlap = leftEdge.DisplayRenderBounds.GetContentOffset(context.SelectionRange.Start);
-				if (leftEdge.TryRemoveContent(leftEdgeOverlap.ContentOffset, context.SelectionRange.Length, formatter))
+				var leftEdgeOverlapOffset = leftEdge.DisplayRenderBounds.GetContentOffset(context.SelectionRange.Start);
+				var leftEdgeOverlapLength = leftEdge.DisplayRenderBounds.GetContentOffset(context.SelectionRange.End).ContentOffset - leftEdgeOverlapOffset.ContentOffset;
+				if (leftEdge.TryRemoveContent(leftEdgeOverlapOffset.ContentOffset, leftEdgeOverlapLength, formatter))
 					removedAnything = true;
 
 				//Gibt es einen Inhalt?
@@ -510,7 +582,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 						{
 							//Teile die Randkomponente in zwei Teile
 							//TODO: Wenn ein automatischer Bindestrich angezeigt wird, funktioniert das Einfügen direkt davor nicht richtig
-							var newRightEdge = leftEdge.SplitEnd(leftEdgeOverlap.ContentOffset, formatter);
+							var newRightEdge = leftEdge.SplitEnd(leftEdgeOverlapOffset.ContentOffset, formatter);
 
 							//Füge den neuen rechten Rand ein
 							if (leftEdgeIndex == Line.components.Count - 1)
@@ -526,7 +598,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 						//Versuche die erste Komponente hinten an den linken Rand anzufügen
 						var firstNewComponent = newContentComponents[0];
-						if (leftEdge.TryMerge(firstNewComponent, leftEdgeOverlap.ContentOffset, formatter))
+						if (leftEdge.TryMerge(firstNewComponent, leftEdgeOverlapOffset.ContentOffset, formatter))
 						{
 							//Berechne die Gesamtlänge des eingefügten Inhalts
 							var lastNewComponent = newContentComponents[^1];
@@ -536,7 +608,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 							//Versuche die letzte Komponente vorne an den rechten Rand anzufügen
 							specialCursorPosition = null;
-							if (newContentComponents.Count > 0 && rightEdge?.TryMerge(lastNewComponent, 0, formatter) == true)
+							if (newContentComponents.Count > 0 && rightEdge?.TryMerge(lastNewComponent, ContentOffset.Zero, formatter) == true)
 							{
 								//Letzte Komponente hinzugefügt
 								newContentComponents.RemoveAt(newContentComponents.Count - 1);
@@ -573,7 +645,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 								{
 									//Setze den Cursor an das Ende des eingefügten Inhalts im linken Rand
 									//cursorPosition = context.SelectionRange.Start + newContentComponents.Sum(c => c.Content.GetLength(formatter));
-									var cursorOffset = leftEdgeOverlap.ContentOffset + firstNewComponent.Content.GetLength(formatter);
+									var cursorOffset = leftEdgeOverlapOffset.ContentOffset + firstNewComponent.Content.GetLength(formatter);
 									specialCursorPosition = SpecialCursorPosition.FromStart(leftEdge, cursorOffset, SpecialCursorVirtualPositionType.KeepLeft);
 								}
 							}
@@ -627,7 +699,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			{
 				//Kürze die Komponente
 				var rightEdgeOverlap = rightEdge.DisplayRenderBounds.GetContentOffset(context.SelectionRange.End);
-				if (!skipTrimAfter && rightEdge.TryRemoveContent(0, rightEdgeOverlap.ContentOffset, formatter))
+				if (!skipTrimAfter && rightEdge.TryRemoveContent(ContentOffset.Zero, rightEdgeOverlap.ContentOffset, formatter))
 					removedAnything = true;
 
 				//Gibt es einen Inhalt?
@@ -637,7 +709,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 					newContentComponents ??= CreateComponentsForContent(content);
 
 					//Versuche die letzte Komponente vorne an den rechten Rand anzufügen
-					if (rightEdge.TryMerge(newContentComponents[^1], 0, formatter))
+					if (rightEdge.TryMerge(newContentComponents[^1], ContentOffset.Zero, formatter))
 					{
 						//Letzte Komponente hinzugefügt
 						var lastComponent = newContentComponents[^1];
@@ -681,9 +753,37 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				content = null;
 				addedContent = true;
 
+				//Prüfe, ob der rechte Rand auch hinzugefügt werden kann
+				if (rightEdge is not null && rightEdge != leftEdge)
+				{
+					//Entferne die rechte Randkomponente
+					Line.components.Remove(rightEdge);
+					removedAnything = true;
+				}
+
 				//Setze den Cursor an das Ende des eingefügten Inhalts
-				cursorPosition = context.SelectionRange.Start + newContentComponents.Sum(c => c.Content.GetLength(formatter));
+				cursorPosition = context.SelectionRange.Start + newContentComponents.Sum(c => c.Content.GetLength(formatter).Value);
 				specialCursorPosition = SpecialCursorPosition.Behind(newContentComponents[^1]);
+			}
+
+			//Wurde die Cursorposition immer noch nicht gesetzt?
+			if (specialCursorPosition is null)
+			{
+				//Nur fullyInside wurde entfernt und nichts hinzugefügt, setze den Cursor ans Ende des Bereichs
+				if (removedAnything && !addedContent)
+				{
+					//Setze den Cursor an das Ende des Bereichs
+					if (rightEdge is not null)
+						specialCursorPosition = SpecialCursorPosition.Before(rightEdge, deleteBackward ? SpecialCursorVirtualPositionType.KeepRight : SpecialCursorVirtualPositionType.KeepLeft);
+					else if (leftEdge is not null)
+						specialCursorPosition = SpecialCursorPosition.Behind(leftEdge, deleteBackward ? SpecialCursorVirtualPositionType.KeepRight : SpecialCursorVirtualPositionType.KeepLeft);
+				}
+
+				//Der Rand wurde getrimmt
+				else if (removedAnything)
+				{
+
+				}
 			}
 
 			//Prüfe, ob der linke Rand entfernt werden kann
@@ -706,13 +806,31 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			var stopCombining = false;
 			for (var current = Math.Max(leftEdgeIndex - 1, 0); current < Line.components.Count - 1 && !stopCombining; current++)
 			{
-				//Kann die Komponente mit der darauf folgenden zusammengeführt werden?
+				//Prüfe diese und die folgende Komponente
 				var component = Line.components[current];
 				var nextComponent = Line.components[current + 1];
-				if (component.TryMerge(nextComponent, int.MaxValue, formatter))
+
+				//Soll der Cursor auf eine dieser Komponenten gesetzt werden?
+				ContentOffset? componentLength = null;
+				if ((specialCursorPosition?.Component, specialCursorPosition?.Type) == (component, SpecialCursorPositionType.Behind)
+					|| (specialCursorPosition?.Component, specialCursorPosition?.Type) == (nextComponent, SpecialCursorPositionType.Before))
 				{
+					//Speichere die Länge der Komponente
+					componentLength = (component as VarietyComponent)?.Content.GetLength(formatter);
+				}
+
+				//Kann die Komponente mit der darauf folgenden zusammengeführt werden?
+				if (component.TryMerge(nextComponent, ContentOffset.FarEnd, formatter))
+				{
+					//Falls der Cursor hinter diese Komponente gesetzt werden soll, passe die Cursorposition an
+					if (componentLength.HasValue)
+					{
+						//Passe die Cursorposition an, damit der Cursor immer noch auf der gleichen Position steht
+						specialCursorPosition = SpecialCursorPosition.FromStart(component, componentLength.Value, specialCursorPosition!.Value.OffsetType);
+					}
+
 					//Das sollte nicht passieren
-					Debugger.Break();
+					//Debugger.Break();
 
 					//Entferne die folgende Komponente
 					Line.components.RemoveAt(current + 1);
@@ -732,7 +850,6 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			//Zeile bearbeitet
 			Line.RaiseModifiedAndInvalidateCache();
 			Line.cachedLines = null;
-			Line.RaiseModified(new ModifiedEventArgs(Line));
 
 			//Ist die Zeile jetzt leer?
 			if (Line.components.Count == 0)
@@ -761,19 +878,21 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 		}
 
 		private readonly record struct SpecialCursorPosition(SpecialCursorPositionType Type, Component Component,
-			int ContentOffset = 0, SpecialCursorVirtualPositionType OffsetType = SpecialCursorVirtualPositionType.KeepLeft)
+			ContentOffset ContentOffset = default, SpecialCursorVirtualPositionType OffsetType = SpecialCursorVirtualPositionType.KeepLeft)
 		{
-			public static SpecialCursorPosition Before(Component component) => new(SpecialCursorPositionType.Before, component);
-			public static SpecialCursorPosition Behind(Component component) => new(SpecialCursorPositionType.Behind, component);
+			public static SpecialCursorPosition Before(Component component, SpecialCursorVirtualPositionType offsetType = SpecialCursorVirtualPositionType.KeepLeft)
+				=> new(SpecialCursorPositionType.Before, component, OffsetType: offsetType);
+			public static SpecialCursorPosition Behind(Component component, SpecialCursorVirtualPositionType offsetType = SpecialCursorVirtualPositionType.KeepLeft)
+				=> new(SpecialCursorPositionType.Behind, component, OffsetType: offsetType);
 
-			public static SpecialCursorPosition FromStart(Component component, int contentOffset, SpecialCursorVirtualPositionType offsetType)
+			public static SpecialCursorPosition FromStart(Component component, ContentOffset contentOffset, SpecialCursorVirtualPositionType offsetType)
 				=> new(SpecialCursorPositionType.Before, component, contentOffset, offsetType);
 
 			public int Calculate(SheetVarietyLine line, ISheetBuilderFormatter? formatter)
 			{
 				//Finde den Anzeige-Offset zum Inhaltsoffset
 				var displayOffset = 0;
-				if (ContentOffset != 0)
+				if (ContentOffset != ContentOffset.Zero)
 				{
 					//Berechne den Anzeige-Offset
 					displayOffset = Component.DisplayRenderBounds.GetDisplayOffset(ContentOffset, keepRight: OffsetType == SpecialCursorVirtualPositionType.KeepRight)
@@ -889,7 +1008,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			}
 
 			//Finde das nächste Attachment und verschiebe es nach links
-			return FindAndMoveNextAttachment(context.SelectionRange.Start, -context.SelectionRange.Length, formatter);
+			return FindAndMoveNextAttachment(context.SelectionRange.Start, new(-context.SelectionRange.Length), formatter);
 		}
 
 		public MetalineEditResult InsertContent(SheetDisplayLineEditingContext context, string content, ISheetBuilderFormatter? formatter)
@@ -915,7 +1034,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			if (string.IsNullOrWhiteSpace(content))
 			{
 				//Finde das nächste Attachment und verschiebe es nach rechts
-				var moveOffset = content.Length - context.SelectionRange.Length;
+				var moveOffset = new ContentOffset(content.Length - context.SelectionRange.Length);
 				return FindAndMoveNextAttachment(context.SelectionRange.Start, moveOffset, formatter);
 			}
 
@@ -935,30 +1054,44 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			if (before is not null)
 			{
 				//Füge den Inhalt ans Ende des Attachments an
-				before.InsertContent(content, int.MaxValue, formatter);
+				before.InsertContent(content, ContentOffset.FarEnd, formatter);
 
-				//Modified-Event
+				//Erzeuge die Displayelemente der Zeile neu
 				Line.RaiseModifiedAndInvalidateCache();
-				return this.CreateSuccessEditResult(SimpleRange.CursorAt(context.SelectionRange.Start + content.Length));
+				Line.CreateDisplayLines(formatter);
+
+				//Setze den Cursor hinter das Attachment
+				var cursorPosition = before.RenderBounds.EndOffset;
+				return this.CreateSuccessEditResult(SimpleRange.CursorAt(cursorPosition));
 			}
 			else if (after is not null)
 			{
 				//Füge den Inhalt an den Anfang des Attachments an
-				after.InsertContent(content, 0, formatter);
+				after.InsertContent(content, ContentOffset.Zero, formatter);
 
-				//Modified-Event
+				//Erzeuge die Displayelemente der Zeile neu
 				Line.RaiseModifiedAndInvalidateCache();
-				return this.CreateSuccessEditResult(SimpleRange.CursorAt(context.SelectionRange.Start + content.Length));
+				Line.CreateDisplayLines(formatter);
+
+				//Setze den Cursor hinter den eingefügten Text
+				var cursorPosition = after.RenderBounds.StartOffset + content.Length;
+				return this.CreateSuccessEditResult(SimpleRange.CursorAt(cursorPosition));
 			}
+			else
+			{
+				//Erzeuge ein neues Attachment
+				var componentOffset = component.DisplayRenderBounds.GetContentOffset(context.SelectionRange.Start);
+				var newAttachment = VarietyComponent.VarietyAttachment.FromString(componentOffset.ContentOffset, content);
+				component.AddAttachment(newAttachment);
 
-			//Erzeuge ein neues Attachment
-			var componentOffset = component.DisplayRenderBounds.GetContentOffset(context.SelectionRange.Start);
-			var newAttachment = VarietyComponent.VarietyAttachment.FromString(componentOffset.ContentOffset, content);
-			component.AddAttachment(newAttachment);
+				//Erzeuge die Displayelemente der Zeile neu
+				Line.RaiseModifiedAndInvalidateCache();
+				Line.CreateDisplayLines(formatter);
 
-			//Zeile bearbeitet
-			Line.RaiseModifiedAndInvalidateCache();
-			return this.CreateSuccessEditResult(SimpleRange.CursorAt(context.SelectionRange.Start + content.Length));
+				//Setze den Cursor hinter das eingefügte Attachment
+				var cursorPosition = newAttachment.RenderBounds.EndOffset;
+				return this.CreateSuccessEditResult(SimpleRange.CursorAt(cursorPosition));
+			}
 		}
 
 		private IEnumerable<(VarietyComponent Component, VarietyComponent.VarietyAttachment Attachment)> FindAttachmentsInRange(SimpleRange range, ISheetFormatter? formatter)
@@ -967,11 +1100,11 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			foreach (var component in Line.components)
 			{
 				//Liegt die Komponente vor dem Bereich?
-				if (component.TotalRenderBounds.EndOffset <= range.Start)
+				if (component.TotalRenderBounds.EndOffset < range.Start)
 					continue;
 
 				//Liegt die Komponente hinter dem Bereich?
-				if (component.TotalRenderBounds.StartOffset >= range.End)
+				if (component.TotalRenderBounds.StartOffset > range.End)
 					break;
 
 				//Ist die Komponente keine VarietyComponent?
@@ -998,17 +1131,19 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			}
 		}
 
-		private MetalineEditResult EditAttachment(VarietyComponent component, VarietyComponent.VarietyAttachment attachment, SimpleRange selectionRange, string? content, ISheetFormatter? formatter)
+		private MetalineEditResult EditAttachment(VarietyComponent component, VarietyComponent.VarietyAttachment attachment, SimpleRange selectionRange, string? content, ISheetBuilderFormatter? formatter)
 		{
 			//Kürze das Attachment
-			var componentOffset = component.DisplayRenderBounds.GetContentOffset(selectionRange.Start);
-			var attachmentOffset = componentOffset.ContentOffset - attachment.Offset;
-			var lengthBefore = attachment.Content.GetLength(formatter);
+			var attachmentOffset = attachment.RenderBounds.GetContentOffset(selectionRange.Start);
+			var selectionContentLength = attachment.RenderBounds.GetContentOffset(selectionRange.End) - attachmentOffset;
+			var attachmentDisplayLength = attachment.RenderBounds.Length;
 			var removedLength = 0;
 			if (selectionRange.Length > 0)
 			{
-				if (attachment.TryRemoveContent(attachmentOffset, selectionRange.Length, formatter))
+				if (attachment.TryRemoveContent(attachmentOffset, selectionContentLength, formatter))
 					removedLength = selectionRange.Length;
+				else if (content is null)
+					return MetalineEditResult.Fail;
 			}
 			
 			//Füge den Inhalt ein
@@ -1019,18 +1154,19 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			if (attachment.IsEmpty)
 				component.RemoveAttachment(attachment);
 
-			//Berechne die Cursorposition
-			var lengthAfter = attachment.Content.GetLength(formatter);
-			var cursorPosition = selectionRange.Start + lengthAfter - lengthBefore + removedLength;
-
-			//Zeile bearbeitet
+			//Erzeuge die Displayelemente der Zeile neu
 			Line.RaiseModifiedAndInvalidateCache();
+			Line.CreateDisplayLines(formatter);
+
+			//TODO: Cursorposition beim Bearbeiten von Attachments optimieren
+			//Berechne die Cursorposition
+			var cursorPosition = selectionRange.Start + attachment.RenderBounds.Length - attachmentDisplayLength + removedLength;
 
 			//Fertig
 			return this.CreateSuccessEditResult(SimpleRange.CursorAt(cursorPosition));
 		}
 
-		private MetalineEditResult FindAndMoveNextAttachment(int startOffset, int moveOffset, ISheetFormatter? formatter)
+		private MetalineEditResult FindAndMoveNextAttachment(int startOffset, ContentOffset moveOffset, ISheetFormatter? formatter)
 		{
 			//Finde das nächste Attachment
 			var nextAttachment = FindAttachmentsInRange(new SimpleRange(startOffset, int.MaxValue), formatter).FirstOrDefault();
@@ -1039,13 +1175,13 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 			//Berechne den neuen Offset
 			var newOffset = nextAttachment.Attachment.Offset + moveOffset;
-			if (newOffset < 0)
-				newOffset = 0;
+			if (newOffset < ContentOffset.Zero)
+				newOffset = ContentOffset.Zero;
 			else
 			{
 				var contentLength = nextAttachment.Component.Content.GetLength(formatter);
 				if (newOffset >= contentLength)
-					newOffset = contentLength - 1;
+					newOffset = contentLength - new ContentOffset(1);
 			}
 
 			//Hat sich der Offset nicht verändert?
@@ -1057,7 +1193,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 			//Zeile bearbeitet
 			Line.RaiseModifiedAndInvalidateCache();
-			return this.CreateSuccessEditResult(SimpleRange.CursorAt(moveOffset < 0 ? startOffset : startOffset + moveOffset));
+			return this.CreateSuccessEditResult(SimpleRange.CursorAt(moveOffset < ContentOffset.Zero ? startOffset : startOffset + moveOffset.Value));
 		}
 
 		//private LineEditResult DeleteAndInsertContent(SimpleRange selectionRange, ISheetFormatter? formatter, string? content)
@@ -1336,6 +1472,11 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 		Chord = 1,
 	}
 
+	internal readonly record struct MergeResult(int LengthBefore)
+	{
+		public int MergeLengthBefore { get; init; }
+	}
+
 	internal class ComponentContent
 	{
 		public string? Text { get; private set; }
@@ -1366,8 +1507,8 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			return result;
 		}
 
-		public static ComponentContent CreateSpace(int length, SpecialContentType allowedTypes = SpecialContentType.Chord)
-			=> new ComponentContent(new string(' ', length), allowedTypes);
+		public static ComponentContent CreateSpace(ContentOffset length, SpecialContentType allowedTypes = SpecialContentType.Chord)
+			=> new ComponentContent(new string(' ', length.Value), allowedTypes);
 
 		public SheetDisplayLineElement CreateElement(SheetDisplaySliceInfo sliceInfo, ISheetFormatter? formatter)
 		{
@@ -1388,32 +1529,32 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				};
 		}
 
-		public SheetDisplayLineElement CreateElement(SheetDisplaySliceInfo sliceId, int offset, int length, ISheetFormatter? formatter)
+		public SheetDisplayLineElement CreateElement(SheetDisplaySliceInfo sliceId, ContentOffset offset, ContentOffset length, ISheetFormatter? formatter)
 		{
 			//Trenne Inhalt auf
 			var textContent = Text ?? Chord?.ToString(formatter) ?? string.Empty;
-			if (offset == 0 && length >= textContent.Length)
+			if (offset == ContentOffset.Zero && length.Value >= textContent.Length)
 				return CreateElement(sliceId, formatter);
 
 			//Bilde Substring
-			var subContent = FromString(textContent.Substring(offset, Math.Min(length, textContent.Length - offset)), CurrentType);
+			var subContent = FromString(textContent.Substring(offset.Value, Math.Min(length.Value, textContent.Length - offset.Value)), CurrentType);
 			return subContent.CreateElement(sliceId, formatter);
 		}
 
-		public int GetLength(ISheetFormatter? formatter)
-			=> Text?.Length
+		public ContentOffset GetLength(ISheetFormatter? formatter)
+			=> new(Text?.Length
 			?? Chord?.ToString(formatter).Length
-			?? 0;
+			?? 0);
 
-		public ComponentContent GetContent(int offset, int length, ISheetFormatter? formatter)
+		public ComponentContent GetContent(ContentOffset offset, ContentOffset length, ISheetFormatter? formatter)
 		{
 			//Trenne Inhalt auf
 			var textContent = Text ?? Chord?.ToString(formatter) ?? string.Empty;
-			if (offset == 0 && length >= textContent.Length)
+			if (offset == ContentOffset.Zero && length.Value >= textContent.Length)
 				return this;
 
 			//Bilde Substring
-			return FromString(textContent.Substring(offset, Math.Min(length, textContent.Length - offset)), CurrentType);
+			return FromString(textContent.Substring(offset.Value, Math.Min(length.Value, textContent.Length - offset.Value)), CurrentType);
 		}
 
 		internal void ReplaceContent(ComponentContent newContent)
@@ -1437,15 +1578,15 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			}
 		}
 
-		internal bool RemoveContent(int offset, int length, ISheetFormatter? formatter)
+		internal bool RemoveContent(ContentOffset offset, ContentOffset length, ISheetFormatter? formatter)
 		{
-			if (offset < 0)
+			if (offset < ContentOffset.Zero)
 			{
 				length -= offset;
-				offset = 0;
+				offset = ContentOffset.Zero;
 			}
 
-			if (length <= 0)
+			if (length <= ContentOffset.Zero)
 				return false;
 
 			//Textinhalt
@@ -1453,8 +1594,8 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			if (textContent is null) return false;
 
 			//Kürze den Textinhalt
-			if (offset >= textContent.Length) return false;
-			var newContent = textContent.Remove(offset, Math.Min(length, textContent.Length - offset));
+			if (offset.Value >= textContent.Length) return false;
+			var newContent = textContent.Remove(offset.Value, Math.Min(length.Value, textContent.Length - offset.Value));
 			if (newContent == textContent) return false;
 
 			//Setze den neuen Inhalt
@@ -1462,7 +1603,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			return true;
 		}
 
-		internal void AppendContent(string content, ISheetFormatter? formatter)
+		internal MergeResult AppendContent(string content, ISheetFormatter? formatter)
 		{
 			//Textinhalt
 			var textContent = Text ?? Chord?.ToString(formatter);
@@ -1470,43 +1611,61 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			//Füge den Textinhalt hinzu
 			var newContent = textContent + content;
 			SetContent(newContent);
+
+			//Ergebnis
+			return new(textContent?.Length ?? 0)
+			{
+				MergeLengthBefore = content.Length
+			};
 		}
 
-		internal void MergeContents(string content, int offset, ISheetFormatter? formatter)
+		internal MergeResult MergeContents(string content, ContentOffset offset, ISheetFormatter? formatter)
 		{
 			//Textinhalt
 			var textContent = Text ?? Chord?.ToString(formatter) ?? string.Empty;
 
 			//Füge den Textinhalt hinzu
-			var stringOffset = Math.Min(offset, textContent.Length);
+			var stringOffset = Math.Min(offset.Value, textContent.Length);
 			var newContent = textContent[0..stringOffset] + content;
-			if (offset < textContent.Length)
+			if (offset.Value < textContent.Length)
 				newContent += textContent[stringOffset..];
 			SetContent(newContent);
+
+			//Ergebnis
+			return new(textContent.Length)
+			{
+				MergeLengthBefore = content.Length
+			};
 		}
 
-		internal void MergeContents(ComponentContent content, int offset, ISheetFormatter? formatter)
+		internal MergeResult MergeContents(ComponentContent content, ContentOffset offset, ISheetFormatter? formatter)
 		{
 			//Textinhalt
 			var textContent = Text ?? Chord?.ToString(formatter) ?? string.Empty;
 			var afterTextContent = content.Text ?? content.Chord?.ToString(formatter);
 
 			//Füge den Textinhalt hinzu
-			var stringOffset = Math.Min(offset, textContent.Length);
+			var stringOffset = Math.Min(offset.Value, textContent.Length);
 			var newContent = textContent[0..stringOffset] + afterTextContent;
-			if (offset < textContent.Length)
+			if (offset.Value < textContent.Length)
 				newContent += textContent[stringOffset..];
 			SetContent(newContent);
+
+			//Ergebnis
+			return new(textContent.Length)
+			{
+				MergeLengthBefore = afterTextContent?.Length ?? 0
+			};
 		}
 
-		internal ComponentContent SplitEnd(int offset, ISheetFormatter? formatter)
+		internal ComponentContent SplitEnd(ContentOffset offset, ISheetFormatter? formatter)
 		{
 			//Textinhalt
 			var textContent = Text ?? Chord?.ToString(formatter) ?? string.Empty;
 
 			//Trenne den Textinhalt auf
-			var newContent = textContent[..offset];
-			var newEndContent = textContent[offset..];
+			var newContent = textContent[..offset.Value];
+			var newEndContent = textContent[offset.Value..];
 
 			//Setze den neuen Inhalt
 			SetContent(newContent);
@@ -1547,6 +1706,9 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 		public static readonly RenderBounds Empty = new(0, 0);
 
 		public int Length => EndOffset - StartOffset;
+
+		public ContentOffset GetContentOffset(int displayOffset)
+			=> new(displayOffset - StartOffset);
 	}
 
 	internal record DisplayRenderBounds(int StartOffset, int EndOffset, IReadOnlyList<SheetDisplayLineElement> DisplayElements)
@@ -1555,24 +1717,24 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 		public int Length => EndOffset - StartOffset;
 
-		public (int ContentOffset, int GapOffset) GetContentOffset(int displayOffset)
+		public VirtualContentOffset GetContentOffset(int displayOffset)
 		{
 			//Finde das Element, in dem der Offset liegt
 			var display = DisplayElements.LastOrDefault(d => d.Slice.HasValue && d.DisplayOffset <= displayOffset);
 			if (display is null)
-				return (0, displayOffset);
+				return new(ContentOffset.Zero, displayOffset);
 
 			//Ist das Element virtuell?
 			var offsetFromStart = displayOffset - display.DisplayOffset;
 			if (display.Slice!.Value.IsVirtual)
-				return (display.Slice.Value.ContentOffset, offsetFromStart);
+				return new(display.Slice.Value.ContentOffset, offsetFromStart);
 
 			//Berechne den tatsächlichen ContentOffset
-			var contentOffset = display.Slice.Value.ContentOffset + offsetFromStart;
-			return (contentOffset, 0);
+			var contentOffset = display.Slice.Value.ContentOffset + new ContentOffset(offsetFromStart);
+			return new(contentOffset, 0);
 		}
 
-		public int GetDisplayOffset(int contentOffset, bool keepRight = false)
+		public int GetDisplayOffset(ContentOffset contentOffset, bool keepRight = false)
 		{
 			if (!keepRight)
 			{
@@ -1582,14 +1744,14 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				//Fallback, falls kein Element gefunden wurde
 				if (display is null)
 				{
-					if (contentOffset == 0)
+					if (contentOffset == ContentOffset.Zero)
 						return StartOffset;
 					else
 						return EndOffset;
 				}
 
 				//Berechne den Offset
-				return display.DisplayOffset + contentOffset - display.Slice!.Value.ContentOffset;
+				return display.DisplayOffset + contentOffset.Value - display.Slice!.Value.ContentOffset.Value;
 			}
 			else
 			{
@@ -1601,7 +1763,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				//Fallback, falls kein Element gefunden wurde
 				if (display.Display is null)
 				{
-					if (contentOffset == 0)
+					if (contentOffset == ContentOffset.Zero)
 						return StartOffset;
 					else
 						return EndOffset;
@@ -1618,69 +1780,9 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				}
 
 				//Berechne den Offset
-				return display.Display.DisplayOffset + contentOffset - display.Display.Slice!.Value.ContentOffset;
+				return display.Display.DisplayOffset + contentOffset.Value - display.Display.Slice!.Value.ContentOffset.Value;
 			}
 		}
-	}
-
-	internal record GapRenderBounds(int StartOffset, int EndOffset)
-	{
-		public static readonly GapRenderBounds Empty = new(0, 0);
-
-		public int Length => EndOffset - StartOffset;
-
-		public IReadOnlyList<RenderGap> Gaps { get; init; } = [];
-
-		public int GetContentOffset(int offset)
-		{
-			var contentOffset = offset - StartOffset;
-			foreach (var gap in Gaps)
-			{
-				//Liegt die Lücke nach dem Offset?
-				if (gap.StartOffset > offset)
-					continue;
-
-				//Wie weit liegt das Ende der Lücke hinter dem Offset?
-				var diff = gap.EndOffset - offset;
-				if (diff <= 0)
-					contentOffset -= gap.Length;
-				else
-					contentOffset -= diff;
-			}
-
-			return contentOffset;
-		}
-
-		public int GetOffsetWithGaps(int offset)
-			=> GetContentOffset(offset) + StartOffset;
-
-		public int GetContentOffsetFromEnd(int offset)
-		{
-			var contentOffset = EndOffset - offset;
-			foreach (var gap in Gaps)
-			{
-				//Liegt die Lücke vor dem Offset?
-				if (gap.EndOffset > offset)
-					continue;
-
-				//Wie weit liegt der Anfang der Lücke vor dem Offset?
-				var diff = offset - gap.StartOffset;
-				if (diff <= 0)
-					contentOffset += gap.Length;
-				else
-					contentOffset += diff;
-			}
-
-			return contentOffset;
-		}
-	}
-
-	internal record RenderGap(int StartOffset, int EndOffset)
-	{
-		public int Length => EndOffset - StartOffset;
-
-		public static RenderGap FromLength(int startOffset, int length)
-			=> new(startOffset, startOffset + length);
 	}
 
 	public abstract class Component
@@ -1693,10 +1795,10 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 		internal abstract void BuildLines(LineBuilders builders, int componentIndex, ISheetBuilderFormatter? formatter);
 
-		internal abstract bool TryRemoveContent(int offet, int length, ISheetFormatter? formatter);
+		internal abstract bool TryRemoveContent(ContentOffset offet, ContentOffset length, ISheetFormatter? formatter);
 		internal abstract bool TryReplaceContent(ComponentContent newContent, ISheetFormatter? formatter);
-		internal abstract bool TryMerge(Component next, int offset, ISheetFormatter? formatter);
-		internal abstract Component SplitEnd(int offset, ISheetFormatter? formatter);
+		internal abstract bool TryMerge(Component next, ContentOffset offset, ISheetFormatter? formatter);
+		internal abstract Component SplitEnd(ContentOffset offset, ISheetFormatter? formatter);
 
 		internal class LineBuilders
 		{
@@ -1754,7 +1856,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 		public static VarietyComponent FromString(string content, SpecialContentType allowedTypes = SpecialContentType.Chord)
 			=> new VarietyComponent(ComponentContent.FromString(content, allowedTypes));
 
-		public static VarietyComponent CreateSpace(int length, SpecialContentType allowedTypes = SpecialContentType.None)
+		public static VarietyComponent CreateSpace(ContentOffset length, SpecialContentType allowedTypes = SpecialContentType.None)
 			=> new VarietyComponent(ComponentContent.CreateSpace(length, allowedTypes));
 
 		#region Display
@@ -1775,7 +1877,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				var targetOffset = builders.ChordLine.CurrentLength + spaceBefore;
 
 				//Wie viel mehr Platz wird auf der Akkordzeile benötigt, damit das Attachment passt?
-				var difference = targetOffset - builders.TextLine.CurrentLength - firstAttachment.Attachment.Offset;
+				var difference = targetOffset - builders.TextLine.CurrentLength - firstAttachment.Attachment.Offset.Value;
 
 				//Verlängere die Textzeile auch um diese Differenz
 				builders.TextLine.ExtendLength(0, difference);
@@ -1786,7 +1888,6 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			var chordStartIndex = builders.ChordLine.CurrentLength;
 
 			//Trenne den Text an Attachments
-			var gaps = new List<RenderGap>();
 			var contentDisplayElements = new List<SheetDisplayLineElement>();
 			foreach (var block in GetDisplayColumns(componentIndex, formatter))
 			{
@@ -1815,10 +1916,6 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 						};
 						contentDisplayElements.Add(hyphen);
 						builders.TextLine.Append(hyphen, formatter);
-
-						//Speichere Lücke
-						if (offsetBefore < builders.TextLine.CurrentLength)
-							gaps.Add(new RenderGap(offsetBefore, builders.TextLine.CurrentLength));
 					}
 				}
 
@@ -1877,10 +1974,9 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 			//Trenne den Text an Attachments
 			Attachment? currentAttachment = null;
-			var gaps = new List<RenderGap>();
 			var nextAttachmentIndex = -2;
 			var currentAttachmentIndex = 0;
-			foreach (var nextAttachment in attachments.Prepend(new EmptyAttachmentStub(0)).Append(new EmptyAttachmentStub(contentLength)))
+			foreach (var nextAttachment in attachments.Prepend(new EmptyAttachmentStub(ContentOffset.Zero)).Append(new EmptyAttachmentStub(contentLength)))
 			{
 				nextAttachmentIndex++;
 
@@ -1894,7 +1990,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 				//Berechne Textlänge
 				var textLength = nextAttachment.Offset - currentAttachment.Offset;
-				if (textLength <= 0)
+				if (textLength <= ContentOffset.Zero)
 				{
 					//Nichts schreiben
 					currentAttachment = nextAttachment;
@@ -1947,7 +2043,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				{
 					Slice = textElement.Slice!.Value with
 					{
-						ContentOffset = 1,
+						ContentOffset = new(1),
 					},
 				};
 
@@ -1956,7 +2052,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				{
 					Slice = textElement.Slice!.Value with
 					{
-						ContentOffset = textElement.Text.Length - 1,
+						ContentOffset = new(textElement.Text.Length - 1),
 					},
 				};
 			}
@@ -1968,7 +2064,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				{
 					Slice = textElement.Slice!.Value with
 					{
-						ContentOffset = 1,
+						ContentOffset = new(1),
 					},
 				};
 			}
@@ -1986,14 +2082,17 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 		private sealed class EmptyAttachmentStub : Attachment
 		{
-			internal override RenderBounds RenderBounds { get; private protected set; }
+			internal override RenderBounds RenderBounds
+			{
+				get => throw new NotSupportedException();
+				private protected set => throw new NotSupportedException();
+			}
+
 			public override bool IsEmpty => true;
 
-			public EmptyAttachmentStub(int offset)
+			public EmptyAttachmentStub(ContentOffset offset)
 				: base(offset)
-			{
-				RenderBounds = new(Offset, Offset);
-			}
+			{ }
 
 			internal override SheetDisplayLineElement? CreateDisplayAttachment(SheetDisplaySliceInfo sliceInfo, out Action<RenderBounds> setRenderBounds, ISheetFormatter? formatter)
 			{
@@ -2023,11 +2122,11 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			return true;
 		}
 
-		internal override bool TryRemoveContent(int offset, int length, ISheetFormatter? formatter)
+		internal override bool TryRemoveContent(ContentOffset offset, ContentOffset length, ISheetFormatter? formatter)
 		{
 			//Speichere die Länge vor der Bearbeitung
 			var lengthBefore = Content.GetLength(formatter);
-			if (length == 0 || offset >= lengthBefore) return false;
+			if (length == ContentOffset.Zero || offset >= lengthBefore) return false;
 
 			//Entferne den Inhalt
 			if (!Content.RemoveContent(offset, length, formatter))
@@ -2055,7 +2154,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				if (a.Offset < endOffset)
 				{
 					//Würde sich das Attachment mit einem anderen überschneiden?
-					if (moved < 0 && attachments.Skip(index + 1).Any(n => n.Offset + moved <= offset))
+					if (moved < ContentOffset.Zero && attachments.Skip(index + 1).Any(n => n.Offset + moved <= offset))
 						return true;
 					else
 					{
@@ -2066,7 +2165,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				}
 
 				//Verschiebe Attachments nach dem Bereich
-				if (moved != 0)
+				if (moved != ContentOffset.Zero)
 					a.SetOffset(a.Offset + moved);
 				return false;
 			});
@@ -2074,7 +2173,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			return true;
 		}
 
-		internal override bool TryMerge(Component next, int offset, ISheetFormatter? formatter)
+		internal override bool TryMerge(Component next, ContentOffset offset, ISheetFormatter? formatter)
 		{
 			//Ist das nachfolgende Element kein VarietyComponent?
 			if (next is not VarietyComponent varietyMerge)
@@ -2093,17 +2192,17 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			//Verschiebe alle Attachments nach dem Offset
 			var lengthNow = Content.GetLength(formatter);
 			var moved = lengthNow - lengthBefore;
-			if (moved != 0)
+			if (moved != ContentOffset.Zero)
 				foreach (var attachment in attachments)
 					if (attachment.Offset >= offset)
 						attachment.SetOffset(attachment.Offset + moved);
 
 			//Füge alle Attachments zusammen und verschiebe dabei alle Attachments des eingefügten Elements
-			var newAttachmentsMove = lengthBefore + moved;
+			var newAttachmentsMove = lengthNow - mergeLengthBefore;
 			attachments.AddRange(varietyMerge.Attachments.Select(a =>
 			{
 				//Verschiebe das Attachment
-				a.SetOffset(a.Offset + moved);
+				a.SetOffset(a.Offset + newAttachmentsMove);
 				return a;
 			}));
 
@@ -2112,7 +2211,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			return true;
 		}
 
-		internal override Component SplitEnd(int offset, ISheetFormatter? formatter)
+		internal override Component SplitEnd(ContentOffset offset, ISheetFormatter? formatter)
 		{
 			//Trenne den Inhalt
 			var newEndContent = Content.SplitEnd(offset, formatter);
@@ -2147,7 +2246,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 		public void AddAttachments(IEnumerable<Attachment> attachments)
 		{
 			this.attachments.AddRange(attachments);
-			this.attachments.Sort((a1, a2) => a1.Offset - a2.Offset);
+			this.attachments.Sort((a1, a2) => a1.Offset.Value - a2.Offset.Value);
 			ResetDisplayCache();
 		}
 
@@ -2167,22 +2266,22 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 		public abstract class Attachment
 		{
-			public int Offset { get; protected set; }
+			public ContentOffset Offset { get; protected set; }
 
 			public abstract bool IsEmpty { get; }
 			internal abstract RenderBounds RenderBounds { get; private protected set; }
 
-			protected Attachment(int offset)
+			protected Attachment(ContentOffset offset)
 			{
-				if (offset < 0)
+				if (offset < ContentOffset.Zero)
 					throw new ArgumentOutOfRangeException(nameof(offset));
 
 				Offset = offset;
 			}
 
-			internal void SetOffset(int offset)
+			internal void SetOffset(ContentOffset offset)
 			{
-				if (offset < 0)
+				if (offset < ContentOffset.Zero)
 					throw new ArgumentOutOfRangeException(nameof(offset));
 
 				Offset = offset;
@@ -2199,25 +2298,25 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			public override bool IsEmpty => Content.IsEmpty;
 			internal override RenderBounds RenderBounds { get; private protected set; }
 
-			public VarietyAttachment(int offset, string text)
+			public VarietyAttachment(ContentOffset offset, string text)
 				: base(offset)
 			{
 				Content = new(text);
 			}
 
-			public VarietyAttachment(int offset, Chord chord)
+			public VarietyAttachment(ContentOffset offset, Chord chord)
 				: base(offset)
 			{
 				Content = new(chord);
 			}
 
-			private VarietyAttachment(int offset, ComponentContent content)
+			private VarietyAttachment(ContentOffset offset, ComponentContent content)
 				: base(offset)
 			{
 				Content = content;
 			}
 
-			public static VarietyAttachment FromString(int offset, string content)
+			public static VarietyAttachment FromString(ContentOffset offset, string content)
 				=> new VarietyAttachment(offset, ComponentContent.FromString(content));
 
 			internal override SheetDisplayLineElement? CreateDisplayAttachment(SheetDisplaySliceInfo sliceInfo,
@@ -2231,13 +2330,13 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				=> RenderBounds = bounds;
 
 			#region Editing
-			internal bool TryRemoveContent(int offset, int length, ISheetFormatter? formatter)
+			internal bool TryRemoveContent(ContentOffset offset, ContentOffset length, ISheetFormatter? formatter)
 			{
 				//Entferne den Inhalt
 				return Content.RemoveContent(offset, length, formatter);
 			}
 
-			internal void InsertContent(string content, int offset, ISheetFormatter? formatter)
+			internal void InsertContent(string content, ContentOffset offset, ISheetFormatter? formatter)
 			{
 				//Füge Inhalt ein
 				Content.MergeContents(content, offset, formatter);
@@ -2249,7 +2348,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				Content.SetContent(content);
 			}
 
-			internal VarietyAttachment? SplitEnd(int offset, ISheetFormatter? formatter)
+			internal VarietyAttachment? SplitEnd(ContentOffset offset, ISheetFormatter? formatter)
 			{
 				//Trenne den Inhalt
 				var newEndContent = Content.SplitEnd(offset, formatter);
@@ -2263,7 +2362,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			internal bool TryMergeContents(VarietyAttachment attachment, ISheetFormatter? formatter)
 			{
 				//Füge Inhalt hinzu
-				Content.MergeContents(attachment.Content, int.MaxValue, formatter);
+				Content.MergeContents(attachment.Content, ContentOffset.FarEnd, formatter);
 				return true;
 			}
 			#endregion

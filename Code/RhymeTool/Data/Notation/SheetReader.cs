@@ -5,7 +5,12 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-using ChordInLine = (Skinnix.RhymeTool.Data.Notation.Chord Chord, int Length, string? Suffix, int Offset, int SuffixOffset);
+using ChordInLine = (
+	Skinnix.RhymeTool.Data.Notation.Chord Chord,
+	Skinnix.RhymeTool.Data.Notation.ContentOffset Length,
+	string? Suffix,
+	Skinnix.RhymeTool.Data.Notation.ContentOffset Offset,
+	Skinnix.RhymeTool.Data.Notation.ContentOffset SuffixOffset);
 
 namespace Skinnix.RhymeTool.Data.Notation;
 
@@ -178,7 +183,7 @@ public class SheetReader
 	private SheetVarietyLine CreateChordLine(IEnumerable<ChordInLine> chords)
 	{
 		var components = new List<SheetVarietyLine.Component>();
-		var offset = 0;
+		ContentOffset offset = ContentOffset.Zero;
 		foreach (var chord in chords)
 		{
 			if (chord.Offset > offset)
@@ -194,13 +199,13 @@ public class SheetReader
 				components.Add(new SheetVarietyLine.VarietyComponent(chord.Chord));
 			if (chord.Suffix is not null)
 			{
-				if (chord.SuffixOffset > 0)
+				if (chord.SuffixOffset > ContentOffset.Zero)
 					components.Add(SheetVarietyLine.VarietyComponent.CreateSpace(chord.SuffixOffset));
 
 				components.Add(new SheetVarietyLine.VarietyComponent(chord.Suffix));
 			}
 
-			offset += chord.Length + + chord.SuffixOffset + (chord.Suffix?.Length ?? 0);
+			offset += chord.Length + chord.SuffixOffset + new ContentOffset(chord.Suffix?.Length ?? 0);
 		}
 
 		return new(components);
@@ -289,7 +294,7 @@ public class SheetReader
             }
 
             //Merke Akkord und Offset
-            chords.Add((chord, chordLength, suffix, chordOffset, suffixOffset));
+            chords.Add((chord, new(chordLength), suffix, new(chordOffset), new(suffixOffset)));
         }
 
         return chords;
@@ -301,7 +306,7 @@ public class SheetReader
         var offset = 0;
         var chordEnumerator = (chordLine ?? Enumerable.Empty<ChordInLine>()).GetEnumerator();
         ChordInLine nextChord = chordEnumerator.MoveNext() ? chordEnumerator.Current : default;
-        var nextChordOffset = nextChord.Chord != null ? nextChord.Offset : int.MaxValue;
+        var nextChordOffset = nextChord.Chord != null ? nextChord.Offset : ContentOffset.MaxValue;
         while (offset < line.Length)
         {
             //Whitespaces oder Zeichen?
@@ -313,19 +318,19 @@ public class SheetReader
 
 			//Finde alle Attachments, die in diesem Bereich liegen
 			var attachments = new List<SheetVarietyLine.VarietyComponent.Attachment>();
-			while (nextChord.Length != 0 && nextChord.Offset < offset)
+			while (nextChord.Length != ContentOffset.Zero && nextChord.Offset.Value < offset)
 			{
 				//Füge den Akkord hinzu
 				if (nextChord.Chord is not null)
-					attachments.Add(new SheetVarietyLine.VarietyComponent.VarietyAttachment(nextChord.Offset - startOffset, nextChord.Chord));
+					attachments.Add(new SheetVarietyLine.VarietyComponent.VarietyAttachment(nextChord.Offset - new ContentOffset(startOffset), nextChord.Chord));
 
 				//Füge ggf. Text hinzu
 				if (nextChord.Suffix is not null)
-					attachments.Add(new SheetVarietyLine.VarietyComponent.VarietyAttachment(nextChord.SuffixOffset - startOffset + nextChord.SuffixOffset, nextChord.Suffix));
+					attachments.Add(new SheetVarietyLine.VarietyComponent.VarietyAttachment(nextChord.SuffixOffset - new ContentOffset(startOffset) + nextChord.SuffixOffset, nextChord.Suffix));
 
 				//Wechle zum nächsten Akkord
 				nextChord = chordEnumerator.MoveNext() ? chordEnumerator.Current : default;
-				nextChordOffset = nextChord.Chord != null ? nextChord.Offset : int.MaxValue;
+				nextChordOffset = nextChord.Chord != null ? nextChord.Offset : ContentOffset.MaxValue;
 			}
 
 			//Erzeuge den String
@@ -345,7 +350,7 @@ public class SheetReader
 					else
 						spaceLength++;
 				}
-				component = SheetVarietyLine.VarietyComponent.CreateSpace(spaceLength, SheetVarietyLine.SpecialContentType.None);
+				component = SheetVarietyLine.VarietyComponent.CreateSpace(new(spaceLength), SheetVarietyLine.SpecialContentType.None);
 			}
 
 			//Füge die Attachments hinzu
@@ -359,10 +364,10 @@ public class SheetReader
 		while (nextChord.Chord != null)
         {
             //Verlängere die Zeile um Leerzeichen
-            if (nextChordOffset > offset)
+            if (nextChordOffset.Value > offset)
             {
-                components.Add(SheetVarietyLine.VarietyComponent.CreateSpace(nextChordOffset - offset, SheetVarietyLine.SpecialContentType.None));
-                offset = nextChordOffset;
+                components.Add(SheetVarietyLine.VarietyComponent.CreateSpace(nextChordOffset - new ContentOffset(offset), SheetVarietyLine.SpecialContentType.None));
+                offset = nextChordOffset.Value;
             }
 
             //Füge ein einzelnes Leerzeichen als Wort hinzu
@@ -371,7 +376,7 @@ public class SheetReader
 
 			//Füge den Akkord und ggf. Suffix hinzu
 			if (nextChord.Chord is not null)
-				word.AddAttachment(new SheetVarietyLine.VarietyComponent.VarietyAttachment(0, nextChord.Chord));
+				word.AddAttachment(new SheetVarietyLine.VarietyComponent.VarietyAttachment(ContentOffset.Zero, nextChord.Chord));
 			if (nextChord.Suffix is not null)
 				word.AddAttachment(new SheetVarietyLine.VarietyComponent.VarietyAttachment(nextChord.SuffixOffset, nextChord.Suffix));
 
@@ -380,7 +385,7 @@ public class SheetReader
 
             //Wechle zum nächsten Akkord
             nextChord = chordEnumerator.MoveNext() ? chordEnumerator.Current : default;
-            nextChordOffset = nextChord.Chord != null ? nextChord.Offset : int.MaxValue;
+            nextChordOffset = nextChord.Chord != null ? nextChord.Offset : ContentOffset.MaxValue;
         }
 
         return components;

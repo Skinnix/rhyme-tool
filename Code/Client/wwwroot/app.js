@@ -104,6 +104,9 @@ function getSelectionRange(selection, wrapper, elementCondition) {
 
 		for (; !elementCondition(node); node = node.parentElement) {
 			for (var current = node.previousSibling; current; current = current.previousSibling) {
+				if (current.nodeType == Node.COMMENT_NODE)
+					continue;
+
 				offset += current.textContent?.length || 0;
 			}
 		}
@@ -167,6 +170,9 @@ function setSelectionRange(wrapper, metaline, lineId, lineIndex, selectionRange)
 		var currentOffsetFromStart = 0;
 		for (var i = 0; i < element.childNodes.length; i++) {
 			var child = element.childNodes[i];
+			if (child.nodeType == Node.COMMENT_NODE)
+				continue;
+
 			var afterOffset = currentOffsetFromStart + child.textContent.length;
 			if (offsetFromStart < afterOffset)
 				return findNodeAndOffset(child, offsetFromStart - currentOffsetFromStart);
