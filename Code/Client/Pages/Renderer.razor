@@ -1,6 +1,7 @@
 ﻿@page "/chords"
 @page "/"
 
+@using Skinnix.RhymeTool.Client.Components.Configuration
 @using Skinnix.RhymeTool.Client.Components.Rendering
 @using Skinnix.RhymeTool.Data.Notation
 @using Skinnix.RhymeTool.Data.Notation.Display
@@ -40,8 +41,8 @@
     <InputFile OnChange="UploadFile" id="openFileInput" />
 </div>
 
-<div class="col sheet-wrapper" style="font-size: @(fontSize)px;">
-    <SheetRenderer Document="document" DisplayMode="SheetDisplayMode.Lines" Formatter="formatter" />
+<div class="col sheet-wrapper" style="font-size: @(settings.FontSize)px;">
+    <SheetRenderer Document="document" DisplayMode="SheetDisplayMode.Lines" Formatter="settings.Formatter" />
 </div>
 
 <aside class="col-2 offcanvas-lg offcanvas-end d-flex" data-bs-scroll="true" id="rendererMenu">
@@ -54,58 +55,7 @@
             @if (document != null)
             {
                 <h4>Tools</h4>
-                <div class="row mb-3">
-                    <label class="form-label">
-                        <button class="btn btn-sm rounded" data-bs-toggle="collapse" data-bs-target="#fontSizeWrapper">
-                            <i class="fas fa-toggle-off"></i>
-                        </button>
-
-                        Schriftgröße
-                    </label>
-                    <div class="col collapse show" id="fontSizeWrapper">
-                        <div class="input-group" role="group">
-                            <button type="button" class="btn btn-outline-secondary"
-                                    @onclick="() => SetFontSize(fontSize - 1)">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                            
-                            <input inputmode="numeric" class="form-control text-center"
-                                   @bind:get="fontSize"
-                                   @bind:set="SetFontSize" />
-
-                            <button type="button" class="btn btn-outline-secondary"
-                                    @onclick="() => SetFontSize(fontSize + 1)">
-                                <i class="fas fa-plus"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-                <div class="row mb-3">
-                    <label class="form-label">
-                        <button class="btn btn-sm rounded" data-bs-toggle="collapse" data-bs-target="#transposeWrapper">
-                            <i class="fas fa-toggle-off"></i>
-                        </button>
-
-                        Transponieren
-                    </label>
-                    <div class="col collapse show" id="transposeWrapper">
-                        <div class="input-group" role="group">
-                            <button type="button" class="btn btn-outline-secondary"
-                                    @onclick="DecrementTranspose">
-                                <i class="fas fa-minus"></i>
-                            </button>
-
-                            <input inputmode="numeric" class="form-control text-center"
-                                   @bind:get="formatter.Transformation?.Transpose ?? 0"
-                                   @bind:set="SetTranspose" />
-
-                            <button type="button" class="btn btn-outline-secondary"
-                                    @onclick="IncrementTranspose">
-                                <i class="fas fa-plus"></i>
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                <ConfigurationGrid Settings="settings" />
 
                 <h4>Navigation</h4>
                 <nav class="nav nav-pills flex-column" id="pageNavigation">
@@ -123,16 +73,21 @@
 
 @code {
     private SheetDocument? document;
-    private int fontSize = 16;
 
-    private DefaultSheetFormatter formatter = new DefaultSheetFormatter()
+    private RenderingSettings settings = new()
     {
-        GermanMode = GermanNoteMode.Descriptive,
+        FontSize = 16,
+        Formatter = new DefaultSheetFormatter()
+        {
+            GermanMode = GermanNoteMode.Descriptive,
+        }
     };
 
     protected override async Task OnParametersSetAsync()
     {
         await base.OnParametersSetAsync();
+
+        settings.PropertyChanged += (_, _) => StateHasChanged();
 
         #if DEBUG
         using (var stream = await http.GetStreamAsync("Data/test-sas.txt"))
@@ -150,39 +105,6 @@
         await base.OnAfterRenderAsync(firstRender);
 
         await js.InvokeVoidAsync("startScrollSpy", "pageNavigation");
-    }
-
-    private void SetFontSize(int value)
-    {
-        if (value <= 0) return;
-
-        fontSize = value;
-    }
-
-    private void DecrementTranspose()
-        => SetTranspose((formatter.Transformation?.Transpose ?? 0) - 1);
-
-    private void IncrementTranspose()
-        => SetTranspose((formatter.Transformation?.Transpose ?? 0) + 1);
-
-    private void SetTranspose(int value)
-    {
-        if (formatter.Transformation == null)
-            formatter = formatter with
-            {
-                Transformation = new SheetTransformation()
-                {
-                    Transpose = value
-                }
-            };
-        else
-            formatter = formatter with
-            {
-                Transformation = formatter.Transformation with
-                {
-                    Transpose = value
-                }
-            };
     }
 
     private async Task UploadFile(InputFileChangeEventArgs e)

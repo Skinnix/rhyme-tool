@@ -5,8 +5,8 @@ public interface ISheetDisplayLineEditing
 	public SheetLine Line { get; }
 	public int LineId { get; }
 
-	public MetalineEditResult InsertContent(SheetDisplayLineEditingContext context, string content, ISheetBuilderFormatter? formatter = null);
-	public MetalineEditResult DeleteContent(SheetDisplayLineEditingContext context, bool forward = false, ISheetBuilderFormatter? formatter = null);
+	public MetalineEditResult InsertContent(SheetDisplayLineEditingContext context, string content, ISheetEditorFormatter? formatter = null);
+	public MetalineEditResult DeleteContent(SheetDisplayLineEditingContext context, bool forward = false, ISheetEditorFormatter? formatter = null);
 }
 
 public record struct SheetDisplayLineEditingContext(SimpleRange SelectionRange)

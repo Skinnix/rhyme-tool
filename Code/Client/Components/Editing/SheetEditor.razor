@@ -10,7 +10,7 @@
 <div class="chord-sheet chord-sheet-editor chord-sheet-editing @(IsDebug ? "debug" : null)" contenteditable @ref="editorWrapper">
     @if (Document != null)
     {
-        <CascadingValue TValue="ISheetFormatter" Value="Formatter">
+        <CascadingValue TValue="ISheetEditorFormatter" Value="Formatter">
             <CascadingValue TValue="SheetDocument" Value="Document">
 
                 @foreach (var line in Document.Lines)
@@ -32,7 +32,7 @@
 #endif
 
     [Parameter] public SheetDocument? Document { get; set; }
-    [Parameter] public ISheetFormatter? Formatter { get; set; }
+    [Parameter] public ISheetEditorFormatter? Formatter { get; set; }
 
     private SheetDocument? loadedDocument;
 

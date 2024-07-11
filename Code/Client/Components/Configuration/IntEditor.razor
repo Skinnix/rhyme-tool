@@ -1,0 +1,21 @@
+﻿@namespace Skinnix.RhymeTool.Client.Components.Configuration
+
+@inherits PropertyEditorBase<int>
+
+@if (Property is not null)
+{
+    <div class="input-group" role="group">
+        <button type="button" class="btn btn-outline-secondary"
+                @onclick="() => Value--">
+            <i class="fas fa-minus"></i>
+        </button>
+
+        <input inputmode="numeric" class="form-control text-center"
+               @bind="Value" />
+
+        <button type="button" class="btn btn-outline-secondary"
+                @onclick="() => Value++">
+            <i class="fas fa-plus"></i>
+        </button>
+    </div>
+}

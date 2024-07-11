@@ -23,6 +23,13 @@ public record SheetTransformation
         }
     }
 
+	public SheetTransformation() { }
+
+	public SheetTransformation(int transpose)
+	{
+		Transpose = transpose;
+	}
+
     public Chord TransformChord(Chord chord)
     {
         if (Transpose == 0)
@@ -37,5 +44,21 @@ public record SheetTransformation
             return note;
 
         return note.Transpose(Transpose);
-    }
+	}
+
+	public Chord UntransformChord(Chord chord)
+	{
+		if (Transpose == 0)
+			return chord;
+
+		return chord.Transpose(-Transpose);
+	}
+
+	public Note UntransformNote(Note note)
+	{
+		if (Transpose == 0)
+			return note;
+
+		return note.Transpose(-Transpose);
+	}
 }

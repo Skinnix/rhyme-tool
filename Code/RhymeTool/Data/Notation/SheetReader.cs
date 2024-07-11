@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-
+using Skinnix.RhymeTool.Data.Notation.Display;
 using ChordInLine = (
 	Skinnix.RhymeTool.Data.Notation.Chord Chord,
 	Skinnix.RhymeTool.Data.Notation.ContentOffset Length,
@@ -22,6 +22,8 @@ public class SheetReader
     private readonly List<SheetLine> lines = new();
 
     private List<ChordInLine>? lastChordLine = null;
+
+	public ISheetEditorFormatter? Formatter { get; set; }
 
     private SheetReader(TextReader reader)
     {
@@ -190,7 +192,7 @@ public class SheetReader
 			{
 				//Füge Leerzeichen hinzu
 				var spaceLength = chord.Offset - offset;
-				components.Add(SheetVarietyLine.VarietyComponent.CreateSpace(spaceLength));
+				components.Add(SheetVarietyLine.VarietyComponent.CreateSpace(spaceLength, Formatter));
 				offset += spaceLength;
 			}
 
@@ -200,7 +202,7 @@ public class SheetReader
 			if (chord.Suffix is not null)
 			{
 				if (chord.SuffixOffset > ContentOffset.Zero)
-					components.Add(SheetVarietyLine.VarietyComponent.CreateSpace(chord.SuffixOffset));
+					components.Add(SheetVarietyLine.VarietyComponent.CreateSpace(chord.SuffixOffset, Formatter));
 
 				components.Add(new SheetVarietyLine.VarietyComponent(chord.Suffix));
 			}
@@ -337,7 +339,7 @@ public class SheetReader
 			SheetVarietyLine.VarietyComponent component;
 			if (!isWordWhitespace)
 			{
-				component = SheetVarietyLine.VarietyComponent.FromString(new string(line[startOffset..offset]), SheetVarietyLine.SpecialContentType.None);
+				component = SheetVarietyLine.VarietyComponent.FromString(new string(line[startOffset..offset]), Formatter, SheetVarietyLine.SpecialContentType.None);
 			}
 			else
 			{
@@ -350,7 +352,7 @@ public class SheetReader
 					else
 						spaceLength++;
 				}
-				component = SheetVarietyLine.VarietyComponent.CreateSpace(new(spaceLength), SheetVarietyLine.SpecialContentType.None);
+				component = SheetVarietyLine.VarietyComponent.CreateSpace(new(spaceLength), Formatter, SheetVarietyLine.SpecialContentType.None);
 			}
 
 			//Füge die Attachments hinzu
@@ -366,7 +368,7 @@ public class SheetReader
             //Verlängere die Zeile um Leerzeichen
             if (nextChordOffset.Value > offset)
             {
-                components.Add(SheetVarietyLine.VarietyComponent.CreateSpace(nextChordOffset - new ContentOffset(offset), SheetVarietyLine.SpecialContentType.None));
+                components.Add(SheetVarietyLine.VarietyComponent.CreateSpace(nextChordOffset - new ContentOffset(offset), Formatter, SheetVarietyLine.SpecialContentType.None));
                 offset = nextChordOffset.Value;
             }
 

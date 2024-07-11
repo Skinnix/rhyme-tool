@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Win32.SafeHandles;
 using Skinnix.RhymeTool;
+using Skinnix.RhymeTool.ComponentModel;
 using Skinnix.RhymeTool.Data.Notation;
 using Skinnix.RhymeTool.Data.Notation.Display;
 
@@ -38,6 +39,11 @@ public interface ISheetBuilderFormatter : ISheetFormatter
 	int SpaceBefore(SheetLine line, SheetDisplayLineBuilder lineBuilder, SheetDisplayLineElement element);
 }
 
+public interface ISheetEditorFormatter : ISheetBuilderFormatter
+{
+	int TryReadChord(ReadOnlySpan<char> s, out Chord? chord);
+}
+
 public enum GermanNoteMode
 {
     AlwaysB,
@@ -48,7 +54,7 @@ public enum GermanNoteMode
     ExplicitH,
 }
 
-public record DefaultSheetFormatter : ISheetBuilderFormatter
+public record DefaultSheetFormatter : ISheetEditorFormatter
 {
     public static readonly DefaultSheetFormatter Instance = new();
 
@@ -57,9 +63,9 @@ public record DefaultSheetFormatter : ISheetBuilderFormatter
     public static string NaturalModifier { get; } = "♮";
 
     public string DefaultAccidentalModifier { get; init; } = string.Empty;
-    public string SharpAccidentalModifier { get; init; } = "♯";
-    public string FlatAccidentalModifier { get; init; } = "♭";
-    public string ExplicitNaturalModifier { get; init; } = "♮";
+    public string SharpAccidentalModifier { get; init; } = SharpModifier;
+    public string FlatAccidentalModifier { get; init; } = FlatModifier;
+    public string ExplicitNaturalAccidentalModifier { get; init; } = NaturalModifier;
 
     public string MajorQuality { get; init; } = string.Empty;
     public string MinorQuality { get; init; } = "m";
@@ -71,8 +77,8 @@ public record DefaultSheetFormatter : ISheetBuilderFormatter
     public string SuspensionAlteration { get; init; } = "sus";
 
     public string DefaultDegreeModifier { get; init; } = string.Empty;
-    public string SharpDegreeModifier { get; init; } = "♯";
-    public string FlatDegreeModifier { get; init; } = "♭";
+    public string SharpDegreeModifier { get; init; } = SharpModifier;
+    public string FlatDegreeModifier { get; init; } = FlatModifier;
     public string MajorDegreeModifier { get; init; } = "maj";
     public string MajorSeventhDegreeModifier { get; init; } = "Δ";
 
@@ -188,7 +194,7 @@ public record DefaultSheetFormatter : ISheetBuilderFormatter
                 case GermanNoteMode.ExplicitB:
                     return note.Accidental switch
                     {
-                        AccidentalType.None => new("B", ExplicitNaturalModifier),
+                        AccidentalType.None => new("B", ExplicitNaturalAccidentalModifier),
                         AccidentalType.Sharp => new("B", SharpAccidentalModifier),
                         AccidentalType.Flat => new("B", FlatAccidentalModifier),
                         _ => throw new NotImplementedException("unknown accidental type"),
@@ -196,7 +202,7 @@ public record DefaultSheetFormatter : ISheetBuilderFormatter
                 case GermanNoteMode.ExplicitH:
                     return note.Accidental switch
                     {
-                        AccidentalType.None => new("H", ExplicitNaturalModifier),
+                        AccidentalType.None => new("H", ExplicitNaturalAccidentalModifier),
                         AccidentalType.Sharp => new("H", SharpAccidentalModifier),
                         AccidentalType.Flat => new("H", FlatAccidentalModifier),
                         _ => throw new NotImplementedException("unknown accidental type"),
@@ -220,6 +226,50 @@ public record DefaultSheetFormatter : ISheetBuilderFormatter
 
         return 0;
     }
+
+	public int TryReadChord(ReadOnlySpan<char> s, out Chord? chord) => TryReadChord(s, out chord, true);
+	public int TryReadChord(ReadOnlySpan<char> s, out Chord? chord, bool transform)
+	{
+		var length = Chord.TryRead(s, out chord);
+		if (length != s.Length || chord is null)
+		{
+			chord = null;
+			return 0;
+		}
+
+		if (chord.Root.Type == NoteType.B)
+		{
+			switch (GermanMode)
+			{
+				case GermanNoteMode.German:
+					if (chord.Root.Accidental == AccidentalType.None && s.StartsWith("B", StringComparison.OrdinalIgnoreCase))
+						chord = chord with
+						{
+							Root = new(NoteType.B, AccidentalType.Flat)
+						};
+					break;
+			}
+		}
+
+		if (chord.Bass?.Type == NoteType.B)
+		{
+			switch (GermanMode)
+			{
+				case GermanNoteMode.German:
+					if (chord.Root.Accidental == AccidentalType.None && s.StartsWith("B", StringComparison.OrdinalIgnoreCase))
+						chord = chord with
+						{
+							Bass = new(NoteType.B, AccidentalType.Flat)
+						};
+					break;
+			}
+		}
+
+		if (transform && Transformation is not null)
+			chord = Transformation.UntransformChord(chord);
+
+		return length;
+	}
 }
 
 public static class SheetFormatterExceptions

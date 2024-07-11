@@ -43,7 +43,7 @@ public class SheetEmptyLine : SheetLine, ISheetDisplayLineEditing
 		}
     }
 
-	public MetalineEditResult DeleteContent(SheetDisplayLineEditingContext context, bool forward = false, ISheetBuilderFormatter? formatter = null)
+	public MetalineEditResult DeleteContent(SheetDisplayLineEditingContext context, bool forward = false, ISheetEditorFormatter? formatter = null)
 	{
 		if (forward)
 		{
@@ -83,7 +83,7 @@ public class SheetEmptyLine : SheetLine, ISheetDisplayLineEditing
 		}
 	}
 
-	public MetalineEditResult InsertContent(SheetDisplayLineEditingContext context, string content, ISheetBuilderFormatter? formatter = null)
+	public MetalineEditResult InsertContent(SheetDisplayLineEditingContext context, string content, ISheetEditorFormatter? formatter = null)
 	{
 		//Wird nur ein Zeilenumbruch eingefügt?
 		if (content == "\n")

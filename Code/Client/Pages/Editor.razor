@@ -1,6 +1,8 @@
 ﻿@page "/editor"
 @page "/chords/editor"
 
+@using Skinnix.RhymeTool.Client.Components.Configuration
+@using Skinnix.RhymeTool.Client.Components.Rendering
 @using Skinnix.RhymeTool.Data.Notation
 @using Skinnix.RhymeTool.Data.Notation.Display
 @using Skinnix.RhymeTool.Client.Components.Editing
@@ -9,6 +11,7 @@
 
 @inject HttpClient http
 @inject IJSRuntime js
+@inject NavigationManager navigation
 
 <SectionContent SectionName="NavbarMain">
     <button class="navbar-toggler d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#rendererMenu" aria-controls="rendererMenu">
@@ -16,8 +19,8 @@
     </button>
 </SectionContent>
 
-<div class="col sheet-wrapper">
-    <SheetEditor Document="document" Formatter="formatter" />
+<div class="col sheet-wrapper" style="font-size: @(settings.FontSize)px;">
+    <SheetEditor Document="document" Formatter="settings.Formatter" />
 </div>
 
 <aside class="col-2 offcanvas-lg offcanvas-end d-flex" data-bs-scroll="true" id="rendererMenu">
@@ -30,9 +33,17 @@
             @if (document != null)
             {
                 <h4>Tools</h4>
-                <div class="row mb-3">
-                    
-                </div>
+                <ConfigurationGrid Settings="settings" />
+
+                <h4>Navigation</h4>
+                <nav class="nav nav-pills flex-column" id="pageNavigation">
+                    @foreach (var segment in document.FindSegments())
+                    {
+                        <a class="nav-link" href="@(navigation.Uri)#sheetSegment-@(segment.TitleLine.Guid)">
+                            @segment.Title
+                        </a>
+                    }
+                </nav>
             }
         </div>
     </div>
@@ -41,14 +52,20 @@
 @code {
     private SheetDocument? document;
 
-    private DefaultSheetFormatter formatter = new DefaultSheetFormatter()
+    private EditingSettings settings = new()
+    {
+        FontSize = 16,
+        Formatter = new DefaultSheetFormatter()
         {
             GermanMode = GermanNoteMode.Descriptive,
-        };
+        },
+    };
 
     protected override async Task OnParametersSetAsync()
     {
         await base.OnParametersSetAsync();
+
+        settings.PropertyChanged += (_, _) => StateHasChanged();
 
         using (var stream = await http.GetStreamAsync("Data/test-sas.txt"))
         using (var reader = new StreamReader(stream))
