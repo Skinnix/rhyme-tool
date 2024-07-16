@@ -48,9 +48,7 @@
             {
                 <span class="chord-bass-separator">/</span>
 
-                <span class="chord-bass">@{
-                        RenderNote(chord.Bass.Value, true);
-                    }</span>
+                <span class="chord-bass">@{ RenderNote(chord.Bass.Value, true); }</span>
             }
         </span>
     }
@@ -104,9 +102,7 @@
         switch (line)
         {
             case SheetDisplayEmptyLine empty:
-                <div class="line line-empty" data-line-index="@line.Id">
-                    @(" ")
-                </div>
+                <div class="line line-empty" data-line-index="@line.Id"></div>
                 break;
 
             case SheetDisplayChordLine chords:
@@ -152,11 +148,9 @@
     }
 }
 
-@if (lineCache != null)
+@if (Line is not null)
 {
-    var displayLines = lineCache.GetDisplayLines(Formatter);
-
-    <div class="metaline" data-metaline="@(lineCache.Line.Guid)" data-type="@Line?.GetType()?.Name">
+    <div class="metaline" data-metaline="@(Line.Guid)" data-type="@Line.GetType()?.Name">
         <div class="metaline-controls" contenteditable="false">
             <div class="dropdown metaline-type">
                 @switch (Line)
@@ -177,7 +171,7 @@
             </div>
         </div>
         <div class="metaline-lines">
-            @foreach (var display in lineCache.GetDisplayLines(Formatter))
+            @foreach (var display in Line.CreateDisplayLines(Formatter))
             {
                 <div class="line-controls" contenteditable="false">
                     @{
@@ -197,20 +191,20 @@
 
     [Parameter] public SheetLine? Line { get; set; }
 
-    private SheetLineCache? lineCache;
+    //private SheetLineCache? lineCache;
 
-    protected override void OnParametersSet()
-    {
-        base.OnParametersSet();
+    // protected override void OnParametersSet()
+    // {
+    //     base.OnParametersSet();
 
-        if (lineCache != null)
-            lineCache.Modified -= OnLineModified;
+    //     if (lineCache != null)
+    //         lineCache.Modified -= OnLineModified;
 
-        lineCache = Line == null ? null : new SheetLineCache(Line);
+    //     lineCache = Line == null ? null : new SheetLineCache(Line);
 
-        if (lineCache != null)
-            lineCache.Modified += OnLineModified;
-    }
+    //     if (lineCache != null)
+    //         lineCache.Modified += OnLineModified;
+    // }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -226,10 +220,10 @@
 
     public async Task<MetalineEditResult?> HandleInput(InputEventData data)
     {
-        if (Line is null || lineCache is null || Document is null) throw new InvalidOperationException("Editor not initialized");
+        if (Line is null || Document is null) throw new InvalidOperationException("Editor not initialized");
 
         //find lines
-        var lines = lineCache.GetDisplayLines();
+        var lines = Line.CreateDisplayLines(Formatter);
         var startLine = lines.FirstOrDefault(l => l.Id == data.Selection.Start.Line);
         var endLine = lines.FirstOrDefault(l => l.Id == data.Selection.End.Line);
 

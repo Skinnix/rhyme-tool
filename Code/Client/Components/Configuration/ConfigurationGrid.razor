@@ -7,23 +7,7 @@
 }
 @foreach (var property in Settings?.Properties ?? [])
 {
-    i++;
-
-    <div class="row mb-3">
-        <label class="form-label">
-            @if (property.IsToggleable)
-            {
-                <button class="btn btn-sm rounded" data-bs-toggle="collapse" data-bs-target="#property@(guid)-@(i)">
-                    <i class="fas fa-toggle-off"></i>
-                </button>
-            }
-
-            @property.Name
-        </label>
-        <div class="col collapse show" id="property@(guid)-@(i)">
-            @CreateRenderer(property)
-        </div>
-    </div>
+    @CreateRenderer(property, $"{guid}-{i++}")
 }
 
 
@@ -48,10 +32,10 @@
         
     }
 
-    private RenderFragment CreateRenderer(IConfigurableProperty property)
+    private RenderFragment CreateRenderer(IConfigurableProperty property, string editorId)
     {
-        var componentType =
-            property.Type == typeof(int) ? typeof(IntEditor)
+        var componentType = property.Type == typeof(int) ? typeof(IntEditor)
+            : property.Type == typeof(bool) ? typeof(BoolEditor)
             : null;
 
         if (componentType is null)
@@ -61,6 +45,7 @@
         {
             builder.OpenComponent(0, componentType);
             builder.AddAttribute(1, "Property", property);
+            builder.AddAttribute(2, "EditorId", editorId);
             builder.CloseComponent();
         };
     }

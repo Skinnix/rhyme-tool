@@ -122,8 +122,8 @@ $separatorColor: #6c757d;
 		}
 	}
 
-	.line.line-emptyafter, .line:empty::after {
-		content: ' ';
+	.line.line-empty::after, .line:empty::after {
+		content: '\A';
 	}
 
 	.chord {

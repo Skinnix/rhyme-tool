@@ -104,17 +104,20 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			yield break;
 		}
 
-		//Gib nichtleere Zeilen zurück
+		//Ist die Akkordzeile nicht leer?
 		if (builders.ChordLine.CurrentLength > 0)
 		{
 			//Strecke die Akkordzeile auf die Länge der Textzeile + 1
 			builders.ChordLine.ExtendLength(builders.TextLine.CurrentLength + 1, 0);
+		}
+
+		//Zeige Akkordzeile
+		if (formatter?.ShowLine(this, builders.ChordLine) != false)
 			yield return builders.ChordLine.CreateDisplayLine(1, attachmentEditor);
-		}
-		if (builders.TextLine.CurrentLength > 0)
-		{
+
+		//Zeige Textzeile
+		if (formatter?.ShowLine(this, builders.TextLine) != false)
 			yield return builders.TextLine.CreateDisplayLine(0, contentEditor);
-		}
 	}
 
 	#region Creation
@@ -244,7 +247,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				}
 
 				//Wird der Zeilenumbruch am Ende entfernt?
-				if (forward && Line.components.Count == 0 || context.SelectionRange.End >= Line.components[^1].DisplayRenderBounds.EndOffset)
+				if (forward && (Line.components.Count == 0 || context.SelectionRange.End >= Line.components[^1].DisplayRenderBounds.EndOffset))
 				{
 					//Gibt es eine Zeile danach?
 					var lineAfter = context.GetLineAfter?.Invoke();
@@ -543,15 +546,16 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				}
 			}
 
-			//Sonderfall: wird ein Text mit Attachment durch ein Leerzeichen ersetzt?
+			//Sonderfall: wird ein Text mit Attachment durch ein Leerzeichen ersetzt (oder umgekehrt)?
 			if (content is not null && rangeStartsOnComponent && rangeEndsOnComponent && fullyInside.Count == 1
-				&& fullyInside[0] is VarietyComponent varietyInside && !varietyInside.Content.IsSpace && string.IsNullOrWhiteSpace(content))
+				&& fullyInside[0] is VarietyComponent varietyInside && varietyInside.Attachments.Count == 1
+				&& varietyInside.Content.IsSpace != string.IsNullOrWhiteSpace(content))
 			{
 				//Erzeuge Komponenten für den Inhalt
 				newContentComponents ??= CreateComponentsForContent(content, formatter);
 				
 				//Hat der Inhalt genau eine Leerzeichenkomponente?
-				if (newContentComponents.Count == 1 && newContentComponents[0].Content.IsSpace)
+				if (newContentComponents.Count == 1 && newContentComponents[0].Content.IsSpace != varietyInside.Content.IsSpace)
 				{
 					//Übernimm das Attachment des Textes
 					var attachment = varietyInside.Attachments[0];
@@ -770,12 +774,12 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				addedContent = true;
 
 				//Prüfe, ob der rechte Rand auch hinzugefügt werden kann
-				if (rightEdge is not null && rightEdge != leftEdge)
-				{
-					//Entferne die rechte Randkomponente
-					Line.components.Remove(rightEdge);
-					removedAnything = true;
-				}
+				//if (rightEdge is not null && rightEdge != leftEdge)
+				//{
+				//	//Entferne die rechte Randkomponente
+				//	Line.components.Remove(rightEdge);
+				//	removedAnything = true;
+				//}
 
 				//Setze den Cursor an das Ende des eingefügten Inhalts
 				cursorPosition = context.SelectionRange.Start + newContentComponents.Sum(c => c.Content.GetLength(formatter).Value);

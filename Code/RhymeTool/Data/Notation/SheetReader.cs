@@ -5,6 +5,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Skinnix.RhymeTool.Data.Notation.Display;
+
 using ChordInLine = (
 	Skinnix.RhymeTool.Data.Notation.Chord Chord,
 	Skinnix.RhymeTool.Data.Notation.ContentOffset Length,
@@ -339,7 +340,7 @@ public class SheetReader
 			SheetVarietyLine.VarietyComponent component;
 			if (!isWordWhitespace)
 			{
-				component = SheetVarietyLine.VarietyComponent.FromString(new string(line[startOffset..offset]), Formatter, SheetVarietyLine.SpecialContentType.None);
+				component = SheetVarietyLine.VarietyComponent.FromString(new string(line[startOffset..offset]), Formatter);
 			}
 			else
 			{
@@ -352,7 +353,7 @@ public class SheetReader
 					else
 						spaceLength++;
 				}
-				component = SheetVarietyLine.VarietyComponent.CreateSpace(new(spaceLength), Formatter, SheetVarietyLine.SpecialContentType.None);
+				component = SheetVarietyLine.VarietyComponent.CreateSpace(new(spaceLength), Formatter);
 			}
 
 			//Füge die Attachments hinzu
@@ -368,12 +369,12 @@ public class SheetReader
             //Verlängere die Zeile um Leerzeichen
             if (nextChordOffset.Value > offset)
             {
-                components.Add(SheetVarietyLine.VarietyComponent.CreateSpace(nextChordOffset - new ContentOffset(offset), Formatter, SheetVarietyLine.SpecialContentType.None));
+                components.Add(SheetVarietyLine.VarietyComponent.CreateSpace(nextChordOffset - new ContentOffset(offset), Formatter));
                 offset = nextChordOffset.Value;
             }
 
             //Füge ein einzelnes Leerzeichen als Wort hinzu
-			var word = new SheetVarietyLine.VarietyComponent(" ", SheetVarietyLine.SpecialContentType.None);
+			var word = new SheetVarietyLine.VarietyComponent(" ");
             offset++;
 
 			//Füge den Akkord und ggf. Suffix hinzu

@@ -6,6 +6,7 @@ namespace Skinnix.RhymeTool.Client.Components.Configuration;
 public abstract class PropertyEditorBase : ComponentBase
 {
 	[Parameter] public IConfigurableProperty? Property { get; set; }
+	[Parameter] public string? EditorId { get; set; }
 }
 
 public abstract class PropertyEditorBase<TValue> : PropertyEditorBase
