@@ -14,6 +14,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Common", "Common", "{E5D15B
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RhymeTool", "RhymeTool\RhymeTool.csproj", "{1A32AB1B-ACDE-4E37-883D-A3F3CF71DA24}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RhymeTool.MauiBlazor", "App\RhymeTool.MauiBlazor.csproj", "{538103CD-B1D3-4202-8E82-83320A857D67}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,15 @@ Global
 		{1A32AB1B-ACDE-4E37-883D-A3F3CF71DA24}.Release|Any CPU.Build.0 = Release|Any CPU
 		{1A32AB1B-ACDE-4E37-883D-A3F3CF71DA24}.Server Side|Any CPU.ActiveCfg = Debug|Any CPU
 		{1A32AB1B-ACDE-4E37-883D-A3F3CF71DA24}.Server Side|Any CPU.Build.0 = Debug|Any CPU
+		{538103CD-B1D3-4202-8E82-83320A857D67}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{538103CD-B1D3-4202-8E82-83320A857D67}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{538103CD-B1D3-4202-8E82-83320A857D67}.Debug|Any CPU.Deploy.0 = Debug|Any CPU
+		{538103CD-B1D3-4202-8E82-83320A857D67}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{538103CD-B1D3-4202-8E82-83320A857D67}.Release|Any CPU.Build.0 = Release|Any CPU
+		{538103CD-B1D3-4202-8E82-83320A857D67}.Release|Any CPU.Deploy.0 = Release|Any CPU
+		{538103CD-B1D3-4202-8E82-83320A857D67}.Server Side|Any CPU.ActiveCfg = Debug|Any CPU
+		{538103CD-B1D3-4202-8E82-83320A857D67}.Server Side|Any CPU.Build.0 = Debug|Any CPU
+		{538103CD-B1D3-4202-8E82-83320A857D67}.Server Side|Any CPU.Deploy.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,0 +1,8 @@
+﻿@using Skinnix.RhymeTool.Client
+
+<Router AppAssembly="@typeof(ClientStartup).Assembly">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(Skinnix.RhymeTool.Client.Shared.MainLayout)" />
+        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+    </Found>
+</Router>

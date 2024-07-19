@@ -9,7 +9,6 @@
 
 @layout MainLayout
 
-@inject HttpClient http
 @inject IJSRuntime js
 @inject NavigationManager navigation
 
@@ -50,6 +49,10 @@
 </aside>
 
 @code {
+    #if DEBUG
+    [Inject] protected Services.IDebugDataService debugData { get;set; } = null!;
+    #endif
+
     private SheetDocument? document;
 
     private EditingSettings settings = new()
@@ -67,7 +70,7 @@
 
         settings.PropertyChanged += (_, _) => StateHasChanged();
 
-        using (var stream = await http.GetStreamAsync("Data/test-sas.txt"))
+        using (var stream = await debugData.GetDebugFileAsync())
         using (var reader = new StreamReader(stream))
         {
             //Lese Sheet

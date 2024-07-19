@@ -1,4 +1,6 @@
-﻿namespace Skinnix.RhymeTool.Client;
+﻿using Skinnix.RhymeTool.Client.Services;
+
+namespace Skinnix.RhymeTool.Client;
 
 public static class ClientStartup
 {
@@ -8,6 +10,10 @@ public static class ClientStartup
 		{
 			BaseAddress = new Uri(baseAddress),
 		});
+
+#if DEBUG
+		services.AddScoped<IDebugDataService, DebugDataService>();
+#endif
 
 		return services;
 	}

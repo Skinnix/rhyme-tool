@@ -65,21 +65,44 @@ app.MapBlazorHub("/chords/_blazor");
 app.MapFallbackToPage("/_Host");
 #else
 
-app.MapWhen(ctx => ctx.Request.Path.StartsWithSegments("/chords"), chords =>
+app.UseBlazorFrameworkFiles("/chords");
+app.MapFallbackToFile("/chords/{*path:nonfile}", "/chords/index.html");
+
+app.Map("/chords", app =>
 {
-	chords.UseBlazorFrameworkFiles("/chords");
-	chords.UseRouting();
-	chords.UseEndpoints(endpoints =>
+	app.UseRouting();
+	app.UseEndpoints(endpoints =>
 	{
 		endpoints.MapFallbackToFile("/chords/{*path:nonfile}", "/chords/index.html");
 	});
 });
 
-app.MapFallback(context =>
-{
-	context.Response.Redirect("/chords");
-	return Task.CompletedTask;
-});
+//app.MapWhen(ctx => ctx.Request.Path.StartsWithSegments("/chords"), app =>
+//{
+//	app.UseBlazorFrameworkFiles("/chords");
+//	app.UseRouting();
+//	app.UseEndpoints(endpoints =>
+//	{
+//		endpoints.MapFallback(request =>
+//		{
+//			request.Response.Redirect("/chords");
+//			return Task.CompletedTask;
+//		});
+//		//endpoints.MapFallbackToFile("/{*path:nonfile}", "/chords/index.html");
+//	});
+//});
+
+//app.MapWhen(ctx => !ctx.Request.Path.StartsWithSegments("/chords"), app =>
+//{
+//	app.UseEndpoints(endpoints =>
+//	{
+//		endpoints.MapFallback(request =>
+//		{
+//			request.Response.Redirect("/chords");
+//			return Task.CompletedTask;
+//		});
+//	});
+//});
 #endif
 
 app.Run();
