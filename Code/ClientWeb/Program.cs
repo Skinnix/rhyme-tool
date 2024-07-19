@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Skinnix.RhymeTool;
 using Skinnix.RhymeTool.Client;
-using Skinnix.RhymeTool.Client.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 

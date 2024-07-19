@@ -1,11 +1,11 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+﻿<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <AssemblyName>Skinnix.RhymeTool.Client</AssemblyName>
-    <RootNamespace>Skinnix.RhymeTool.Client</RootNamespace>
+    <AssemblyName>Skinnix.RhymeTool.Client.Web</AssemblyName>
+    <RootNamespace>Skinnix.RhymeTool.Client.Web</RootNamespace>
     <Configurations>Debug;Release;Server Side</Configurations>
 		<StaticWebAssetBasePath>chords</StaticWebAssetBasePath>
   </PropertyGroup>
@@ -25,14 +25,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Client\RhymeTool.Client.csproj" />
     <ProjectReference Include="..\RhymeTool\RhymeTool.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="wwwroot\css\chords.css" />
-    <None Include="wwwroot\Data\test-sas.txt" />
-    <None Include="wwwroot\Data\test-ws-full.txt" />
-    <None Include="wwwroot\Data\test-ws.txt" />
   </ItemGroup>
 
 </Project>

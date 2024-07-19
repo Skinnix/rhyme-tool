@@ -70,12 +70,14 @@
 
         settings.PropertyChanged += (_, _) => StateHasChanged();
 
+        #if DEBUG
         using (var stream = await debugData.GetDebugFileAsync())
         using (var reader = new StreamReader(stream))
         {
             //Lese Sheet
             document = SheetReader.ReadSheet(reader);
         }
+        #endif
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

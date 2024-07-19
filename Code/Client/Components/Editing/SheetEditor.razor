@@ -7,7 +7,7 @@
 
 @inject IJSRuntime js
 
-<div class="chord-sheet chord-sheet-editor chord-sheet-editing @(IsDebug ? "debug" : null)" contenteditable @ref="editorWrapper">
+<div class="chord-sheet chord-sheet-editor chord-sheet-editing @(IsDebug ? "debug" : null)" contenteditable @ref="editorWrapper" spellcheck="false">
     @if (Document != null)
     {
         <CascadingValue TValue="ISheetEditorFormatter" Value="Formatter">

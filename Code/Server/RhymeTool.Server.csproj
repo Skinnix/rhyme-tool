@@ -22,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Client\RhymeTool.Client.csproj" />
+    <ProjectReference Include="..\ClientWeb\RhymeTool.Client.Web.csproj" />
   </ItemGroup>
 
 </Project>
