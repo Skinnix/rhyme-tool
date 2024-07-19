@@ -38,13 +38,20 @@ public class EditingSettings : IConfigurable
 	public int Transpose
 	{
 		get => Formatter.Transformation?.Transpose ?? 0;
-		set
+		set => Formatter = Formatter with
 		{
-			Formatter = Formatter with
-			{
-				Transformation = new SheetTransformation(value)
-			};
-		}
+			Transformation = new SheetTransformation(value)
+		};
+	}
+
+	[Configurable(Name = "Leere Akkordzeilen anzeigen")]
+	public bool ShowEmptyChordLines
+	{
+		get => Formatter.ShowEmptyAttachmentLines;
+		set => Formatter = Formatter with
+		{
+			ShowEmptyAttachmentLines = value
+		};
 	}
 
 	private void Set<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)

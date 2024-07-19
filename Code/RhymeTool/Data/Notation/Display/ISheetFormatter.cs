@@ -37,6 +37,7 @@ public interface ISheetFormatter
 public interface ISheetBuilderFormatter : ISheetFormatter
 {
 	int SpaceBefore(SheetLine line, SheetDisplayLineBuilder lineBuilder, SheetDisplayLineElement element);
+	bool ShowLine(SheetLine line, SheetDisplayLineBuilder lineBuilder);
 }
 
 public interface ISheetEditorFormatter : ISheetBuilderFormatter
@@ -86,6 +87,7 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 
     public int SpaceBetweenChordsOnVarietyLine { get; init; } = 1;
     public int SpaceBetweenChordsOnChordLine { get; init; } = 3;
+	public bool ShowEmptyAttachmentLines { get; init; } = false;
 
     public SheetTransformation? Transformation { get; init; }
 
@@ -226,6 +228,14 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 
         return 0;
     }
+
+	public bool ShowLine(SheetLine line, SheetDisplayLineBuilder lineBuilder)
+	{
+		if (!ShowEmptyAttachmentLines && lineBuilder.CurrentLength == 0 && lineBuilder is SheetDisplayChordLine.Builder)
+			return false;
+
+		return true;
+	}
 
 	public int TryReadChord(ReadOnlySpan<char> s, out Chord? chord) => TryReadChord(s, out chord, true);
 	public int TryReadChord(ReadOnlySpan<char> s, out Chord? chord, bool transform)
