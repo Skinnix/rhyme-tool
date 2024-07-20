@@ -8,6 +8,7 @@
     <RootNamespace>Skinnix.RhymeTool.Client</RootNamespace>
     <Configurations>Debug;Release;Server Side</Configurations>
 		<StaticWebAssetBasePath>chords</StaticWebAssetBasePath>
+		<LangVersion>latest</LangVersion>
   </PropertyGroup>
 
   <PropertyGroup>

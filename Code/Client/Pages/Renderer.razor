@@ -1,8 +1,9 @@
-﻿@page "/"
-@page "/chords"
+﻿@page "/renderer"
+@page "/chords/renderer"
 
 @using Skinnix.RhymeTool.Client.Components.Configuration
 @using Skinnix.RhymeTool.Client.Components.Rendering
+@using Skinnix.RhymeTool.Client.Services
 @using Skinnix.RhymeTool.Data.Notation
 @using Skinnix.RhymeTool.Data.Notation.Display
 @using Skinnix.RhymeTool.Client.Components.Editing
@@ -10,6 +11,7 @@
 @layout MainLayout
 
 @inject IJSRuntime js
+@inject WorkSession session
 @inject NavigationManager navigation
 
 <SectionContent SectionName="NavbarMain">
@@ -24,7 +26,7 @@
     </button>
 </SectionContent>
 
-<div class="dropzone dropzone-overlay">
+@* <div class="dropzone dropzone-overlay">
     <div class="dropzone-overlay-background"></div>
 
     <div class="dropzone-overlay-content d-flex flex-column align-items-center">
@@ -38,47 +40,41 @@
     </div>
 
     <InputFile OnChange="UploadFile" id="openFileInput" />
-</div>
+</div> *@
 
 <div class="col sheet-wrapper" style="font-size: @(settings.FontSize)px;">
-    <SheetRenderer Document="document" DisplayMode="SheetDisplayMode.Lines" Formatter="settings.Formatter" />
+    <SheetRenderer Document="session.CurrentDocument?.Document" DisplayMode="SheetDisplayMode.Lines" Formatter="settings.Formatter" />
 </div>
 
 <aside class="col-2 offcanvas-lg offcanvas-end d-flex" data-bs-scroll="true" id="rendererMenu">
     <div class="offcanvas-header">
-        <h5 class="offcanvas-title" id="offcanvasResponsiveLabel">@document?.Label</h5>
+        <h5 class="offcanvas-title" id="offcanvasResponsiveLabel">@session.CurrentDocument?.Document.Label</h5>
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#rendererMenu" aria-label="Close"></button>
     </div>
     <div class="offcanvas-body flex-column">
         <div class="sticky-lg-top">
-            @if (document != null)
+            @if (session.CurrentDocument != null)
             {
                 <h4>Tools</h4>
                 <ConfigurationGrid Settings="settings" />
 
-                <a href="/Editor" class="btn btn-link">Bearbeiten</a>
-
                 <h4>Navigation</h4>
                 <nav class="nav nav-pills flex-column" id="pageNavigation">
-                    @foreach (var segment in document.FindSegments())
+                    @foreach (var segment in session.CurrentDocument.Document.FindSegments())
                     {
                         <a class="nav-link" href="@(navigation.Uri)#sheetSegment-@(segment.TitleLine.Guid)">
                             @segment.Title
                         </a>
                     }
                 </nav>
+
+                <a href="editor" class="btn"><i class="fa-regular fa-pen-to-square"></i> Bearbeiten</a>
             }
         </div>
     </div>
 </aside>
 
 @code {
-    #if DEBUG
-    [Inject] protected Services.IDebugDataService debugData { get;set; } = null!;
-    #endif
-
-    private SheetDocument? document;
-
     private RenderingSettings settings = new()
     {
         FontSize = 16,
@@ -93,16 +89,6 @@
         await base.OnParametersSetAsync();
 
         settings.PropertyChanged += (_, _) => StateHasChanged();
-
-        #if DEBUG
-        using (var stream = await debugData.GetDebugFileAsync())
-        using (var reader = new StreamReader(stream))
-        {
-            //Lese Sheet
-            document = SheetReader.ReadSheet(reader);
-            StateHasChanged();
-        }
-        #endif
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -112,14 +98,14 @@
         await js.InvokeVoidAsync("startScrollSpy", "pageNavigation");
     }
 
-    private async Task UploadFile(InputFileChangeEventArgs e)
-    {
-        using (var stream = e.File.OpenReadStream())
-        using (var reader = new StreamReader(stream))
-        {
-            //Lese Sheet
-            document = await SheetReader.ReadSheetAsync(reader);
-            StateHasChanged();
-        }
-    }
+    // private async Task UploadFile(InputFileChangeEventArgs e)
+    // {
+    //     using (var stream = e.File.OpenReadStream())
+    //     using (var reader = new StreamReader(stream))
+    //     {
+    //         //Lese Sheet
+    //         document = await SheetReader.ReadSheetAsync(reader);
+    //         StateHasChanged();
+    //     }
+    // }
 }

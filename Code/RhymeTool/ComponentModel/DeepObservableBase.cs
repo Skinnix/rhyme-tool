@@ -3,15 +3,13 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace Skinnix.RhymeTool.ComponentModel;
 
-public abstract class DeepObservableBase : INotifyPropertyChanged, IModifiable
+public abstract class DeepObservableBase : ObservableBase, INotifyPropertyChanged, IModifiable
 {
-	public event PropertyChangedEventHandler? PropertyChanged;
 	public event EventHandler<ModifiedEventArgs>? Modified;
 
 	#region Register/Deregister
@@ -92,23 +90,9 @@ public abstract class DeepObservableBase : INotifyPropertyChanged, IModifiable
 	}
 	#endregion
 
-	#region Set
-	protected T Set<T>(ref T field, T value, bool force = true, [CallerMemberName] string? propertyName = null)
+	protected override void RaisePropertyChanged(PropertyChangedEventArgs e)
 	{
-		if (!force && Equals(field, value))
-			return value;
-
-		field = value;
-		RaisePropertyChanged(propertyName);
-		return value;
-	}
-	#endregion
-
-	protected void RaisePropertyChanged(string? propertyName) => RaisePropertyChanged(new PropertyChangedEventArgs(propertyName));
-
-	protected virtual void RaisePropertyChanged(PropertyChangedEventArgs e)
-	{
-		PropertyChanged?.Invoke(this, e);
+		base.RaisePropertyChanged(e);
 		RaiseModified(new ModifiedEventArgs(this, this, e));
 	}
 

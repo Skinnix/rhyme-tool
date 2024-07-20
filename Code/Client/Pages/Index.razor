@@ -1,34 +1,84 @@
-﻿@page "/a"
+﻿@page "/"
+@page "/chords"
 
 @layout MainLayout
 
+@using Skinnix.RhymeTool.Client.Components.Files
 @using Skinnix.RhymeTool.Client.Components.Rendering
+@using Skinnix.RhymeTool.Client.Services
+@using Skinnix.RhymeTool.Client.Services.Files
 @using Skinnix.RhymeTool.Data.Notation
 @using Skinnix.RhymeTool.Data.Notation.Display
 
-@inject HttpClient http
+@inject IDocumentFileService fileService
+@inject IDialogService dialogService
+
+@inject WorkSession session
+@inject NavigationManager navigation
 
 <PageTitle>Index</PageTitle>
 
-<SheetRenderer Document="document" DisplayMode="SheetDisplayMode.Lines" Formatter="formatter" />
+@if (fileService.CanOpenDroppedFile)
+{
+    <label class="dropzone dropzone-overlay">
+        <div class="dropzone-overlay-background"></div>
+
+        <div class="dropzone-overlay-content d-flex flex-column align-items-center">
+            <div class="dropzone-overlay-icon fs-1">
+                <i class="fas fa-file-import"></i>
+            </div>
+
+            <div class="dropzone-overlay-text">
+                <p>Droppe eine Datei hier, um sie zu öffnen.</p>
+            </div>
+        </div>
+
+        <InputFile OnChange="OpenDroppedFile" id="openFileInput" />
+    </label>
+}
+
+@if (fileList is not null)
+{
+    <FileSelector Files="fileList" OnOpenFile="OpenSelectedFile" />
+}
+else if (fileService.CanUploadFile)
+{
+    <button class="btn btn-secondary" role="button" onclick="document.getElementById('openFileInput').click()">
+        <i class="fas fa-file-import"></i> Datei öffnen
+    </button>
+}
 
 @code {
-    private SheetDocument? document;
-
-    private ISheetBuilderFormatter formatter = new DefaultSheetFormatter()
-    {
-        GermanMode = GermanNoteMode.ExplicitH,
-    };
+    private IFileList? fileList;
 
     protected override async Task OnParametersSetAsync()
     {
         await base.OnParametersSetAsync();
 
-        using (var stream = await http.GetStreamAsync("/Data/test-sas.txt"))
-        using (var reader = new StreamReader(stream))
+        fileList = null;
+        if (fileService.CanListFiles)
         {
-            //Lese Sheet
-            document = SheetReader.ReadSheet(reader);
+            fileList = await fileService.TryGetFileListAsync();
+            StateHasChanged();
         }
+    }
+
+    private async Task OpenDroppedFile(InputFileChangeEventArgs e)
+    {
+        await session.OpenDocument(e.File.OpenReadStream(), new DroppedFileContent(e.File.Name));
+        navigation.NavigateTo("renderer");
+    }
+
+    private async Task OpenSelectedFile(IFileListFile file)
+    {
+        var content = await file.GetContentAsync();
+        if (content is null || !content.CanRead || await content.ReadAsync() is not Stream stream)
+        {
+            await dialogService.ShowError("Die Datei konnte nicht geöffnet werden.", "Fehler beim Öffnen der Datei");
+            return;
+        }
+
+        await session.OpenDocument(stream, content);
+        navigation.NavigateTo("renderer");
     }
 }

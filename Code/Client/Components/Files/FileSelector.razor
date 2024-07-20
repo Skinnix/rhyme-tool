@@ -1,0 +1,148 @@
+﻿@using Skinnix.RhymeTool.Client.Services.Files
+
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead class="table-light">
+            <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Änderungsdatum</th>
+                <th scope="col">Größe</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (currentDirectory is not null)
+            {
+                <tr @ondblclick="() => OpenDirectory(currentDirectory.Directory)">
+                    <td>
+                        <a href="javascript:void(0);" class="text-dark text-decoration-none" @onclick="() => OpenDirectory(currentDirectory.Directory)">
+                            <i class="fa-solid fa-turn-up"></i> ..
+                        </a>
+                    </td>
+                    <td></td>
+                    <td></td>
+                </tr>
+            }
+
+            @foreach (var item in currentItems)
+            {
+                @if (item is IFileListDirectory directory)
+                {
+                    <tr @key="item" @ondblclick="() => OpenDirectory(directory)">
+                        <td>
+                            <a href="javascript:void(0);" class="text-dark text-decoration-none" @onclick="() => OpenDirectory(directory)">
+                                <i class="fa-solid fa-folder"></i> @directory.Name
+                            </a>
+                        </td>
+                        <td>@directory.LastModified</td>
+                        <td></td>
+                    </tr>
+                }
+                else if (item is IFileListFile file)
+                {
+                    <tr @key="item" @ondblclick="() => OpenFile(file)">
+                        <td>
+                            <a href="javascript:void(0);" class="text-dark text-decoration-none" @onclick="() => OpenFile(file)">
+                                <i class="fa-solid fa-file-lines"></i> @file.Name
+                            </a>
+                        </td>
+                        <td>@item.LastModified</td>
+                        <td>@FormatFileSize(file.Size)</td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter] public IFileList? Files { get; set; }
+    [Parameter] public EventCallback<IFileListFile> OnOpenFile { get; set; }
+
+    private IFileList? currentFiles;
+    private IFileListDirectory? currentDirectory;
+    private IReadOnlyList<IFileListItem> currentItems = [];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await base.OnParametersSetAsync();
+
+        //Dateiliste geändert?
+        if (currentFiles != Files)
+        {
+            //Keine Dateiliste?
+            if (Files is null)
+            {
+                currentFiles = null;
+                currentDirectory = null;
+                currentItems = [];
+                return;
+            }
+
+            //Speichere Dateiliste
+            currentFiles = Files;
+            currentDirectory = null;
+
+            //Lade Dateien
+            await LoadCurrentFiles();
+        }
+    }
+
+    private async Task LoadCurrentFiles()
+    {
+        if (Files is null)
+        {
+            currentItems = [];
+            return;
+        }
+
+        //Lade Dateien und aktualisiere die Oberfläche
+        currentItems = await ((IFileListItemParent?)currentDirectory ?? Files).GetItemsAsync();
+        currentItems = currentItems.Order(ItemComparer.Instance).ToArray();
+        StateHasChanged();
+    }
+
+    private string? FormatFileSize(long? size)
+    {
+        if (size is null)
+            return null;
+
+        if (size < 1024)
+            return size + " B";
+
+        if (size < 1024 * 1024)
+            return (size / 1024) + " KB";
+
+        return (size / 1024 / 1024) + " MB";
+    }
+
+    private async Task OpenDirectory(IFileListDirectory? directory)
+    {
+        currentDirectory = directory;
+        await LoadCurrentFiles();
+    }
+
+    private async Task OpenFile(IFileListFile file)
+    {
+        await OnOpenFile.InvokeAsync(file);
+    }
+
+    private class ItemComparer : IComparer<IFileListItem>
+    {
+        public static ItemComparer Instance { get; } = new ItemComparer();
+
+        public int Compare(IFileListItem? x, IFileListItem? y)
+        {
+            if (x is null)
+                return y is null ? 0 : -1;
+            else if (y is null)
+                return 1;
+            
+            if (x is IFileListDirectory && y is not IFileListDirectory)
+                return -1;
+            else if (x is not IFileListDirectory && y is IFileListDirectory)
+                return 1;
+            else
+                return string.Compare(x.Name, y.Name, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+}

@@ -1,6 +1,9 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using CommunityToolkit.Maui;
+using Microsoft.Extensions.Logging;
 using Skinnix.RhymeTool.Client;
 using Skinnix.RhymeTool.Client.Services;
+using Skinnix.RhymeTool.Client.Services.Files;
+using Skinnix.RhymeTool.MauiBlazor.Services;
 
 namespace Skinnix.RhymeTool.MauiBlazor;
 
@@ -11,6 +14,7 @@ public static class MauiProgram
 		var builder = MauiApp.CreateBuilder();
 		builder
 			.UseMauiApp<App>()
+			.UseMauiCommunityToolkit()
 			.ConfigureFonts(fonts =>
 			{
 				fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
@@ -18,7 +22,10 @@ public static class MauiProgram
 
 		builder.Services.AddMauiBlazorWebView();
 
-		builder.Services.AddRhymeToolClient("");
+		//RhymeTool Client Services
+		builder.Services.AddRhymeToolClient();
+
+		builder.Services.AddSingleton<IDocumentFileService, MauiDocumentFileService>();
 
 #if DEBUG
 		builder.Services.AddScoped<IDebugDataService, MauiDebugDataService>();
