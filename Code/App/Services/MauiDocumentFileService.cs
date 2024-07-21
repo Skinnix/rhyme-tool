@@ -4,13 +4,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using CommunityToolkit.Maui.Storage;
+using Skinnix.RhymeTool.Client.Services;
 using Skinnix.RhymeTool.Client.Services.Files;
 
 namespace Skinnix.RhymeTool.MauiBlazor.Services;
 
-internal class MauiDocumentFileService : IDocumentFileService
+internal class MauiDocumentFileService(IPreferencesService preferences) : IDocumentFileService
 {
-	private string? workingDirectory = null;
+	private const string WORKING_DIRECTORY_KEY = "WorkingDirectory";
 
 	public bool CanListFiles => true;
 	public bool CanUploadFile => true;
@@ -18,37 +19,96 @@ internal class MauiDocumentFileService : IDocumentFileService
 	public bool CanOpenDroppedFile => false;
 	public bool CanSelectWorkingDirectory => true;
 
-	public async Task<IFileList?> TryGetFileListAsync(CancellationToken cancellation = default)
+	public Task<IFileList?> TryGetFileListAsync(CancellationToken cancellation = default)
 	{
-		if (workingDirectory is null)
-		{
-			if (!await TrySelectWorkingDirectory(cancellation) || workingDirectory is null)
-				return null;
-		}
-
 		try
 		{
-			var info = new DirectoryInfo(workingDirectory);
-			var folders = info.GetDirectories();
-			var files = info.GetFiles(".txt");
-			return new RootFileList(this, folders, files);
+			var workingDirectory = preferences.GetValue<string>(WORKING_DIRECTORY_KEY);
+			if (workingDirectory is not null)
+			{
+				var info = new DirectoryInfo(workingDirectory);
+				var folders = info.GetDirectories();
+				var files = info.GetFiles();
+				return Task.FromResult<IFileList?>(new RootFileList(this, folders, files));
+			}
 		}
-		catch (Exception)
-		{
-			return null;
-		}
+		catch (Exception) { }
+
+		return Task.FromResult<IFileList?>(null);
 	}
 
-	public Task<IFileContent?> TrySelectFileAsync(CancellationToken cancellation = default) => throw new NotImplementedException();
-
-	public async Task<bool> TrySelectWorkingDirectory(CancellationToken cancellation = default)
+	public async Task<IFileContent?> TrySelectFileAsync(CancellationToken cancellation = default)
 	{
-		var result = await FolderPicker.Default.PickAsync(cancellation);
-		if (!result.IsSuccessful)
-			return false;
+		try
+		{
+			var file = await FilePicker.Default.PickAsync();
+			if (file is not null)
+				return new FileContent(new FileInfo(file.FullPath));
+		}
+		catch (Exception) { }
 
-		workingDirectory = result.Folder.Path;
-		return true;
+		return null;
+	}
+
+	public Task<IFileContent?> LoadFile(string id, CancellationToken cancellation = default)
+	{
+		try
+		{
+			//Lade Datei
+			var info = new FileInfo(id);
+			if (info.Exists)
+				return Task.FromResult<IFileContent?>(new FileContent(info));
+		}
+		catch (Exception) { }
+
+		return Task.FromResult<IFileContent?>(null);
+	}
+
+	public Task<string?> TryGetWorkingDirectory(CancellationToken cancellation = default)
+	{
+		try
+		{
+			var workingDirectory = preferences.GetValue<string>(WORKING_DIRECTORY_KEY);
+			return Task.FromResult(workingDirectory);
+		}
+		catch (Exception) { }
+
+		return Task.FromResult<string?>(null);
+	}
+
+	public async Task<string?> TrySelectWorkingDirectory(CancellationToken cancellation = default)
+	{
+		try
+		{
+			var result = await FolderPicker.Default.PickAsync(cancellation);
+			if (result.IsSuccessful)
+			{
+				preferences.SetValue(WORKING_DIRECTORY_KEY, result.Folder.Path);
+				return result.Folder.Path;
+			}
+		}
+		catch (Exception) { }
+
+		return null;
+	}
+
+	private record FileContent(FileInfo File) : IFileContent
+	{
+		public string? Id => File.FullName;
+		public string NameWithExtension => File.Name;
+		public string Name => Path.GetFileNameWithoutExtension(File.Name);
+
+		public bool CanRead => true;
+		public bool CanWrite => true;
+
+		public Task<Stream> ReadAsync(CancellationToken cancellation = default)
+			=> Task.FromResult<Stream>(File.OpenRead());
+
+		public async Task WriteAsync(Func<Stream, Task> write, CancellationToken cancellation = default)
+		{
+			using var stream = File.OpenWrite();
+			await write(stream);
+		}
 	}
 
 	private class RootFileList : IFileList
@@ -78,7 +138,7 @@ internal class MauiDocumentFileService : IDocumentFileService
 				=> Task.FromResult<IReadOnlyList<IFileListItem>>(Enumerable.Empty<IFileListItem>()
 				.Concat(Directory.EnumerateDirectories()
 					.Select(folder => new DirectoryItem(this, folder, folder.Name, folder.LastAccessTime)))
-				.Concat(Directory.EnumerateFiles("*.txt")
+				.Concat(Directory.EnumerateFiles()
 					.Select(file => new FileItem(this, file, file.Name, file.LastAccessTime, file.Length)))
 				.ToArray());
 		}
@@ -90,7 +150,9 @@ internal class MauiDocumentFileService : IDocumentFileService
 
 			private record FileContent(FileItem Owner) : IFileContent
 			{
-				public string Name => Owner.Name;
+				public string? Id => Owner.File.FullName;
+				public string Name => Path.GetFileNameWithoutExtension(Owner.File.Name);
+				public string NameWithExtension => Owner.File.Name;
 
 				public bool CanRead => true;
 				public bool CanWrite => true;

@@ -1,7 +1,7 @@
 ﻿@page "/"
 @page "/chords"
 
-@layout MainLayout
+@layout FullscreenLayout
 
 @using Skinnix.RhymeTool.Client.Components.Files
 @using Skinnix.RhymeTool.Client.Components.Rendering
@@ -11,74 +11,171 @@
 @using Skinnix.RhymeTool.Data.Notation.Display
 
 @inject IDocumentFileService fileService
+@inject IDocumentService documentService
 @inject IDialogService dialogService
 
-@inject WorkSession session
 @inject NavigationManager navigation
 
 <PageTitle>Index</PageTitle>
 
+<SectionContent SectionName="NavbarMain">
+    <button class="navbar-toggler" type="button" data-bs-toggle="offcanvas" data-bs-target="#mainMenu" aria-controls="mainMenu">
+        <i class="fa-solid fa-bars"></i>
+    </button>
+
+    <div class="navbar-brand me-auto">
+        Akkorde
+    </div>
+</SectionContent>
+
+<aside class="offcanvas offcanvas-start d-flex" data-bs-scroll="true" id="mainMenu">
+    <div class="offcanvas-header">
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#mainMenu" aria-label="Close"></button>
+        <SectionOutlet SectionName="MainMenuHeader" />
+    </div>
+    <div class="offcanvas-body d-flex flex-column">
+        <div class="list-group flex-fill d-table">
+            <button class="list-group-item list-group-item-action d-table-row" @onclick="() => navigation.NavigateTo(Preferences.GetUrl())">
+                <span class="d-table-cell">
+                    <i class="fa-solid fa-gear"></i>&nbsp;
+                </span>
+                <span class="d-table-cell">
+                    Einstellungen
+                </span>
+            </button>
+        </div>
+    </div>
+</aside>
+
 @if (fileService.CanOpenDroppedFile)
 {
     <label class="dropzone dropzone-overlay">
-        <div class="dropzone-overlay-background"></div>
+        <span class="dropzone-overlay-background"></span>
 
-        <div class="dropzone-overlay-content d-flex flex-column align-items-center">
-            <div class="dropzone-overlay-icon fs-1">
+        <span class="dropzone-overlay-content d-flex flex-column align-items-center">
+            <span class="dropzone-overlay-icon fs-1">
                 <i class="fas fa-file-import"></i>
-            </div>
+            </span>
 
-            <div class="dropzone-overlay-text">
-                <p>Droppe eine Datei hier, um sie zu öffnen.</p>
-            </div>
-        </div>
+            <span class="dropzone-overlay-text">
+                <span>Droppe eine Datei hier, um sie zu öffnen.</span>
+            </span>
+        </span>
 
         <InputFile OnChange="OpenDroppedFile" id="openFileInput" />
     </label>
 }
 
-@if (fileList is not null)
+@if (fileService.CanSelectFile)
 {
-    <FileSelector Files="fileList" OnOpenFile="OpenSelectedFile" />
+    <button class="btn btn-secondary d-block w-100 mb-3" role="button" @onclick="SelectFile">
+        <i class="fas fa-file-import"></i> Datei öffnen
+    </button>
 }
-else if (fileService.CanUploadFile)
+else if (fileService.CanUploadFile && fileList is null)
 {
-    <button class="btn btn-secondary" role="button" onclick="document.getElementById('openFileInput').click()">
+    <button class="btn btn-secondary d-block w-100 mb-3" role="button" onclick="document.getElementById('openFileInput').click()">
         <i class="fas fa-file-import"></i> Datei öffnen
     </button>
 }
 
+@if (fileList is not null)
+{
+    <div class="mb-3 fullscreen-fill">
+        <FileSelector Files="fileList" OnOpenFile="OpenSelectedFile" />
+    </div>
+}
+else if (shouldSelectWorkingDirectory)
+{
+    <div class="row mb-3">
+        <div class="col-sm-6">
+            <label for="selectWorkingDirectory" class="text-danger me-auto">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span>Es wurde noch kein Arbeitsordner ausgewählt.</span>
+            </label>
+        </div>
+
+        <div class="col-sm-6">
+            <button class="btn btn-primary d-block w-100" @onclick="SelectWorkingDirectory">
+                Arbeitsordner auswählen
+            </button>
+        </div>
+    </div>
+    }
+
 @code {
     private IFileList? fileList;
+
+    private bool shouldSelectWorkingDirectory;
 
     protected override async Task OnParametersSetAsync()
     {
         await base.OnParametersSetAsync();
 
         fileList = null;
+        shouldSelectWorkingDirectory = false;
         if (fileService.CanListFiles)
         {
             fileList = await fileService.TryGetFileListAsync();
+
+            if (fileList is null && fileService.CanSelectWorkingDirectory)
+                shouldSelectWorkingDirectory = await fileService.TryGetWorkingDirectory() is null;
+
             StateHasChanged();
         }
     }
 
+    private async Task SelectWorkingDirectory()
+    {
+        //Wähle Arbeitsordner
+        if (await fileService.TrySelectWorkingDirectory() is null)
+        {
+            await dialogService.ShowErrorAsync("Fehler beim Auswählen des Arbeitsordners", "Fehler");
+        }
+        StateHasChanged();
+    }
+
+    private async Task SelectFile()
+    {
+        //Wähle Datei
+        var file = await fileService.TrySelectFileAsync();
+        if (file is null) return;
+
+        //Öffne Datei
+        await OpenFile(file);
+    }
+
     private async Task OpenDroppedFile(InputFileChangeEventArgs e)
     {
-        await session.OpenDocument(e.File.OpenReadStream(), new DroppedFileContent(e.File.Name));
-        navigation.NavigateTo("renderer");
+        if (e.File is null)
+            return;
+
+        //Öffne Datei
+        await OpenFile(new DroppedFileContent(e.File));
     }
 
     private async Task OpenSelectedFile(IFileListFile file)
     {
-        var content = await file.GetContentAsync();
-        if (content is null || !content.CanRead || await content.ReadAsync() is not Stream stream)
+        //Öffne Datei
+        await OpenFile(await file.GetContentAsync());
+    }
+
+    private async Task OpenFile(IFileContent? content)
+    {
+        //Prüfe, ob Datei geöffnet werden kann
+        if (content is null || !content.CanRead)
         {
-            await dialogService.ShowError("Die Datei konnte nicht geöffnet werden.", "Fehler beim Öffnen der Datei");
+            await dialogService.ShowErrorAsync("Die Datei konnte nicht geöffnet werden.", "Fehler beim Öffnen der Datei");
             return;
         }
 
-        await session.OpenDocument(stream, content);
-        navigation.NavigateTo("renderer");
+        //Lade Datei
+        var documentSource = await documentService.LoadFile(content);
+
+        //Setze als aktuelles Dokument
+        documentService.SetCurrentDocument(documentSource);
+
+        //Zeige an
+        navigation.NavigateTo(Renderer.GetUrl(documentSource));
     }
 }

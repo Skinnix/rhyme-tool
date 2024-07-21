@@ -1,8 +1,10 @@
-﻿namespace Skinnix.RhymeTool.Client.Services;
+﻿using Skinnix.RhymeTool.Client.Services.Files;
+
+namespace Skinnix.RhymeTool.Client.Services;
 
 #if DEBUG
 public interface IDebugDataService
 {
-	Task<Stream> GetDebugFileAsync();
+	Task<IFileContent> GetDebugFileAsync();
 }
 #endif

@@ -1,8 +1,10 @@
+using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Skinnix.RhymeTool;
 using Skinnix.RhymeTool.Client;
 using Skinnix.RhymeTool.Client.Services;
+using Skinnix.RhymeTool.Client.Services.Files;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
@@ -23,14 +25,16 @@ var host = builder.Build();
 host.Services.UseRhymeToolClient();
 
 #if DEBUG
-var session = host.Services.GetRequiredService<WorkSession>();
+var documentService = host.Services.GetRequiredService<IDocumentService>();
 var debugData = host.Services.GetRequiredService<IDebugDataService>();
-await session.OpenDocument(await debugData.GetDebugFileAsync(), null);
+var documentSource = await documentService.LoadFile(await debugData.GetDebugFileAsync());
+documentService.SetCurrentDocument(documentSource);
 #endif
 
 await host.RunAsync();
 
-class WebDebugDataService : IDebugDataService
+#if DEBUG
+public class WebDebugDataService : IDebugDataService
 {
 	private readonly HttpClient httpClient;
 
@@ -39,6 +43,21 @@ class WebDebugDataService : IDebugDataService
 		this.httpClient = httpClient;
 	}
 
-	public Task<Stream> GetDebugFileAsync()
-		=> httpClient.GetStreamAsync("Data/test-sas.txt");
+	public Task<IFileContent> GetDebugFileAsync()
+		=> Task.FromResult<IFileContent>(new DebugFileContent("test-sas.txt", () => httpClient.GetStreamAsync("Data/test-sas.txt")));
+
+	public sealed record DebugFileContent(string NameWithExtension, Func<Task<Stream>> GetStream) : IFileContent
+	{
+		public string? Id => null;
+		public string Name => Path.GetFileNameWithoutExtension(NameWithExtension);
+
+		public bool CanRead => true;
+		public bool CanWrite => false;
+
+		public Task WriteAsync(Func<Stream, Task> write, CancellationToken cancellation = default) => throw new NotSupportedException();
+
+		public Task<Stream> ReadAsync(CancellationToken cancellation = default)
+			=> GetStream();
+	}
 }
+#endif

@@ -5,6 +5,7 @@ namespace Skinnix.RhymeTool.Data.Notation;
 public readonly record struct ContentOffset(int Value)
 {
 	public static readonly ContentOffset Zero = new(0);
+	public static readonly ContentOffset One = new(1);
 	public static readonly ContentOffset MaxValue = new(int.MaxValue);
 	public static readonly ContentOffset FarEnd = MaxValue;
 

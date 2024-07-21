@@ -1,0 +1,92 @@
+﻿@page "/preferences"
+@page "/chords/preferences"
+
+@using Skinnix.RhymeTool.Client.Services
+@using Skinnix.RhymeTool.Client.Services.Files
+
+@layout FullscreenLayout
+
+@inject IDocumentFileService fileService
+@inject IPreferencesService preferencesService
+@inject IDialogService dialogService
+
+<SectionContent SectionName="NavbarMain">
+    <a class="btn btn-dark" href="/chords">
+        <i class="fas fa-arrow-left"></i>
+    </a>
+
+    <div class="me-auto">
+        Einstellungen
+    </div>
+</SectionContent>
+
+@if (fileService.CanSelectWorkingDirectory)
+{
+    <h2>Ordner</h2>
+    <div class="row mb-3">
+        @if (currentWorkingDirectory is null)
+        {
+            <div class="col-sm-6">
+                Es wurde kein Arbeitsverzeichnis ausgewählt.
+            </div>
+
+            <div class="col-sm-6">
+                <button type="button" class="btn btn-secondary d-block w-100" @onclick="SelectWorkingDirectory">
+                    Arbeitsverzeichnis auswählen
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="col-sm-6">
+                Das aktuelle Arbeitsverzeichnis ist:
+                <div class="ms-3 text-body-secondary">@currentWorkingDirectory</div>
+            </div>
+
+            <div class="col-sm-6">
+                <button type="button" class="btn btn-secondary d-block w-100" @onclick="SelectWorkingDirectory">
+                    Arbeitsverzeichnis ändern
+                </button>
+            </div>
+        }
+    </div>
+}
+
+<h2>Daten löschen</h2>
+<button type="button" class="btn btn-danger d-block w-100" @onclick="DeleteAllPreferences">
+    Alle Einstellungen löschen
+</button>
+
+@code {
+    public static string GetUrl() => "/chords/preferences";
+
+    private string? currentWorkingDirectory;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await base.OnParametersSetAsync();
+
+        currentWorkingDirectory = null;
+        if (fileService.CanSelectWorkingDirectory)
+        {
+            currentWorkingDirectory = await fileService.TryGetWorkingDirectory();
+            StateHasChanged();
+        }
+    }
+
+    private async Task SelectWorkingDirectory()
+    {
+        currentWorkingDirectory = await fileService.TrySelectWorkingDirectory();
+        StateHasChanged();
+    }
+
+    private async Task DeleteAllPreferences()
+    {
+        if (!await dialogService.ConfirmAsync("Möchten Sie wirklich alle Einstellungen löschen?", "Daten löschen?"))
+            return;
+
+        preferencesService.Clear();
+        currentWorkingDirectory = null;
+        StateHasChanged();
+    }
+}

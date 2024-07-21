@@ -1,0 +1,1 @@
+.table.explorer-table{width:100%}.table.explorer-table th:hover{--bs-table-color-state: var(--bs-table-hover-color);--bs-table-bg-state: var(--bs-table-hover-bg)}.table.explorer-table td{white-space:nowrap}.table.explorer-table td:first-child{max-width:0;width:100%;overflow:hidden;text-overflow:ellipsis}.table.explorer-table tr.clickable{cursor:pointer}

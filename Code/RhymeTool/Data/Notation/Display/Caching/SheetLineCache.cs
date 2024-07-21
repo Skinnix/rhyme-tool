@@ -27,7 +27,7 @@ public class SheetLineCache : DeepObservableBase
 		displayLines = null;
 	}
 
-	public IReadOnlyList<SheetDisplayLine> GetDisplayLines(ISheetBuilderFormatter? formatter = null)
+	public IReadOnlyList<SheetDisplayLine> GetDisplayLines(ISheetEditorFormatter? formatter = null)
 	{
 		if (this.formatter != formatter)
 			displayLines = null;

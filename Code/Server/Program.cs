@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.ResponseCompression;
+using Microsoft.Extensions.Hosting;
 using Skinnix.RhymeTool.Client;
+using Skinnix.RhymeTool.Client.Services;
 using Skinnix.RhymeTool.Data.Notation;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,7 +19,12 @@ builder.Services.AddServerSideBlazor()
 		o.DetailedErrors = true;
 	});
 
-builder.Services.AddRhymeToolClient("https://localhost:7105/chords/");
+builder.Services.AddRhymeToolClient();
+
+#if DEBUG
+builder.Services.AddSingleton<HttpClient>(services => new HttpClient { BaseAddress = new Uri("https://localhost:7105/chords/") });
+builder.Services.AddSingleton<IDebugDataService, WebDebugDataService>();
+#endif
 #endif
 
 var app = builder.Build();
@@ -63,6 +70,7 @@ app.MapWhen(ctx => ctx.Request.Path.StartsWithSegments("/chords"), chords =>
 
 app.MapBlazorHub("/chords/_blazor");
 app.MapFallbackToPage("/_Host");
+
 #else
 
 app.UseBlazorFrameworkFiles("/chords");
@@ -76,33 +84,13 @@ app.Map("/chords", app =>
 		endpoints.MapFallbackToFile("/chords/{*path:nonfile}", "/chords/index.html");
 	});
 });
+#endif
 
-//app.MapWhen(ctx => ctx.Request.Path.StartsWithSegments("/chords"), app =>
-//{
-//	app.UseBlazorFrameworkFiles("/chords");
-//	app.UseRouting();
-//	app.UseEndpoints(endpoints =>
-//	{
-//		endpoints.MapFallback(request =>
-//		{
-//			request.Response.Redirect("/chords");
-//			return Task.CompletedTask;
-//		});
-//		//endpoints.MapFallbackToFile("/{*path:nonfile}", "/chords/index.html");
-//	});
-//});
-
-//app.MapWhen(ctx => !ctx.Request.Path.StartsWithSegments("/chords"), app =>
-//{
-//	app.UseEndpoints(endpoints =>
-//	{
-//		endpoints.MapFallback(request =>
-//		{
-//			request.Response.Redirect("/chords");
-//			return Task.CompletedTask;
-//		});
-//	});
-//});
+#if DEBUG
+var documentService = app.Services.GetRequiredService<IDocumentService>();
+var debugData = app.Services.GetRequiredService<IDebugDataService>();
+var documentSource = await documentService.LoadFile(await debugData.GetDebugFileAsync());
+documentService.SetCurrentDocument(documentSource);
 #endif
 
 app.Run();

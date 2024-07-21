@@ -8,20 +8,26 @@
 @using Skinnix.RhymeTool.Data.Notation.Display
 @using Skinnix.RhymeTool.Client.Components.Editing
 
-@layout MainLayout
+@layout RendererLayout
 
 @inject IJSRuntime js
-@inject WorkSession session
+@inject IDocumentService documentService
 @inject NavigationManager navigation
 
 <SectionContent SectionName="NavbarMain">
-    <label>
-        <button class="btn btn-secondary" role="button" onclick="document.getElementById('openFileInput').click()">
-            <i class="fas fa-file-import"></i>
-        </button>
-    </label>
+    <a class="btn btn-dark" href="/chords">
+        <i class="fas fa-arrow-left"></i>
+    </a>
 
-    <button class="navbar-toggler d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#rendererMenu" aria-controls="rendererMenu">
+    <div class="navbar-brand me-auto">
+        @document?.Label
+    </div>
+
+    <a class="btn btn-secondary" href="@(Editor.GetUrl(Doc))">
+        <i class="fa-regular fa-pen-to-square"></i>
+    </a>
+
+    <button class="navbar-toggler d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#sideMenu" aria-controls="sideMenu">
         <span class="navbar-toggler-icon"></span>
     </button>
 </SectionContent>
@@ -42,39 +48,40 @@
     <InputFile OnChange="UploadFile" id="openFileInput" />
 </div> *@
 
-<div class="col sheet-wrapper" style="font-size: @(settings.FontSize)px;">
-    <SheetRenderer Document="session.CurrentDocument?.Document" DisplayMode="SheetDisplayMode.Lines" Formatter="settings.Formatter" />
+<SectionContent SectionName="SideMenuHeader">
+    <h5 class="offcanvas-title" id="offcanvasResponsiveLabel">@document?.Label</h5>
+</SectionContent>
+
+<SectionContent SectionName="SideMenu">
+    @if (document != null)
+    {
+        <h4>Tools</h4>
+        <ConfigurationGrid Settings="settings" />
+
+        <h4>Navigation</h4>
+        <nav class="nav nav-pills flex-column overflow-x-hidden text-break" id="pageNavigation">
+            @foreach (var segment in document.FindSegments())
+            {
+                <a class="nav-link" href="@(navigation.Uri)#sheetSegment-@(segment.TitleLine.Guid)">
+                    @segment.Title
+                </a>
+            }
+        </nav>
+    }
+</SectionContent>
+
+<div class="chord-sheet-wrapper" style="font-size: @(settings.FontSize)px;">
+    <SheetRenderer Document="document" DisplayMode="SheetDisplayMode.Lines" Formatter="settings.Formatter" />
 </div>
 
-<aside class="col-2 offcanvas-lg offcanvas-end d-flex" data-bs-scroll="true" id="rendererMenu">
-    <div class="offcanvas-header">
-        <h5 class="offcanvas-title" id="offcanvasResponsiveLabel">@session.CurrentDocument?.Document.Label</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#rendererMenu" aria-label="Close"></button>
-    </div>
-    <div class="offcanvas-body flex-column">
-        <div class="sticky-lg-top">
-            @if (session.CurrentDocument != null)
-            {
-                <h4>Tools</h4>
-                <ConfigurationGrid Settings="settings" />
-
-                <h4>Navigation</h4>
-                <nav class="nav nav-pills flex-column" id="pageNavigation">
-                    @foreach (var segment in session.CurrentDocument.Document.FindSegments())
-                    {
-                        <a class="nav-link" href="@(navigation.Uri)#sheetSegment-@(segment.TitleLine.Guid)">
-                            @segment.Title
-                        </a>
-                    }
-                </nav>
-
-                <a href="editor" class="btn"><i class="fa-regular fa-pen-to-square"></i> Bearbeiten</a>
-            }
-        </div>
-    </div>
-</aside>
-
 @code {
+    [Parameter, SupplyParameterFromQuery] public string? Doc { get; set; }
+
+    public static string GetUrl(IDocumentSource document) => GetUrl(document.Id);
+    public static string GetUrl(string? documentId) => documentId is null ? "/chords/renderer" : "/chords/renderer?doc=" + Uri.EscapeDataString(documentId);
+
+    private SheetDocument? document;
+
     private RenderingSettings settings = new()
     {
         FontSize = 16,
@@ -89,6 +96,12 @@
         await base.OnParametersSetAsync();
 
         settings.PropertyChanged += (_, _) => StateHasChanged();
+
+        var documentSource = await documentService.TryGetDocument(Doc);
+        if (documentSource is not null)
+        {
+            document = await documentSource.LoadDocument();
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -97,15 +110,4 @@
 
         await js.InvokeVoidAsync("startScrollSpy", "pageNavigation");
     }
-
-    // private async Task UploadFile(InputFileChangeEventArgs e)
-    // {
-    //     using (var stream = e.File.OpenReadStream())
-    //     using (var reader = new StreamReader(stream))
-    //     {
-    //         //Lese Sheet
-    //         document = await SheetReader.ReadSheetAsync(reader);
-    //         StateHasChanged();
-    //     }
-    // }
 }

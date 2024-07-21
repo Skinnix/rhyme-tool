@@ -1,11 +1,13 @@
-﻿namespace Skinnix.RhymeTool.MauiBlazor;
+﻿using Skinnix.RhymeTool.MauiBlazor.Services;
+
+namespace Skinnix.RhymeTool.MauiBlazor;
 
 public partial class App : Application
 {
-	public App()
+	public App(IMauiUiService uiService)
 	{
 		InitializeComponent();
 
-		MainPage = new MainPage();
+		MainPage = new MainPage(uiService);
 	}
 }

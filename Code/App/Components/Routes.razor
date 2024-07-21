@@ -1,8 +1,25 @@
 ﻿@using Skinnix.RhymeTool.Client
 
+@inject NavigationManager navigation
+@inject IJSRuntime js
+
 <Router AppAssembly="@typeof(ClientStartup).Assembly">
     <Found Context="routeData">
-        <RouteView RouteData="@routeData" DefaultLayout="@typeof(Skinnix.RhymeTool.Client.Shared.MainLayout)" />
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(Skinnix.RhymeTool.Client.Shared.SimpleLayout)" />
         <FocusOnNavigate RouteData="@routeData" Selector="h1" />
     </Found>
 </Router>
+
+@code {
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        navigation.LocationChanged += OnLocationChanged;
+    }
+
+    private async void OnLocationChanged(object? sender, LocationChangedEventArgs args)
+    {
+        await js.InvokeVoidAsync("hideAllOffcanvases");
+    }
+}

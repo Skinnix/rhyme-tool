@@ -1,0 +1,17 @@
+﻿@inherits LayoutComponentBase
+
+<div class="vh-100 d-flex flex-column overflow-y-hidden">
+    <header class="sticky-top mb-3 border-bottom shadow">
+        <nav class="navbar navbar-dark bg-dark">
+            <div class="container-xxl d-flex gap-3 text-light">
+                <SectionOutlet SectionName="NavbarMain" />
+            </div>
+        </nav>
+    </header>
+
+    <div class="container-xxl fullscreen-fill">
+        <main class="fullscreen-fill overflow-x-hidden">
+            @Body
+        </main>
+    </div>
+</div>

@@ -94,6 +94,7 @@ a, .btn-link {
 	}
 
 	.dropzone-overlay-background {
+		display: block;
 		position: absolute;
 		top: 0;
 		left: 0;
@@ -116,4 +117,17 @@ a, .btn-link {
 html.dragover .dropzone-overlay {
 	display: flex;
 	opacity: 1;
+}
+
+.fullscreen-fill {
+	display: flex;
+	flex-direction: column;
+	flex: 1 1 auto;
+	overflow-y: hidden;
+}
+
+@media (min-width: 992px) {
+	#sideMenu {
+		max-width: 25%;
+	}
 }

@@ -22,10 +22,16 @@ public static class MauiProgram
 
 		builder.Services.AddMauiBlazorWebView();
 
+		//MAUI-Services
+		builder.Services.AddSingleton<IMauiUiService, MauiUiService>();
+
 		//RhymeTool Client Services
 		builder.Services.AddRhymeToolClient();
 
+		//Service-Überschreibungen
 		builder.Services.AddSingleton<IDocumentFileService, MauiDocumentFileService>();
+		builder.Services.AddTransient<IPreferencesService, MauiPreferencesService>();
+		builder.Services.AddSingleton<IDialogService, MauiDialogService>();
 
 #if DEBUG
 		builder.Services.AddScoped<IDebugDataService, MauiDebugDataService>();
@@ -46,9 +52,21 @@ public static class MauiProgram
 #if DEBUG
 	private class MauiDebugDataService : IDebugDataService
 	{
-		public Task<Stream> GetDebugFileAsync()
+		public Task<IFileContent> GetDebugFileAsync()
+			=> Task.FromResult<IFileContent>(new DebugFileContent("test-sas.txt", () => FileSystem.OpenAppPackageFileAsync("test-sas.txt")));
+
+		public sealed record DebugFileContent(string NameWithExtension, Func<Task<Stream>> GetStream) : IFileContent
 		{
-			return FileSystem.OpenAppPackageFileAsync("test-sas.txt");
+			public string? Id => null;
+			public string Name => Path.GetFileNameWithoutExtension(NameWithExtension);
+
+			public bool CanRead => true;
+			public bool CanWrite => false;
+
+			public Task WriteAsync(Func<Stream, Task> write, CancellationToken cancellation = default) => throw new NotSupportedException();
+
+			public Task<Stream> ReadAsync(CancellationToken cancellation = default)
+				=> GetStream();
 		}
 	}
 #endif

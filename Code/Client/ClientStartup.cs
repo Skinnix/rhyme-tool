@@ -10,7 +10,8 @@ public static class ClientStartup
 	{
 		services.AddScoped<IDialogService, DialogService>();
 		services.AddSingleton<IDocumentFileService, WebDefaultDocumentFileService>();
-		services.AddScoped<WorkSession>();
+		services.AddSingleton<IDocumentService, DefaultDocumentService>();
+		services.AddSingleton<IPreferencesService, InMemoryPreferencesService>();
 
 		return services;
 	}

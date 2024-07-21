@@ -1,9 +1,14 @@
-﻿namespace Skinnix.RhymeTool.MauiBlazor;
+﻿using Skinnix.RhymeTool.MauiBlazor.Services;
+
+namespace Skinnix.RhymeTool.MauiBlazor;
 
 public partial class MainPage : ContentPage
 {
-	public MainPage()
+	public MainPage(IMauiUiService uiService)
 	{
 		InitializeComponent();
+
+		uiService.MainPage = this;
+		uiService.WebView = blazorWebView;
 	}
 }

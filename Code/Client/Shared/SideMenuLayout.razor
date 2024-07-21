@@ -1,0 +1,20 @@
+﻿@inherits LayoutComponentBase
+
+@layout RootLayout
+
+<div class="flex-fill overflow-x-hidden">
+    @Body
+</div>
+
+<aside class="offcanvas-lg offcanvas-end" data-bs-scroll="true" id="sideMenu">
+    <div class="offcanvas-header">
+        <SectionOutlet SectionName="SideMenuHeader" />
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#sideMenu" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body d-flex flex-column">
+        <div class="sticky-lg-top" style="top: 5em">
+            <SectionOutlet SectionName="SideMenu" />
+        </div>
+    </div>
+</aside>
+

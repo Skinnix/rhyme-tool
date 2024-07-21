@@ -8,49 +8,60 @@
 @using Skinnix.RhymeTool.Data.Notation.Display
 @using Skinnix.RhymeTool.Client.Components.Editing
 
-@layout MainLayout
+@layout RendererLayout
 
 @inject IJSRuntime js
-@inject WorkSession session
+@inject IDocumentService documentService
 @inject NavigationManager navigation
 
 <SectionContent SectionName="NavbarMain">
-    <button class="navbar-toggler d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#rendererMenu" aria-controls="rendererMenu">
+    <a class="btn btn-dark" href="/chords">
+        <i class="fas fa-arrow-left"></i>
+    </a>
+
+    <div class="navbar-brand me-auto">
+        @document?.Label
+    </div>
+
+    <button class="navbar-toggler d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#sideMenu" aria-controls="sideMenu">
         <span class="navbar-toggler-icon"></span>
     </button>
 </SectionContent>
 
-<div class="col sheet-wrapper" style="font-size: @(settings.FontSize)px;">
-    <SheetEditor Document="session.CurrentDocument?.Document" Formatter="settings.Formatter" />
+<SectionContent SectionName="SideMenuHeader">
+    <h5 class="offcanvas-title" id="offcanvasResponsiveLabel">@document?.Label</h5>
+</SectionContent>
+
+<SectionContent SectionName="SideMenu">
+    @if (document is not null)
+    {
+        <h4>Tools</h4>
+        <ConfigurationGrid Settings="settings" />
+
+        <h4>Navigation</h4>
+        <nav class="nav nav-pills flex-column overflow-x-hidden text-break" id="pageNavigation">
+            @foreach (var segment in document.FindSegments())
+            {
+                <a class="nav-link" href="@(navigation.Uri)#sheetSegment-@(segment.TitleLine.Guid)">
+                    @segment.Title
+                </a>
+            }
+        </nav>
+    }
+</SectionContent>
+
+<div class="chord-sheet-wrapper" style="font-size: @(settings.FontSize)px;">
+    <SheetEditor Document="document" Formatter="settings.Formatter" />
 </div>
 
-<aside class="col-2 offcanvas-lg offcanvas-end d-flex" data-bs-scroll="true" id="rendererMenu">
-    <div class="offcanvas-header">
-        <h5 class="offcanvas-title" id="offcanvasResponsiveLabel">@session.CurrentDocument?.Document?.Label</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#rendererMenu" aria-label="Close"></button>
-    </div>
-    <div class="offcanvas-body flex-column">
-        <div class="sticky-lg-top">
-            @if (session.CurrentDocument?.Document != null)
-            {
-                <h4>Tools</h4>
-                <ConfigurationGrid Settings="settings" />
-
-                <h4>Navigation</h4>
-                <nav class="nav nav-pills flex-column" id="pageNavigation">
-                    @foreach (var segment in session.CurrentDocument.Document.FindSegments())
-                    {
-                        <a class="nav-link" href="@(navigation.Uri)#sheetSegment-@(segment.TitleLine.Guid)">
-                            @segment.Title
-                        </a>
-                    }
-                </nav>
-            }
-        </div>
-    </div>
-</aside>
-
 @code {
+    [Parameter, SupplyParameterFromQuery] public string? Doc { get; set; }
+    
+    public static string GetUrl(IDocumentSource document) => GetUrl(document.Id);
+    public static string GetUrl(string? documentId) => documentId is null ? "/chords/editor" : "/chords/editor?doc=" + Uri.EscapeDataString(documentId);
+
+    private SheetDocument? document;
+
     private EditingSettings settings = new()
     {
         FontSize = 16,
@@ -65,6 +76,12 @@
         await base.OnParametersSetAsync();
 
         settings.PropertyChanged += (_, _) => StateHasChanged();
+
+        var documentSource = await documentService.TryGetDocument(Doc);
+        if (documentSource is not null)
+        {
+            document = await documentSource.LoadDocument();
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

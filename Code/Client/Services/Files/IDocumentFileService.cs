@@ -16,7 +16,11 @@ public interface IDocumentFileService
 
 	Task<IFileList?> TryGetFileListAsync(CancellationToken cancellation = default);
 	Task<IFileContent?> TrySelectFileAsync(CancellationToken cancellation = default);
-	Task<bool> TrySelectWorkingDirectory(CancellationToken cancellation = default);
+
+	Task<string?> TryGetWorkingDirectory(CancellationToken cancellation = default);
+	Task<string?> TrySelectWorkingDirectory(CancellationToken cancellation = default);
+
+	Task<IFileContent?> LoadFile(string id, CancellationToken cancellation = default);
 }
 
 public class WebDefaultDocumentFileService : IDocumentFileService
@@ -28,8 +32,10 @@ public class WebDefaultDocumentFileService : IDocumentFileService
 	public bool CanSelectWorkingDirectory => false;
 
 	public Task<IFileList?> TryGetFileListAsync(CancellationToken cancellation = default) => throw new NotSupportedException();
-	public Task<bool> TrySelectWorkingDirectory(CancellationToken cancellation = default) => throw new NotSupportedException();
+	public Task<string?> TryGetWorkingDirectory(CancellationToken cancellation = default) => throw new NotSupportedException();
+	public Task<string?> TrySelectWorkingDirectory(CancellationToken cancellation = default) => throw new NotSupportedException();
 	public Task<IFileContent?> TrySelectFileAsync(CancellationToken cancellation = default) => throw new NotSupportedException();
+	public Task<IFileContent?> LoadFile(string id, CancellationToken cancellation = default) => throw new NotSupportedException();
 }
 
 public interface IFileListItemParent
@@ -44,7 +50,7 @@ public interface IFileList : IFileListItemParent
 public interface IFileListItem
 {
 	IFileListItemParent Parent { get; }
-	IFileListDirectory? Directory => Parent as IFileListDirectory;
+	IFileListDirectory? ParentDirectory => Parent as IFileListDirectory;
 
 	string Name { get; }
 	DateTime? LastModified { get; }
@@ -64,20 +70,13 @@ public interface IFileListFile : IFileListItem
 
 public interface IFileContent
 {
+	string? Id { get; }
 	string Name { get; }
+	string NameWithExtension { get; }
 
 	bool CanRead { get; }
 	bool CanWrite { get; }
 
 	Task<Stream> ReadAsync(CancellationToken cancellation = default);
 	Task WriteAsync(Func<Stream, Task> write, CancellationToken cancellation = default);
-}
-
-public record DroppedFileContent(string Name) : IFileContent
-{
-	public bool CanRead => false;
-	public bool CanWrite => false;
-
-	public Task<Stream> ReadAsync(CancellationToken cancellation = default) => throw new NotSupportedException();
-	public Task WriteAsync(Func<Stream, Task> write, CancellationToken cancellation = default) => throw new NotSupportedException();
 }
