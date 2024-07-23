@@ -4,18 +4,22 @@
 @using Skinnix.RhymeTool.Client.Components.Configuration
 @using Skinnix.RhymeTool.Client.Components.Rendering
 @using Skinnix.RhymeTool.Client.Services
+@using Skinnix.RhymeTool.Client.Services.Files
 @using Skinnix.RhymeTool.Data.Notation
 @using Skinnix.RhymeTool.Data.Notation.Display
 @using Skinnix.RhymeTool.Client.Components.Editing
+@using System.ComponentModel
 
 @layout RendererLayout
 
 @inject IJSRuntime js
+@inject IDocumentFileService fileService
 @inject IDocumentService documentService
+@inject IDialogService dialogService
 @inject NavigationManager navigation
 
 <SectionContent SectionName="NavbarMain">
-    <a class="btn btn-dark" href="/chords">
+    <a class="btn btn-dark" href="javascript:history.back()">
         <i class="fas fa-arrow-left"></i>
     </a>
 
@@ -32,21 +36,24 @@
     </button>
 </SectionContent>
 
-@* <div class="dropzone dropzone-overlay">
-    <div class="dropzone-overlay-background"></div>
+@if (fileService.CanOpenDroppedFile)
+{
+    <div class="dropzone dropzone-overlay">
+        <div class="dropzone-overlay-background"></div>
 
-    <div class="dropzone-overlay-content d-flex flex-column align-items-center">
-        <div class="dropzone-overlay-icon fs-1">
-            <i class="fas fa-file-import"></i>
+        <div class="dropzone-overlay-content d-flex flex-column align-items-center">
+            <div class="dropzone-overlay-icon fs-1">
+                <i class="fas fa-file-import"></i>
+            </div>
+
+            <div class="dropzone-overlay-text">
+                <p>Droppe eine Datei hier, um sie zu öffnen.</p>
+            </div>
         </div>
 
-        <div class="dropzone-overlay-text">
-            <p>Droppe eine Datei hier, um sie zu öffnen.</p>
-        </div>
+        <InputFile @key="inputFileId" OnChange="OpenDroppedFile" id="openFileInput" />
     </div>
-
-    <InputFile OnChange="UploadFile" id="openFileInput" />
-</div> *@
+}
 
 <SectionContent SectionName="SideMenuHeader">
     <h5 class="offcanvas-title" id="offcanvasResponsiveLabel">@document?.Label</h5>
@@ -59,7 +66,7 @@
         <ConfigurationGrid Settings="settings" />
 
         <h4>Navigation</h4>
-        <nav class="nav nav-pills flex-column overflow-x-hidden text-break" id="pageNavigation">
+        <nav class="nav nav-pills d-flex flex-column flex-nowrap overflow-x-hidden text-break" id="pageNavigation">
             @foreach (var segment in document.FindSegments())
             {
                 <a class="nav-link" href="@(navigation.Uri)#sheetSegment-@(segment.TitleLine.Guid)">
@@ -80,27 +87,31 @@
     public static string GetUrl(IDocumentSource document) => GetUrl(document.Id);
     public static string GetUrl(string? documentId) => documentId is null ? "/chords/renderer" : "/chords/renderer?doc=" + Uri.EscapeDataString(documentId);
 
+    private Guid inputFileId = Guid.NewGuid();
+
     private SheetDocument? document;
 
-    private RenderingSettings settings = new()
-    {
-        FontSize = 16,
-        Formatter = new DefaultSheetFormatter()
-        {
-            GermanMode = GermanNoteMode.Descriptive,
-        }
-    };
+    private RenderingSettings settings = new();
 
     protected override async Task OnParametersSetAsync()
     {
         await base.OnParametersSetAsync();
 
-        settings.PropertyChanged += (_, _) => StateHasChanged();
+        settings.PropertyChanged -= OnSettingsPropertyChanged;
+        settings = new()
+        {
+            FontSize = 16,
+            Formatter = new DefaultSheetFormatter()
+            {
+                GermanMode = GermanNoteMode.Descriptive,
+            }
+        };
+        settings.PropertyChanged += OnSettingsPropertyChanged;
 
         var documentSource = await documentService.TryGetDocument(Doc);
-        if (documentSource is not null)
+        if (documentSource is not null && documentSource.CanLoad)
         {
-            document = await documentSource.LoadDocument();
+            document = await documentSource.LoadAsync();
         }
     }
 
@@ -109,5 +120,62 @@
         await base.OnAfterRenderAsync(firstRender);
 
         await js.InvokeVoidAsync("startScrollSpy", "pageNavigation");
+    }
+
+    private void OnSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        StateHasChanged();
+    }
+
+    private async Task OpenDroppedFile(InputFileChangeEventArgs e)
+    {
+        if (e.File is null)
+            return;
+
+        //Lade Datei
+        var content = await fileService.OpenSelectedFileAsync(e.File);
+
+        //Öffne Datei
+        await OpenFile(content.Value);
+
+        //Input zurücksetzen
+        inputFileId = Guid.NewGuid();
+    }
+
+    private async Task OpenFile(IFileContent? content)
+    {
+        //Prüfe, ob Datei geöffnet werden kann
+        if (content is null || !content.CanRead)
+        {
+            await dialogService.ShowErrorAsync("Die Datei konnte nicht geöffnet werden.", "Fehler");
+            return;
+        }
+
+        //Lade Datei
+        var documentSource = await documentService.LoadFile(content);
+        if (!documentSource.CanLoad)
+        {
+            await dialogService.ShowErrorAsync("Die Datei konnte nicht gelesen werden.", "Fehler");
+            return;
+        }
+
+        //Setze als aktuelles Dokument
+        documentService.SetCurrentDocument(documentSource);
+
+        //Navigiere
+        var url = GetUrl(documentSource);
+        var currentUri = new Uri(navigation.Uri);
+        if (!new Uri(currentUri, url).Equals(currentUri))
+        {
+            navigation.NavigateTo(GetUrl(documentSource), new NavigationOptions()
+            {
+                ReplaceHistoryEntry = true,
+            });
+            return;
+        }
+
+        //Zeige an
+        document = await documentSource.LoadAsync();
+        StateHasChanged();
     }
 }

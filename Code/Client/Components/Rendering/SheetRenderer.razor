@@ -1,5 +1,6 @@
 ﻿@namespace Skinnix.RhymeTool.Client.Components.Rendering
 
+@using Skinnix.RhymeTool.ComponentModel
 @using Skinnix.RhymeTool.Data.Notation
 @using Skinnix.RhymeTool.Data.Notation.Display
 
@@ -15,7 +16,7 @@
 
     void RenderChord(Chord chord)
     {
-        <span class="element element-chord chord">
+        <span class="chord">
             <span class="chord-root">@{ RenderNote(chord.Root); }</span><span class="chord-quality">@chord.Quality.ToString(Formatter)</span>
 
             @if (chord.Alterations.Count > 0)
@@ -129,4 +130,41 @@
     [Parameter] public SheetDocument? Document { get; set; }
     [Parameter] public SheetDisplayMode DisplayMode { get; set; }
     [Parameter] public ISheetEditorFormatter? Formatter { get; set; }
+
+    private SheetDocument? loadedDocument;
+
+    private bool shouldRender;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        if (Document != loadedDocument)
+        {
+            shouldRender = true;
+
+            if (loadedDocument is not null)
+                loadedDocument.Lines.Modified -= OnLinesModified;
+
+            loadedDocument = Document;
+
+            if (loadedDocument is not null)
+                loadedDocument.Lines.Modified += OnLinesModified;
+        }
+    }
+
+    protected override bool ShouldRender()
+    {
+        if (!shouldRender)
+            return false;
+
+        shouldRender = false;
+        return true;
+    }
+
+    private void OnLinesModified(object? sender, ModifiedEventArgs args)
+    {
+        shouldRender = true;
+        StateHasChanged();
+    }
 }

@@ -86,7 +86,7 @@ app.Map("/chords", app =>
 });
 #endif
 
-#if DEBUG
+#if SERVER_SIDE && DEBUG
 var documentService = app.Services.GetRequiredService<IDocumentService>();
 var debugData = app.Services.GetRequiredService<IDebugDataService>();
 var documentSource = await documentService.LoadFile(await debugData.GetDebugFileAsync());

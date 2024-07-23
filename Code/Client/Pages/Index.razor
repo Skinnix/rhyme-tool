@@ -97,7 +97,16 @@ else if (shouldSelectWorkingDirectory)
 
         <div class="col-sm-6">
             <button class="btn btn-primary d-block w-100" @onclick="SelectWorkingDirectory">
-                Arbeitsordner auswählen
+                @if (waitingForDirectoryPermission)
+                {
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>Bestätigen und auswählen</span>
+                }
+                else
+                {
+                    <i class="fas fa-folder-open"></i>
+                    <span>Arbeitsordner auswählen</span>
+                }
             </button>
         </div>
     </div>
@@ -106,6 +115,7 @@ else if (shouldSelectWorkingDirectory)
 @code {
     private IFileList? fileList;
 
+    private bool waitingForDirectoryPermission;
     private bool shouldSelectWorkingDirectory;
 
     protected override async Task OnParametersSetAsync()
@@ -113,13 +123,21 @@ else if (shouldSelectWorkingDirectory)
         await base.OnParametersSetAsync();
 
         fileList = null;
+        waitingForDirectoryPermission = false;
         shouldSelectWorkingDirectory = false;
         if (fileService.CanListFiles)
         {
-            fileList = await fileService.TryGetFileListAsync();
-
-            if (fileList is null && fileService.CanSelectWorkingDirectory)
-                shouldSelectWorkingDirectory = await fileService.TryGetWorkingDirectory() is null;
+            var fileListResult = await fileService.TryGetFileListAsync();
+            if (fileListResult.Value is not null)
+            {
+                fileList = fileListResult.Value;
+            }
+            else if (fileService.CanSelectWorkingDirectory)
+            {
+                var workingDirectoryResult = await fileService.TryGetWorkingDirectoryAsync();
+                if (workingDirectoryResult.Value is null)
+                    shouldSelectWorkingDirectory = true;
+            }
 
             StateHasChanged();
         }
@@ -128,21 +146,88 @@ else if (shouldSelectWorkingDirectory)
     private async Task SelectWorkingDirectory()
     {
         //Wähle Arbeitsordner
-        if (await fileService.TrySelectWorkingDirectory() is null)
+        var workingDirectoryResult = await fileService.TrySelectWorkingDirectoryAsync();
+
+        //Ok?
+        if (workingDirectoryResult.IsOk && workingDirectoryResult.Value is not null)
+        {
+            shouldSelectWorkingDirectory = false;
+            StateHasChanged();
+
+            //Lade Dateiliste
+            var fileListResult = await fileService.TryGetFileListAsync();
+            if (fileListResult.Value is not null)
+            {
+                fileList = fileListResult.Value;
+                StateHasChanged();
+                return;
+            }
+
+            shouldSelectWorkingDirectory = true;
+            StateHasChanged();
+
+            await dialogService.ShowErrorAsync("Fehler beim Laden der Dateien", "Fehler");
+            return;
+        }
+
+        //Abgebrochen?
+        if (workingDirectoryResult.Result == SystemRequestResultType.Denied)
+        {
+            if (!waitingForDirectoryPermission)
+                return;
+
+            waitingForDirectoryPermission = false;
+            StateHasChanged();
+            return;
+        }
+
+        //Warte auf Berechtigung?
+        if (workingDirectoryResult.IsPending)
+        {
+            waitingForDirectoryPermission = true;
+            StateHasChanged();
+            return;
+        }
+
+        //Fehler?
+        if (workingDirectoryResult.IsError)
         {
             await dialogService.ShowErrorAsync("Fehler beim Auswählen des Arbeitsordners", "Fehler");
+            return;
         }
-        StateHasChanged();
+
+        //Keine Berechtigung?
+        if (workingDirectoryResult.Result.HasFlag(SystemRequestResultType.NeededFlag))
+        {
+            await dialogService.ShowErrorAsync("Die Berechtigung zum Zugriff auf das Dateisystem ist erforderlich.", "Fehler");
+            return;
+        }
+
+        await dialogService.ShowErrorAsync("Auswählen des Arbeitsordners fehlgeschlagen", "Fehler");
     }
 
     private async Task SelectFile()
     {
         //Wähle Datei
-        var file = await fileService.TrySelectFileAsync();
-        if (file is null) return;
+        var fileResult = await fileService.TrySelectFileAsync();
+
+        //Fehler?
+        if (fileResult.IsError)
+        {
+            await dialogService.ShowErrorAsync("Fehler beim Auswählen der Datei", "Fehler");
+            return;
+        }
+
+        //Warte auf Berechtigung?
+        if (fileResult.IsPending)
+            return;
+
+        //Abgebrochen?
+        if (fileResult.Result == SystemRequestResultType.Denied || fileResult.Value is null)
+            return;
 
         //Öffne Datei
-        await OpenFile(file);
+        await OpenFile(fileResult.Value);
     }
 
     private async Task OpenDroppedFile(InputFileChangeEventArgs e)
@@ -150,8 +235,11 @@ else if (shouldSelectWorkingDirectory)
         if (e.File is null)
             return;
 
+        //Lade Datei
+        var content = await fileService.OpenSelectedFileAsync(e.File);
+
         //Öffne Datei
-        await OpenFile(new DroppedFileContent(e.File));
+        await OpenFile(content.Value);
     }
 
     private async Task OpenSelectedFile(IFileListFile file)
@@ -165,7 +253,7 @@ else if (shouldSelectWorkingDirectory)
         //Prüfe, ob Datei geöffnet werden kann
         if (content is null || !content.CanRead)
         {
-            await dialogService.ShowErrorAsync("Die Datei konnte nicht geöffnet werden.", "Fehler beim Öffnen der Datei");
+            await dialogService.ShowErrorAsync("Die Datei konnte nicht geöffnet werden.", "Fehler");
             return;
         }
 

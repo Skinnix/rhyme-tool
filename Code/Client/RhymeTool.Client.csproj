@@ -36,4 +36,8 @@
     <None Include="wwwroot\Data\test-ws.txt" />
   </ItemGroup>
 
+  <ItemGroup>
+    <SassFilesToCompile Remove="shared\SideMenuLayout.razor.scss" />
+  </ItemGroup>
+
 </Project>

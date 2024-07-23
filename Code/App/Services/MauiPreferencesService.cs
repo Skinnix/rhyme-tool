@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Skinnix.RhymeTool.Client.Services;
+using Skinnix.RhymeTool.Client.Services.Preferences;
 
 namespace Skinnix.RhymeTool.MauiBlazor.Services;
 

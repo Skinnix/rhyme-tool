@@ -15,13 +15,20 @@
 @inject NavigationManager navigation
 
 <SectionContent SectionName="NavbarMain">
-    <a class="btn btn-dark" href="/chords">
+    <a class="btn btn-dark" href="javascript:history.back()">
         <i class="fas fa-arrow-left"></i>
     </a>
 
     <div class="navbar-brand me-auto">
         @document?.Label
     </div>
+
+    @if (document is not null && documentSource is not null && documentSource.CanSave)
+    {
+        <button class="btn btn-primary" type="button" @onclick="SaveDocument">
+            <i class="fa-solid fa-floppy-disk"></i>
+        </button>
+    }
 
     <button class="navbar-toggler d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#sideMenu" aria-controls="sideMenu">
         <span class="navbar-toggler-icon"></span>
@@ -56,10 +63,11 @@
 
 @code {
     [Parameter, SupplyParameterFromQuery] public string? Doc { get; set; }
-    
+
     public static string GetUrl(IDocumentSource document) => GetUrl(document.Id);
     public static string GetUrl(string? documentId) => documentId is null ? "/chords/editor" : "/chords/editor?doc=" + Uri.EscapeDataString(documentId);
 
+    private IDocumentSource? documentSource;
     private SheetDocument? document;
 
     private EditingSettings settings = new()
@@ -77,10 +85,10 @@
 
         settings.PropertyChanged += (_, _) => StateHasChanged();
 
-        var documentSource = await documentService.TryGetDocument(Doc);
+        documentSource = await documentService.TryGetDocument(Doc);
         if (documentSource is not null)
         {
-            document = await documentSource.LoadDocument();
+            document = await documentSource.LoadAsync();
         }
     }
 
@@ -89,5 +97,13 @@
         await base.OnAfterRenderAsync(firstRender);
 
         await js.InvokeVoidAsync("console.log", "rerender: " + this.GetType().Name);
+    }
+
+    private async Task SaveDocument()
+    {
+        if (document is null || documentSource is null)
+            return;
+
+        await documentSource.SaveAsync(document);
     }
 }

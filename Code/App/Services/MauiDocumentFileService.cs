@@ -4,14 +4,25 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using CommunityToolkit.Maui.Storage;
+using Microsoft.AspNetCore.Components.Forms;
 using Skinnix.RhymeTool.Client.Services;
 using Skinnix.RhymeTool.Client.Services.Files;
+using Skinnix.RhymeTool.Client.Services.Preferences;
 
 namespace Skinnix.RhymeTool.MauiBlazor.Services;
 
-internal class MauiDocumentFileService(IPreferencesService preferences) : IDocumentFileService
+internal class MauiDocumentFileService(IPreferencesService preferenceService) : IDocumentFileService
 {
-	private const string WORKING_DIRECTORY_KEY = "WorkingDirectory";
+	private class PreferencesHolder(IPreferencesService preferenceService) : PreferenceObject(preferenceService, "Files_")
+	{
+		public string? WorkingDirectory
+		{
+			get => GetValue<string>();
+			set => SetValue(value);
+		}
+	}
+
+	private PreferencesHolder preferences = new(preferenceService);
 
 	public bool CanListFiles => true;
 	public bool CanUploadFile => true;
@@ -19,78 +30,166 @@ internal class MauiDocumentFileService(IPreferencesService preferences) : IDocum
 	public bool CanOpenDroppedFile => false;
 	public bool CanSelectWorkingDirectory => true;
 
-	public Task<IFileList?> TryGetFileListAsync(CancellationToken cancellation = default)
+	public Task<SystemRequestResult<IFileList?>> TryGetFileListAsync(CancellationToken cancellation = default)
+		=> Task.FromResult(TryGetFileList(cancellation));
+	public SystemRequestResult<IFileList?> TryGetFileList(CancellationToken cancellation = default)
 	{
+		cancellation.ThrowIfCancellationRequested();
+		var getPermissionResult = TryGetExternalStoragePermission(request: false);
+		if (!getPermissionResult.HasFlag(SystemRequestResultType.OkFlag))
+			return getPermissionResult;
+
+		if (preferences.WorkingDirectory is null)
+			return new(SystemRequestResultType.Existing, null);
+		
 		try
 		{
-			var workingDirectory = preferences.GetValue<string>(WORKING_DIRECTORY_KEY);
-			if (workingDirectory is not null)
-			{
-				var info = new DirectoryInfo(workingDirectory);
-				var folders = info.GetDirectories();
-				var files = info.GetFiles();
-				return Task.FromResult<IFileList?>(new RootFileList(this, folders, files));
-			}
+			var info = new DirectoryInfo(preferences.WorkingDirectory);
+			var folders = info.GetDirectories();
+			var files = info.GetFiles();
+			return new(SystemRequestResultType.Existing, new RootFileList(this, folders, files));
 		}
-		catch (Exception) { }
-
-		return Task.FromResult<IFileList?>(null);
+		catch (Exception)
+		{
+			return SystemRequestResultType.Error;
+		}
 	}
 
-	public async Task<IFileContent?> TrySelectFileAsync(CancellationToken cancellation = default)
+	public async Task<SystemRequestResult<IFileContent?>> TrySelectFileAsync(CancellationToken cancellation = default)
 	{
+		cancellation.ThrowIfCancellationRequested();
 		try
 		{
 			var file = await FilePicker.Default.PickAsync();
+			cancellation.ThrowIfCancellationRequested();
 			if (file is not null)
-				return new FileContent(new FileInfo(file.FullPath));
+				return new(SystemRequestResultType.Confirmed, new FileContent(new FileInfo(file.FullPath)));
+			else
+				return new(SystemRequestResultType.Confirmed, null);
 		}
-		catch (Exception) { }
-
-		return null;
+		catch (OperationCanceledException)
+		{
+			throw;
+		}
+		catch (Exception)
+		{
+			return SystemRequestResultType.Error;
+		}
 	}
 
-	public Task<IFileContent?> LoadFile(string id, CancellationToken cancellation = default)
+	public Task<SystemRequestResult<IFileContent?>> TryLoadFileAsync(string id, CancellationToken cancellation = default)
+		=> Task.FromResult(LoadFile(id, cancellation));
+	public SystemRequestResult<IFileContent?> LoadFile(string id, CancellationToken cancellation = default)
 	{
+		cancellation.ThrowIfCancellationRequested();
 		try
 		{
 			//Lade Datei
 			var info = new FileInfo(id);
 			if (info.Exists)
-				return Task.FromResult<IFileContent?>(new FileContent(info));
+				return new(SystemRequestResultType.Existing, new FileContent(info));
+			else
+				return new(SystemRequestResultType.Existing, null);
 		}
-		catch (Exception) { }
-
-		return Task.FromResult<IFileContent?>(null);
+		catch (Exception)
+		{
+			return SystemRequestResultType.Error;
+		}
 	}
 
-	public Task<string?> TryGetWorkingDirectory(CancellationToken cancellation = default)
+	public Task<SystemRequestResult> TryWorkingDirectoryPermissionAsync(CancellationToken cancellation = default)
+		=> Task.FromResult<SystemRequestResult>(TryGetExternalStoragePermission(request: true, cancellation));
+
+	private SystemRequestResultType TryGetExternalStoragePermission(bool request, CancellationToken cancellation = default)
 	{
+		cancellation.ThrowIfCancellationRequested();
+
+#if ANDROID30_0_OR_GREATER
 		try
 		{
-			var workingDirectory = preferences.GetValue<string>(WORKING_DIRECTORY_KEY);
-			return Task.FromResult(workingDirectory);
-		}
-		catch (Exception) { }
+			if (Android.OS.Build.VERSION.SdkInt < Android.OS.BuildVersionCodes.R)
+				return SystemRequestResultType.NotNeeded;
 
-		return Task.FromResult<string?>(null);
+			if (Platform.CurrentActivity is null)
+				return SystemRequestResultType.PrerequisiteFailed;
+
+			if (Android.OS.Environment.IsExternalStorageManager)
+				return SystemRequestResultType.Existing;
+
+			if (!request)
+				return SystemRequestResultType.Nonexisting;
+
+			var manage = Android.Provider.Settings.ActionManageAppAllFilesAccessPermission;
+			var intent = new Android.Content.Intent(manage);
+			var uri = Android.Net.Uri.Parse("package:" + AppInfo.Current.PackageName);
+			intent.SetData(uri);
+			Platform.CurrentActivity.StartActivity(intent);
+			return SystemRequestResultType.Requesting;
+		}
+		catch (Exception)
+		{
+			return SystemRequestResultType.PrerequisiteFailed;
+		}
+# elif IOS
+		return SystemRequestResultType.PrerequisiteFailed;
+#else
+		return SystemRequestResultType.NotNeeded;
+#endif
 	}
 
-	public async Task<string?> TrySelectWorkingDirectory(CancellationToken cancellation = default)
+	public Task<SystemRequestResult<string?>> TryGetWorkingDirectoryAsync(CancellationToken cancellation = default)
+		=> Task.FromResult(TryGetWorkingDirectory(cancellation));
+	public SystemRequestResult<string?> TryGetWorkingDirectory(CancellationToken cancellation = default)
 	{
+		cancellation.ThrowIfCancellationRequested();
+
 		try
 		{
+			var permission = TryGetExternalStoragePermission(request: false, cancellation);
+			if (!permission.HasFlag(SystemRequestResultType.OkFlag))
+				return permission;
+
+			return new(SystemRequestResultType.Existing, preferences.WorkingDirectory);
+		}
+		catch (OperationCanceledException)
+		{
+			throw;
+		}
+		catch (Exception)
+		{
+			return SystemRequestResultType.Error;
+		}
+	}
+
+	public async Task<SystemRequestResult<string?>> TrySelectWorkingDirectoryAsync(CancellationToken cancellation = default)
+	{
+		cancellation.ThrowIfCancellationRequested();
+		try
+		{
+			var permission = TryGetExternalStoragePermission(request: true, cancellation);
+			if (!permission.HasFlag(SystemRequestResultType.OkFlag))
+				return permission;
+
 			var result = await FolderPicker.Default.PickAsync(cancellation);
-			if (result.IsSuccessful)
-			{
-				preferences.SetValue(WORKING_DIRECTORY_KEY, result.Folder.Path);
-				return result.Folder.Path;
-			}
-		}
-		catch (Exception) { }
+			if (!result.IsSuccessful)
+				return SystemRequestResultType.Denied;
 
-		return null;
+			cancellation.ThrowIfCancellationRequested();
+			preferences.WorkingDirectory = result.Folder.Path;
+			return new(SystemRequestResultType.Granted, result.Folder.Path);
+		}
+		catch (OperationCanceledException)
+		{
+			throw;
+		}
+		catch (Exception)
+		{
+			return SystemRequestResultType.Error;
+		}
 	}
+
+	public Task<SystemRequestResult<IFileContent>> OpenSelectedFileAsync(IBrowserFile file, CancellationToken cancellation = default)
+		=> throw new NotSupportedException();
 
 	private record FileContent(FileInfo File) : IFileContent
 	{
@@ -162,8 +261,10 @@ internal class MauiDocumentFileService(IPreferencesService preferences) : IDocum
 
 				public async Task WriteAsync(Func<Stream, Task> write, CancellationToken cancellation = default)
 				{
-					using var stream = Owner.File.OpenWrite();
-					await write(stream);
+					using (var stream = Owner.File.OpenWrite())
+					{
+						await write(stream);
+					}
 				}
 			}
 		}

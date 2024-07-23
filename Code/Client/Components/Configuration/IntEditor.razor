@@ -4,7 +4,7 @@
 
 @if (Property is not null)
 {
-    <div class="row mb-3">
+    <div class="mb-3">
         <label class="form-label" for="@(EditorId)-editor">
             @if (Property.IsToggleable)
             {
@@ -15,7 +15,7 @@
 
             @Property.Name
         </label>
-        <div class="col collapse show" id="property-@(EditorId)">
+        <div class="collapse show" id="property-@(EditorId)">
             <div class="input-group" role="group">
                 <button type="button" class="btn btn-outline-secondary"
                         @onclick="() => Value--">

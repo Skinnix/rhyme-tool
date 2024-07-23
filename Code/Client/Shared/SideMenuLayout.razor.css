@@ -1,0 +1,1 @@
+.side-column .offcanvas-lg{--offcanvas-top: 5em;top:var(--offcanvas-top);overflow:hidden auto;max-height:calc(100vh - var(--offcanvas-top))}.side-column .offcanvas-lg.show,.side-column .offcanvas-lg.showing{--offcanvas-top: 0}

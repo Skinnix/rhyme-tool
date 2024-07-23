@@ -3,6 +3,7 @@
 
 @using Skinnix.RhymeTool.Client.Services
 @using Skinnix.RhymeTool.Client.Services.Files
+@using Skinnix.RhymeTool.Client.Services.Preferences
 
 @layout FullscreenLayout
 
@@ -24,31 +25,42 @@
 {
     <h2>Ordner</h2>
     <div class="row mb-3">
-        @if (currentWorkingDirectory is null)
-        {
-            <div class="col-sm-6">
-                Es wurde kein Arbeitsverzeichnis ausgewählt.
-            </div>
-
-            <div class="col-sm-6">
-                <button type="button" class="btn btn-secondary d-block w-100" @onclick="SelectWorkingDirectory">
-                    Arbeitsverzeichnis auswählen
-                </button>
-            </div>
-        }
-        else
-        {
-            <div class="col-sm-6">
-                Das aktuelle Arbeitsverzeichnis ist:
+        <div class="col-sm-6">
+            @if (workingDirectoryError)
+            {
+                <text>Es ist ein Fehler aufgetreten.</text>
+            }
+            else if (waitingForDirectoryPermission)
+            {
+                <text>Zum Bestätigen der Berechtigung bitte erneut klicken.</text>
+            }
+            else if (currentWorkingDirectory is not null)
+            {
+                <text>Das aktuelle Arbeitsverzeichnis ist:</text>
                 <div class="ms-3 text-body-secondary">@currentWorkingDirectory</div>
-            </div>
+            }
+            else
+            {
+                <text>Es wurde kein Arbeitsverzeichnis ausgewählt.</text>
+            }
+        </div>
 
-            <div class="col-sm-6">
-                <button type="button" class="btn btn-secondary d-block w-100" @onclick="SelectWorkingDirectory">
-                    Arbeitsverzeichnis ändern
-                </button>
-            </div>
-        }
+        <div class="col-sm-6">
+            <button type="button" class="btn btn-secondary d-block w-100" @onclick="SelectWorkingDirectory">
+                @if (waitingForDirectoryPermission)
+                {
+                    <text>Bestätigen und Auswählen</text>
+                }
+                else if (currentWorkingDirectory is not null)
+                {
+                    <text>Arbeitsverzeichnis ändern</text>
+                }
+                else
+                {
+                    <text>Arbeitsverzeichnis auswählen</text>
+                }
+            </button>
+        </div>
     </div>
 }
 
@@ -61,23 +73,99 @@
     public static string GetUrl() => "/chords/preferences";
 
     private string? currentWorkingDirectory;
+    private bool workingDirectoryError;
+    private bool shouldGetWorkingDirectoryPermission;
+    private bool waitingForDirectoryPermission;
 
     protected override async Task OnParametersSetAsync()
     {
         await base.OnParametersSetAsync();
 
         currentWorkingDirectory = null;
+        shouldGetWorkingDirectoryPermission = false;
+        waitingForDirectoryPermission = false;
+        workingDirectoryError = false;
         if (fileService.CanSelectWorkingDirectory)
         {
-            currentWorkingDirectory = await fileService.TryGetWorkingDirectory();
-            StateHasChanged();
+            var workingDirectoryResult = await fileService.TryGetWorkingDirectoryAsync();
+
+            if (workingDirectoryResult.Result == SystemRequestResultType.Nonexisting)
+            {
+                shouldGetWorkingDirectoryPermission = true;
+                StateHasChanged();
+                return;
+            }
+
+            if (workingDirectoryResult.IsPending)
+            {
+                waitingForDirectoryPermission = true;
+                StateHasChanged();
+                return;
+            }
+
+            if (workingDirectoryResult.IsOk)
+            {
+                currentWorkingDirectory = workingDirectoryResult.Value;
+                StateHasChanged();
+                return;
+            }
+
+            if (workingDirectoryResult.IsError)
+            {
+                workingDirectoryError = true;
+                StateHasChanged();
+                return;
+            }
         }
     }
 
     private async Task SelectWorkingDirectory()
     {
-        currentWorkingDirectory = await fileService.TrySelectWorkingDirectory();
-        StateHasChanged();
+        //Wähle Arbeitsordner
+        var workingDirectoryResult = await fileService.TrySelectWorkingDirectoryAsync();
+
+        //Ok?
+        if (workingDirectoryResult.IsOk && workingDirectoryResult.Value is not null)
+        {
+            currentWorkingDirectory = workingDirectoryResult.Value;
+            StateHasChanged();
+            return;
+        }
+
+        //Abgebrochen?
+        if (workingDirectoryResult.Result == SystemRequestResultType.Denied)
+        {
+            if (!waitingForDirectoryPermission)
+                return;
+
+            waitingForDirectoryPermission = false;
+            StateHasChanged();
+            return;
+        }
+
+        //Warte auf Berechtigung?
+        if (workingDirectoryResult.IsPending)
+        {
+            waitingForDirectoryPermission = true;
+            StateHasChanged();
+            return;
+        }
+
+        //Fehler?
+        if (workingDirectoryResult.IsError)
+        {
+            await dialogService.ShowErrorAsync("Fehler beim Auswählen des Arbeitsordners", "Fehler");
+            return;
+        }
+
+        //Keine Berechtigung?
+        if (workingDirectoryResult.Result.HasFlag(SystemRequestResultType.NeededFlag))
+        {
+            await dialogService.ShowErrorAsync("Die Berechtigung zum Zugriff auf das Dateisystem ist erforderlich.", "Fehler");
+            return;
+        }
+
+        await dialogService.ShowErrorAsync("Auswählen des Arbeitsordners fehlgeschlagen", "Fehler");
     }
 
     private async Task DeleteAllPreferences()

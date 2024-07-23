@@ -1,0 +1,11 @@
+.side-column .offcanvas-lg {
+	--offcanvas-top: 5em;
+	top: var(--offcanvas-top);
+
+	overflow: hidden auto;
+	max-height: calc(100vh - var(--offcanvas-top));
+
+	&.show, &.showing {
+		--offcanvas-top: 0;
+	}
+}

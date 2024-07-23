@@ -241,7 +241,7 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 	public int TryReadChord(ReadOnlySpan<char> s, out Chord? chord, bool transform)
 	{
 		var length = Chord.TryRead(s, out chord);
-		if (length != s.Length || chord is null)
+		if (length <= 0 || chord is null)
 		{
 			chord = null;
 			return 0;

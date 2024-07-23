@@ -26,7 +26,7 @@
 @code {
     private static readonly bool IsDebug =
 #if DEBUG
-        true;
+    true;
 #else
         false;
 #endif
@@ -37,6 +37,8 @@
     private SheetDocument? loadedDocument;
 
     private ElementReference editorWrapper;
+
+    private bool shouldRender;
 
     private readonly WeakDictionary<Guid, SheetEditorLine> lineEditors = new();
     private SheetEditorLine lineEditorsSetter
@@ -54,6 +56,8 @@
 
         if (Document != loadedDocument)
         {
+            shouldRender = true;
+
             if (loadedDocument is not null)
                 loadedDocument.Lines.Modified -= OnLinesModified;
 
@@ -77,8 +81,18 @@
         await js.InvokeVoidAsync("console.log", "rerender: " + this.GetType().Name);
     }
 
+    protected override bool ShouldRender()
+    {
+        if (!shouldRender)
+            return false;
+        
+        shouldRender = false;
+        return true;
+    }
+
     private void OnLinesModified(object? sender, ModifiedEventArgs args)
     {
+        shouldRender = true;
         StateHasChanged();
     }
 

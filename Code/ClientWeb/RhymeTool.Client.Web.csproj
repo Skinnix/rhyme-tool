@@ -7,7 +7,6 @@
     <AssemblyName>Skinnix.RhymeTool.Client.Web</AssemblyName>
     <RootNamespace>Skinnix.RhymeTool.Client.Web</RootNamespace>
     <Configurations>Debug;Release;Server Side</Configurations>
-		<StaticWebAssetBasePath>chords</StaticWebAssetBasePath>
   </PropertyGroup>
 
   <PropertyGroup>

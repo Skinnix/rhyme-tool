@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Skinnix.RhymeTool.Client;
 using Skinnix.RhymeTool.Client.Services;
 using Skinnix.RhymeTool.Client.Services.Files;
+using Skinnix.RhymeTool.Client.Services.Preferences;
 using Skinnix.RhymeTool.MauiBlazor.Services;
 
 namespace Skinnix.RhymeTool.MauiBlazor;

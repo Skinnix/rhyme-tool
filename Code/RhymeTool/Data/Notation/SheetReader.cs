@@ -30,9 +30,9 @@ public class SheetReader
 
     private List<ContentInLine>? lastAttachmentLine = null;
 
-	public ISheetEditorFormatter? Formatter { get; set; }
+	public ISheetEditorFormatter? Formatter { get; set; } = DefaultSheetFormatter.Instance;
 
-    private SheetReader(TextReader reader)
+	private SheetReader(TextReader reader)
     {
         this.reader = reader;
     }
@@ -40,8 +40,8 @@ public class SheetReader
     public static SheetDocument ReadSheet(TextReader reader)
         => new SheetReader(reader).ReadSheet();
 
-	public static Task<SheetDocument> ReadSheetAsync(TextReader reader)
-		=> new SheetReader(reader).ReadSheetAsync();
+	public static Task<SheetDocument> ReadSheetAsync(TextReader reader, CancellationToken cancellation = default)
+		=> new SheetReader(reader).ReadSheetAsync(cancellation);
 
 	private SheetDocument ReadSheet()
     {
@@ -80,16 +80,19 @@ public class SheetReader
         return new SheetDocument(lines);
     }
 
-	private async Task<SheetDocument> ReadSheetAsync()
+	private async Task<SheetDocument> ReadSheetAsync(CancellationToken cancellation = default)
 	{
 		//Ignoriere Leerzeilen am Anfang des Dokuments
-		string? line = await reader.ReadLineAsync();
+		cancellation.ThrowIfCancellationRequested();
+		string? line = await reader.ReadLineAsync(cancellation);
 		while (line != null && string.IsNullOrWhiteSpace(line))
-			line = await reader.ReadLineAsync();
+			line = await reader.ReadLineAsync(cancellation);
 
 		//Lese das Dokument zeilenweise
-		for (; line != null; line = await reader.ReadLineAsync())
+		for (; line != null; line = await reader.ReadLineAsync(cancellation))
 		{
+			cancellation.ThrowIfCancellationRequested();
+
 			//Schneide Zeilenumbrüche ab
 			if (line.StartsWith("\r\n"))
 				line = line[2..];
@@ -106,11 +109,13 @@ public class SheetReader
 		if (lastAttachmentLine != null)
 		{
 			//Die letzte Zeile bleibt eine reine Akkordzeile
+			cancellation.ThrowIfCancellationRequested();
 			var newChordLine = CreateChordLine(lastAttachmentLine);
 			lines.Add(newChordLine);
 		}
 
 		//Finalisiere das Dokument
+		cancellation.ThrowIfCancellationRequested();
 		FinalizeLines();
 
 		//Erzeuge das Dokument
@@ -185,7 +190,7 @@ public class SheetReader
 		foreach (var chord in chords)
 		{
 			//Füge den Inhalt hinzu
-			var component = new SheetVarietyLine.VarietyComponent(chord.Content, SheetVarietyLine.SpecialContentType.Chord);
+			var component = new SheetVarietyLine.VarietyComponent(chord.Content);
 			components.Add(component);
 		}
 
@@ -204,7 +209,7 @@ public class SheetReader
 				componentContent = new SheetVarietyLine.ComponentContent(content.OriginalContent);
 
 			//Erzeuge die Komponente
-			var component = new SheetVarietyLine.VarietyComponent(componentContent, SheetVarietyLine.SpecialContentType.None);
+			var component = new SheetVarietyLine.VarietyComponent(componentContent);
 
 			//Finde ggf. Attachments
 			if (attachments is not null)
@@ -262,8 +267,6 @@ public class SheetReader
 	private List<ContentInLine> TryParseLine(ReadOnlySpan<char> line, out bool canBeChordOnlyLine, out bool canBeAttachmentLine)
 	{
 		var contents = new List<ContentInLine>();
-		var hasWords = false;
-		var hasChords = false;
 		for (var offset = 0; ;)
 		{
 			//Lese nächsten Content
@@ -271,18 +274,26 @@ public class SheetReader
 			if (contentLength <= 0 || content is null)
 				break;
 
+			//Stehen zwei Akkorde direkt hintereinander?
+			if (contents.Count > 0)
+			{
+				var previousContent = contents[^1];
+				if (previousContent.Content.ContentType == SheetVarietyLine.ContentType.Chord && content.Value.ContentType == SheetVarietyLine.ContentType.Chord)
+				{
+					//Füge die Akkorde als Text zusammen und ersetze die vorherige Komponente
+					var combinedText = new string(line[previousContent.Offset.Value..(offset + contentLength)]);
+					contents[^1] = (new SheetVarietyLine.ComponentContent(combinedText), combinedText, previousContent.Offset, previousContent.Length + new ContentOffset(contentLength));
+				}
+			}
+
 			//Merke Content und Offset
 			contents.Add((content.Value, new string(line[offset..(offset + contentLength)]), new(offset), new(contentLength)));
 			offset += contentLength;
-
-			//Prüfe Typ
-			if (content.Value.ContentType == SheetVarietyLine.ContentType.Word)
-				hasWords = true;
-			else if (content.Value.ContentType == SheetVarietyLine.ContentType.Chord)
-				hasChords = true;
 		}
 
 		//Kann die Zeile eine reine Akkordzeile sein?
+		var hasChords = contents.Any(c => c.Content.ContentType == SheetVarietyLine.ContentType.Chord);
+		var hasWords = contents.Any(c => c.Content.ContentType == SheetVarietyLine.ContentType.Word);
 		canBeAttachmentLine = hasChords && !hasWords;
 		canBeChordOnlyLine = false;
 		if (canBeAttachmentLine)
