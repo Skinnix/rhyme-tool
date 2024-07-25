@@ -66,6 +66,7 @@ function handleBeforeInput(element, reference, event) {
 	//get selection
 	var originalSelection = getSelection();
 	var originalRange = originalSelection.rangeCount == 0 ? null : originalSelection.getRangeAt(0);
+	var copyRange = originalRange.cloneRange();
 	var selectionRange = getSelectionRange(originalSelection, element, function (node) {
 		return node && node.classList && node.classList.contains('line');
 	});
@@ -85,7 +86,8 @@ function handleBeforeInput(element, reference, event) {
 	};
 
 	//handle event
-	document.getSelection().removeAllRanges();
+	//document.getSelection().removeAllRanges();
+	originalRange.collapse(true);
 	reference.invokeMethodAsync('OnBeforeInput', {
 		inputType: event.inputType,
 		data: data,
@@ -96,7 +98,7 @@ function handleBeforeInput(element, reference, event) {
 			setSelectionRange(element, result.selection.metaline, result.selection.lineId, result.selection.lineIndex, result.selection.range);
 		} else {
 			//restore old range
-			getSelection().addRange(originalRange);
+			getSelection().addRange(copyRange);
 		}
 	});
 }
