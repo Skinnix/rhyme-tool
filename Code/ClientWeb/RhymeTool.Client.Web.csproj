@@ -7,6 +7,7 @@
     <AssemblyName>Skinnix.RhymeTool.Client.Web</AssemblyName>
     <RootNamespace>Skinnix.RhymeTool.Client.Web</RootNamespace>
     <Configurations>Debug;Release;Server Side</Configurations>
+		<!--<StaticWebAssetBasePath>chords</StaticWebAssetBasePath>-->
   </PropertyGroup>
 
   <PropertyGroup>
@@ -16,6 +17,18 @@
   <PropertyGroup Condition="'$(Configuration)'=='Server Side'">
     <DefineConstants>$(DefineConstants)TRACE;DEBUG</DefineConstants>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Content Remove="wwwroot\Data\test-sas.txt" />
+    <Content Remove="wwwroot\Data\test-ws-full.txt" />
+    <Content Remove="wwwroot\Data\test-ws.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="wwwroot\Data\test-sas.txt" />
+    <None Include="wwwroot\Data\test-ws-full.txt" />
+    <None Include="wwwroot\Data\test-ws.txt" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="DartSassBuilder" Version="1.1.0" />

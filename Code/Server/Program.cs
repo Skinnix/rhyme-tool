@@ -41,11 +41,9 @@ else
 	app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 
-#if DEBUG
-app.UseBlazorFrameworkFiles("/chords");
-#endif
+app.UsePathBase("/chords");
 
 app.UseStaticFiles();
 
@@ -58,32 +56,30 @@ app.UseRouting();
 app.Services.UseRhymeToolClient();
 
 
-app.MapWhen(ctx => ctx.Request.Path.StartsWithSegments("/chords"), chords =>
-{
-	chords.UseBlazorFrameworkFiles("/chords");
-	chords.UseRouting();
-	chords.UseEndpoints(endpoints =>
-	{
-		endpoints.MapFallbackToPage("/chords/{*path:nonfile}", "/_Host");
-	});
-});
+//app.MapWhen(ctx => ctx.Request.Path.StartsWithSegments("/chords"), chords =>
+//{
+//	chords.UseBlazorFrameworkFiles("/chords");
+//	chords.UseRouting();
+//	chords.UseEndpoints(endpoints =>
+//	{
+//		endpoints.MapFallbackToPage("/chords/{*path:nonfile}", "/_Host");
+//	});
+//});
 
-app.MapBlazorHub("/chords/_blazor");
+app.UseBlazorFrameworkFiles();
+app.UseRouting();
+
+app.MapBlazorHub("/_blazor", options =>
+{
+	options.WebSockets.CloseTimeout = TimeSpan.FromSeconds(5);
+});
 app.MapFallbackToPage("/_Host");
 
 #else
 
-app.UseBlazorFrameworkFiles("/chords");
-app.MapFallbackToFile("/chords/{*path:nonfile}", "/chords/index.html");
-
-app.Map("/chords", app =>
-{
-	app.UseRouting();
-	app.UseEndpoints(endpoints =>
-	{
-		endpoints.MapFallbackToFile("/chords/{*path:nonfile}", "/chords/index.html");
-	});
-});
+app.UseBlazorFrameworkFiles();
+app.UseRouting();
+app.MapFallbackToFile("/{*path:nonfile}", "/index.html");
 #endif
 
 #if SERVER_SIDE && DEBUG

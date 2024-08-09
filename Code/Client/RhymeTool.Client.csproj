@@ -7,8 +7,8 @@
     <AssemblyName>Skinnix.RhymeTool.Client</AssemblyName>
     <RootNamespace>Skinnix.RhymeTool.Client</RootNamespace>
     <Configurations>Debug;Release;Server Side</Configurations>
-		<StaticWebAssetBasePath>chords</StaticWebAssetBasePath>
 		<LangVersion>latest</LangVersion>
+		<StaticWebAssetProjectMode>Default</StaticWebAssetProjectMode>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -31,9 +31,6 @@
 
   <ItemGroup>
     <None Include="wwwroot\css\chords.css" />
-    <None Include="wwwroot\Data\test-sas.txt" />
-    <None Include="wwwroot\Data\test-ws-full.txt" />
-    <None Include="wwwroot\Data\test-ws.txt" />
   </ItemGroup>
 
   <ItemGroup>

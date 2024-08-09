@@ -62,6 +62,7 @@ public class WebDefaultDocumentFileService(IJSRuntime js) : IDocumentFileService
 		{
 			if (content is null)
 			{
+				Console.WriteLine("Test");
 				using var stream = file.OpenReadStream(cancellationToken: cancellation);
 
 				content = new MemoryStream();
