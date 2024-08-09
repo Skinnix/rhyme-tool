@@ -33,6 +33,22 @@ function saveAsFile(data, filename) {
 	URL.revokeObjectURL(url);
 }
 
+function registerDropDownHandler(element, reference) {
+	element.addEventListener('show.bs.dropdown', function (event) {
+		reference.invokeMethodAsync('OnDropDownShow');
+	});
+
+	element.addEventListener('hidden.bs.dropdown', function (event) {
+		reference.invokeMethodAsync('OnDropDownHidden');
+	});
+}
+
+
+
+
+
+
+
 function registerBeforeInput(element, reference) {
 	var existingReference = element['data-reference'];
 	if (existingReference === reference) {

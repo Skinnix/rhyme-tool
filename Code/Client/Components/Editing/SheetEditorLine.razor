@@ -117,8 +117,8 @@
 
     void RenderLineTypeButton(SheetDisplayLine display)
     {
-        <div class="dropdown line-type">
-            <button class="btn btn-tiny btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <span class="dropdown line-type">
+            <a class="btn btn-tiny btn-outline-secondary dropdown-toggle" href="javascript:void(0)" data-bs-toggle="dropdown" aria-expanded="false">
                 @switch (display)
                 {
                     case SheetDisplayChordLine _:
@@ -131,46 +131,22 @@
                         <i class="fa-solid fa-ellipsis"></i>
                         break;
                 }
-            </button>
-            @*<ul class="dropdown-menu">
+            </a>
+            <ul class="dropdown-menu">
                 <li><button class="dropdown-item" href="#"><i class="fa-solid fa-font"></i> Text</button></li>
                 <li><button class="dropdown-item" href="#"><i class="fa-solid fa-music"></i> Akkord</button></li>
-            </ul>*@
-        </div>
+            </ul>
+        </span>
     }
 }
 
 @if (Line is not null)
 {
     <span class="metaline" data-metaline="@(Line.Guid)" data-type="@Line.GetType()?.Name">
-        @*<div class="metaline-controls" contenteditable="false">
-            <div class="dropdown metaline-type">
-                @switch (Line)
-                {
-                    case SheetVarietyLine:
-                        <a href="#" class="btn btn-sm btn-outline-secondary dropdown-toggle fa-solid fa-font" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        </a>
-                        break;
-                    default:
-                        <a href="#" class="btn btn-sm btn-outline-secondary dropdown-toggle fa-solid fa-ellipsis" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        </a>
-                        break;
-                }
-                <ul class="dropdown-menu">
-                    <li><button class="dropdown-item" href="#"><i class="fa-solid fa-font"></i> Text</button></li>
-                    <li><button class="dropdown-item" href="#"><i class="fa-solid fa-music"></i> Akkord</button></li>
-                </ul>
-            </div>
-    </div>*@
-        <span class="metaline-lines">
+        <span class="metaline-controls" contenteditable="false"><MetalineTypeButton Line="Line" /></span><span class="metaline-lines">
             @foreach (var display in Line.CreateDisplayLines(Formatter))
             {
-                @*<div class="line-controls" contenteditable="false">
-                    @{
-                        //RenderLineTypeButton(display);
-                    }
-                </div>*@
-
+                <span @key="display" class="line-controls" contenteditable="false"><LineTypeButton Line="display" /></span>
                 RenderLine(display);
             }
         </span>
@@ -183,23 +159,42 @@
 
     [Parameter] public SheetLine? Line { get; set; }
 
-    //private SheetLineCache? lineCache;
+    private SheetLine? loadedLine;
+    private bool shouldRender;
 
-    // protected override void OnParametersSet()
-    // {
-    //     base.OnParametersSet();
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
 
-    //     if (lineCache != null)
-    //         lineCache.Modified -= OnLineModified;
+        if (Line != loadedLine)
+        {
+            shouldRender = true;
 
-    //     lineCache = Line == null ? null : new SheetLineCache(Line);
+            if (loadedLine is not null)
+                loadedLine.Modified -= OnLineModified;
 
-    //     if (lineCache != null)
-    //         lineCache.Modified += OnLineModified;
-    // }
+            loadedLine = Line;
+
+            if (loadedLine is not null)
+                loadedLine.Modified += OnLineModified;
+        }
+    }
+
+    protected override bool ShouldRender()
+    {
+        return shouldRender;
+    }
+
+    private new void StateHasChanged()
+    {
+        shouldRender = true;
+        base.StateHasChanged();
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        shouldRender = false;
+
         await base.OnAfterRenderAsync(firstRender);
 
         await js.InvokeVoidAsync("console.log", "rerender: " + this.GetType().Name);

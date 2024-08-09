@@ -232,7 +232,7 @@ public class SheetReader
 			}
 
 			//Versuche die Komponente an die vorherige anzufügen, ansonsten füge sie als eigene Komponente hinzu
-			if (components.Count == 0 || !components[^1].TryMerge(component, ContentOffset.MaxValue, Formatter))
+			if (components.Count == 0 || components[^1].TryMerge(component, ContentOffset.MaxValue, Formatter) is null)
 				components.Add(component);
 		}
 
@@ -253,7 +253,7 @@ public class SheetReader
 
 			//Füge ggf. das Leerzeichen an die letzte Komponente an
 			var lastComponent = components[^1];
-			if (!lastComponent.TryMerge(spaceComponent, ContentOffset.MaxValue, Formatter))
+			if (lastComponent.TryMerge(spaceComponent, ContentOffset.MaxValue, Formatter) is null)
 			{
 				//Füge das Leerzeichen als eigene Komponente hinzu
 				components.Add(spaceComponent);

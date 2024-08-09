@@ -1,0 +1,58 @@
+﻿@using Skinnix.RhymeTool.Data.Notation.Display
+
+@inject IJSRuntime js
+
+<span class="dropdown line-type" @ref="dropdownWrapper">
+    <a class="btn btn-tiny btn-outline-secondary dropdown-toggle" href="javascript:void(0)" data-bs-toggle="dropdown" aria-expanded="false">
+        @switch (Line)
+        {
+            case SheetDisplayChordLine _:
+                <i class="fa-solid fa-music"></i>
+                break;
+            case SheetDisplayTextLine _:
+                <i class="fa-solid fa-font"></i>
+                break;
+            default:
+                <i class="fa-solid fa-ellipsis"></i>
+                break;
+        }
+    </a><span class="dropdown-menu">
+        @if (expanded)
+        {
+            <a class="dropdown-item" href="javascript:void(0)"><i class="fa-solid fa-font"></i> Text</a>
+            <a class="dropdown-item" href="javascript:void(0)"><i class="fa-solid fa-music"></i> Akkord</a>
+        }
+     </span>
+</span>
+
+@code {
+    [Parameter] public SheetDisplayLine? Line { get; set; }
+
+    private bool expanded;
+
+    private ElementReference dropdownWrapper;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+
+        if (firstRender)
+        {
+            await js.InvokeVoidAsync("registerDropDownHandler", dropdownWrapper, DotNetObjectReference.Create(this));
+        }
+    }
+
+    [JSInvokable]
+    public void OnDropDownShow()
+    {
+        expanded = true;
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public void OnDropDownHidden()
+    {
+        expanded = false;
+        StateHasChanged();
+    }
+}

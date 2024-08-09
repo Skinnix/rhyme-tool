@@ -223,21 +223,43 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 					var lastComponent = varietyBefore.components.Count == 0 ? null : varietyBefore.components[^1];
 					varietyBefore.components.AddRange(Line.components);
 
+					//Setze den Cursor an die Position, die mal das Ende der vorherigen Zeile war
+					SpecialCursorPosition? specialCursorPosition = lastComponent is not null ? SpecialCursorPosition.Behind(lastComponent) : null;
+
 					//Prüfe, ob die Komponenten zusammengefügt werden können
 					if (lastComponent is not null && Line.components.Count > 0)
 					{
-						if (lastComponent.TryMerge(Line.components[0], ContentOffset.FarEnd, formatter))
+						var mergeResult = lastComponent.TryMerge(Line.components[0], ContentOffset.FarEnd, formatter);
+						if (mergeResult is not null)
 						{
 							//Entferne die zusammengefügte Komponente
 							varietyBefore.components.Remove(Line.components[0]);
+
+							//Setze den Cursor zwischen die neu zusammengefügten Komponenten
+							specialCursorPosition = SpecialCursorPosition.FromStart(lastComponent, mergeResult.Value.LengthBefore, SpecialCursorVirtualPositionType.KeepRight);
 						}
 					}
 
 					//Die vorherige Zeile muss neu gezeichnet werden
 					varietyBefore.RaiseModifiedAndInvalidateCache();
 
-					//Setze den Cursor an die Position, die mal das Ende der vorherigen Zeile war
-					var cursorPosition = lastComponent?.DisplayRenderBounds.EndOffset ?? 0;
+					//Berechne Cursorposition
+					int cursorPosition;
+					if (specialCursorPosition is not null)
+					{
+						//Erzeuge Displayelemente, damit die Cursorposition berechnet werden kann
+						varietyBefore.CreateDisplayLines(formatter);
+
+						//Berechne Cursorposition
+						cursorPosition = specialCursorPosition.Value.Calculate(varietyBefore, formatter);
+					}
+					else
+					{
+						//Setze den Cursor an die Position, die mal das Ende der vorherigen Zeile war
+						cursorPosition = lastComponent?.DisplayRenderBounds.EndOffset ?? 0;
+					}
+
+					//Erzeuge das Ergebnis
 					return new MetalineEditResult(true, new MetalineSelectionRange(varietyBefore.ContentEditor, SimpleRange.CursorAt(cursorPosition)))
 					{
 						RemoveLine = true,
@@ -270,21 +292,43 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 					var lastComponent = Line.components.Count == 0 ? null : Line.components[^1];
 					Line.components.AddRange(varietyAfter.components);
 
+					//Setze den Cursor an die Position, die mal das Ende der vorherigen Zeile war
+					SpecialCursorPosition? specialCursorPosition = lastComponent is not null ? SpecialCursorPosition.Behind(lastComponent) : null;
+
 					//Prüfe, ob die Komponenten zusammengefügt werden können
 					if (lastComponent is not null && varietyAfter.components.Count > 0)
 					{
-						if (lastComponent.TryMerge(varietyAfter.components[0], ContentOffset.FarEnd, formatter))
+						var mergeResult = lastComponent.TryMerge(varietyAfter.components[0], ContentOffset.FarEnd, formatter);
+						if (mergeResult is not null)
 						{
 							//Entferne die zusammengefügte Komponente
 							Line.components.Remove(varietyAfter.components[0]);
+
+							//Setze den Cursor zwischen die neu zusammengefügten Komponenten
+							specialCursorPosition = SpecialCursorPosition.FromStart(lastComponent, mergeResult.Value.LengthBefore, SpecialCursorVirtualPositionType.KeepLeft);
 						}
 					}
 
 					//Diese Zeile muss neu gezeichnet werden
 					Line.RaiseModifiedAndInvalidateCache();
 
+					//Berechne Cursorposition
+					int cursorPosition;
+					if (specialCursorPosition is not null)
+					{
+						//Erzeuge Displayelemente, damit die Cursorposition berechnet werden kann
+						Line.CreateDisplayLines(formatter);
+
+						//Berechne Cursorposition
+						cursorPosition = specialCursorPosition.Value.Calculate(Line, formatter);
+					}
+					else
+					{
+						//Setze den Cursor an die Position, die mal das Ende der vorherigen Zeile war
+						cursorPosition = lastComponent?.DisplayRenderBounds.EndOffset ?? 0;
+					}
+
 					//Setze den Cursor an die Position, die mal das Ende dieser Zeile war
-					var cursorPosition = lastComponent?.DisplayRenderBounds.EndOffset ?? 0;
 					return new MetalineEditResult(true, new MetalineSelectionRange(this, SimpleRange.CursorAt(cursorPosition)))
 					{
 						RemoveLineAfter = true,
@@ -409,7 +453,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 					if (component.DisplayRenderBounds.StartOffset < context.SelectionRange.Start)
 					{
 						//Teile die Komponente
-						var splitOffset = component.DisplayRenderBounds.GetContentOffset(context.SelectionRange.Start - component.DisplayRenderBounds.StartOffset);
+						var splitOffset = component.DisplayRenderBounds.GetContentOffset(context.SelectionRange.Start);
 						var end = component.SplitEnd(splitOffset.ContentOffset, formatter);
 
 						//Füge das Ende in die neue Zeile ein
@@ -437,6 +481,9 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 				//Entferne alle verschobenen Komponenten
 				Line.components.RemoveRange(index, Line.components.Count - index);
+
+				//Zeichne diese Zeile neu
+				Line.RaiseModifiedAndInvalidateCache();
 
 				//Füge die neue Zeile danach ein
 				return new MetalineEditResult(true, new MetalineSelectionRange(newLine.ContentEditor, SimpleRange.Zero))
@@ -620,7 +667,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 						//Versuche die erste Komponente hinten an den linken Rand anzufügen
 						var firstNewComponent = newContentComponents[0];
-						if (leftEdge.TryMerge(firstNewComponent, leftEdgeOverlapOffset.ContentOffset, formatter))
+						if (leftEdge.TryMerge(firstNewComponent, leftEdgeOverlapOffset.ContentOffset, formatter) is not null)
 						{
 							//Berechne die Gesamtlänge des eingefügten Inhalts
 							var lastNewComponent = newContentComponents[^1];
@@ -630,7 +677,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 							//Versuche die letzte Komponente vorne an den rechten Rand anzufügen
 							specialCursorPosition = null;
-							if (newContentComponents.Count > 0 && rightEdge?.TryMerge(lastNewComponent, ContentOffset.Zero, formatter) == true)
+							if (newContentComponents.Count > 0 && rightEdge?.TryMerge(lastNewComponent, ContentOffset.Zero, formatter) is not null)
 							{
 								//Letzte Komponente hinzugefügt
 								newContentComponents.RemoveAt(newContentComponents.Count - 1);
@@ -739,7 +786,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 					newContentComponents ??= CreateComponentsForContent(content, formatter);
 
 					//Versuche die letzte Komponente vorne an den rechten Rand anzufügen
-					if (rightEdge.TryMerge(newContentComponents[^1], ContentOffset.Zero, formatter))
+					if (rightEdge.TryMerge(newContentComponents[^1], ContentOffset.Zero, formatter) is not null)
 					{
 						//Letzte Komponente hinzugefügt
 						var lastComponent = newContentComponents[^1];
@@ -850,7 +897,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				}
 
 				//Kann die Komponente mit der darauf folgenden zusammengeführt werden?
-				if (component.TryMerge(nextComponent, ContentOffset.FarEnd, formatter))
+				if (component.TryMerge(nextComponent, ContentOffset.FarEnd, formatter) is not null)
 				{
 					//Falls der Cursor hinter diese Komponente gesetzt werden soll, passe die Cursorposition an
 					if (componentLength.HasValue)
@@ -1488,9 +1535,9 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 		Chord = 1,
 	}
 
-	internal readonly record struct MergeResult(ComponentContent NewContent, int LengthBefore)
+	internal readonly record struct MergeResult(ComponentContent NewContent, ContentOffset LengthBefore)
 	{
-		public int MergeLengthBefore { get; init; }
+		public ContentOffset MergeLengthBefore { get; init; }
 	}
 
 	internal readonly struct ComponentContent
@@ -1652,9 +1699,9 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				newContent += textContent[stringOffset..];
 
 			//Ergebnis
-			return new(FromString(newContent, formatter, allowedTypes), textContent.Length)
+			return new(FromString(newContent, formatter, allowedTypes), new ContentOffset(textContent.Length))
 			{
-				MergeLengthBefore = content.Length
+				MergeLengthBefore = new ContentOffset(content.Length)
 			};
 		}
 
@@ -1671,9 +1718,9 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				newContent += textContent[stringOffset..];
 
 			//Ergebnis
-			return new(FromString(newContent, formatter, allowedTypes), textContent.Length)
+			return new(FromString(newContent, formatter, allowedTypes), new ContentOffset(textContent.Length))
 			{
-				MergeLengthBefore = afterTextContent?.Length ?? 0
+				MergeLengthBefore = new ContentOffset(afterTextContent?.Length ?? 0)
 			};
 		}
 
@@ -1922,7 +1969,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 		internal abstract bool TryRemoveContent(ContentOffset offet, ContentOffset length, ISheetEditorFormatter? formatter);
 		internal abstract bool TryReplaceContent(ComponentContent newContent, ISheetEditorFormatter? formatter);
-		internal abstract bool TryMerge(Component next, ContentOffset offset, ISheetEditorFormatter? formatter);
+		internal abstract MergeResult? TryMerge(Component next, ContentOffset offset, ISheetEditorFormatter? formatter);
 		internal abstract Component SplitEnd(ContentOffset offset, ISheetEditorFormatter? formatter);
 
 		internal class LineBuilders
@@ -2300,15 +2347,15 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			return true;
 		}
 
-		internal override bool TryMerge(Component next, ContentOffset offset, ISheetEditorFormatter? formatter)
+		internal override MergeResult? TryMerge(Component next, ContentOffset offset, ISheetEditorFormatter? formatter)
 		{
 			//Ist das nachfolgende Element kein VarietyComponent?
 			if (next is not VarietyComponent varietyMerge)
-				return false;
+				return null;
 
 			//Passen die Inhaltstypen nicht zusammen?
 			if (!CanAppendTo(Content.ContentType, varietyMerge.Content.ContentType))
-				return false;
+				return null;
 
 			//Füge Inhalt zusammen
 			var lengthBefore = Content.GetLength(formatter);
@@ -2336,7 +2383,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 			//Zusammenführung erfolgreich
 			ResetDisplayCache();
-			return true;
+			return mergeResult;
 		}
 
 		internal override Component SplitEnd(ContentOffset offset, ISheetEditorFormatter? formatter)
