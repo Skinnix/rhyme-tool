@@ -13,10 +13,7 @@
         <CascadingValue TValue="ISheetEditorFormatter" Value="Formatter">
             <CascadingValue TValue="SheetDocument" Value="Document">
 
-                @foreach (var line in Document.Lines)
-                {
-                    <SheetEditorLine Line="line" @key="line" @ref="lineEditorsSetter" />
-                }
+                @foreach (var line in Document.Lines){<SheetEditorLine Line="line" @key="line" @ref="lineEditorsSetter" />}
 
             </CascadingValue>
         </CascadingValue>

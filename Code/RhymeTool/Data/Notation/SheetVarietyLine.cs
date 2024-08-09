@@ -233,6 +233,9 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 						}
 					}
 
+					//Die vorherige Zeile muss neu gezeichnet werden
+					varietyBefore.RaiseModifiedAndInvalidateCache();
+
 					//Setze den Cursor an die Position, die mal das Ende der vorherigen Zeile war
 					var cursorPosition = lastComponent?.DisplayRenderBounds.EndOffset ?? 0;
 					return new MetalineEditResult(true, new MetalineSelectionRange(varietyBefore.ContentEditor, SimpleRange.CursorAt(cursorPosition)))
@@ -276,6 +279,9 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 							Line.components.Remove(varietyAfter.components[0]);
 						}
 					}
+
+					//Diese Zeile muss neu gezeichnet werden
+					Line.RaiseModifiedAndInvalidateCache();
 
 					//Setze den Cursor an die Position, die mal das Ende dieser Zeile war
 					var cursorPosition = lastComponent?.DisplayRenderBounds.EndOffset ?? 0;

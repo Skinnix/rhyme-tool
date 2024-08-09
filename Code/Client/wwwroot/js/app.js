@@ -70,8 +70,22 @@ function handleBeforeInput(element, reference, event) {
 	var selectionRange = getSelectionRange(originalSelection, element, function (node) {
 		return node && node.classList && node.classList.contains('line');
 	});
+
+	//get selection lines
 	var selectionStartLine = getLineId(selectionRange.start.node);
 	var selectionEndLine = getLineId(selectionRange.end.node);
+
+	//collapse empty, line-spanning selections
+	if (originalRange.toString() === '' && selectionStartLine != selectionEndLine) {
+		if (event.inputType == 'deleteContent' || event.inputType == 'deleteContentBackward') {
+			selectionRange.start = selectionRange.end;
+			selectionStartLine = selectionEndLine;
+		} else if (event.inputType == 'deleteContentForward') {
+			selectionRange.end = selectionRange.start;
+			selectionEndLine = selectionStartLine;
+		}
+	}
+
 	var selection = {
 		start: {
 			metaline: selectionStartLine.metaline,

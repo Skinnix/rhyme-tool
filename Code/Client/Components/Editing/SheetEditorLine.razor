@@ -106,19 +106,11 @@
                 break;
 
             case SheetDisplayChordLine chords:
-                <div class="line line-chords" data-line-index="@line.Id">
-                    @{
-                        RenderElements(line.GetElements());
-                    }
-                </div>
+                <div class="line line-chords" data-line-index="@line.Id">@{RenderElements(line.GetElements());}</div>
                 break;
 
             case SheetDisplayTextLine text:
-                <div class="line line-text" data-line-index="@line.Id">
-                    @{
-                        RenderElements(line.GetElements());
-                    }
-                </div>
+                <div class="line line-text" data-line-index="@line.Id">@{RenderElements(line.GetElements());}</div>
                 break;
         }
     }
@@ -150,8 +142,8 @@
 
 @if (Line is not null)
 {
-    <div class="metaline" data-metaline="@(Line.Guid)" data-type="@Line.GetType()?.Name">
-        <div class="metaline-controls" contenteditable="false">
+    <span class="metaline" data-metaline="@(Line.Guid)" data-type="@Line.GetType()?.Name">
+        @*<div class="metaline-controls" contenteditable="false">
             <div class="dropdown metaline-type">
                 @switch (Line)
                 {
@@ -164,25 +156,25 @@
                         </a>
                         break;
                 }
-                @*<ul class="dropdown-menu">
+                <ul class="dropdown-menu">
                     <li><button class="dropdown-item" href="#"><i class="fa-solid fa-font"></i> Text</button></li>
                     <li><button class="dropdown-item" href="#"><i class="fa-solid fa-music"></i> Akkord</button></li>
-                </ul>*@
+                </ul>
             </div>
-        </div>
-        <div class="metaline-lines">
+    </div>*@
+        <span class="metaline-lines">
             @foreach (var display in Line.CreateDisplayLines(Formatter))
             {
-                <div class="line-controls" contenteditable="false">
+                @*<div class="line-controls" contenteditable="false">
                     @{
-                        RenderLineTypeButton(display);
+                        //RenderLineTypeButton(display);
                     }
-                </div>
+                </div>*@
 
                 RenderLine(display);
             }
-        </div>
-    </div>
+        </span>
+    </span>
 }
 
 @code {
