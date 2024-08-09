@@ -140,10 +140,10 @@
                         break;
                 }
             </button>
-            <ul class="dropdown-menu">
+            @*<ul class="dropdown-menu">
                 <li><button class="dropdown-item" href="#"><i class="fa-solid fa-font"></i> Text</button></li>
                 <li><button class="dropdown-item" href="#"><i class="fa-solid fa-music"></i> Akkord</button></li>
-            </ul>
+            </ul>*@
         </div>
     }
 }
@@ -164,10 +164,10 @@
                         </a>
                         break;
                 }
-                <ul class="dropdown-menu">
+                @*<ul class="dropdown-menu">
                     <li><button class="dropdown-item" href="#"><i class="fa-solid fa-font"></i> Text</button></li>
                     <li><button class="dropdown-item" href="#"><i class="fa-solid fa-music"></i> Akkord</button></li>
-                </ul>
+                </ul>*@
             </div>
         </div>
         <div class="metaline-lines">
@@ -218,7 +218,7 @@
         StateHasChanged();
     }
 
-    public async Task<MetalineEditResult?> HandleInput(InputEventData data)
+    public MetalineEditResult? HandleInput(InputEventData data)
     {
         if (Line is null || Document is null) throw new InvalidOperationException("Editor not initialized");
 
@@ -249,12 +249,12 @@
             case "insertLink":
             case "insertText":
                 editResult = startLine.Editing.InsertContent(context, data.Data, Formatter);
-                await js.InvokeVoidAsync("console.log", "insert: " + data.InputType);
+                _ = js.InvokeVoidAsync("console.log", "insert: " + data.InputType);
                 break;
             case "insertLineBreak":
             case "insertParagraph":
                 editResult = startLine.Editing.InsertContent(context, "\n", Formatter);
-                await js.InvokeVoidAsync("console.log", "line break: " + data.InputType);
+                _ = js.InvokeVoidAsync("console.log", "line break: " + data.InputType);
                 break;
             case "deleteByCut":
             case "deleteByDrag":
@@ -266,7 +266,7 @@
                 editResult = startLine.Editing.DeleteContent(context, true, Formatter);
                 break;
             default:
-                await js.InvokeVoidAsync("console.log", "unknown: " + data.InputType);
+                _ = js.InvokeVoidAsync("console.log", "unknown: " + data.InputType);
                 break;
         }
 

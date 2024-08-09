@@ -29,6 +29,10 @@ $separatorColor: #6c757d;
 	font-family: monospace;
 	line-height: 1.1em;
 
+	.refreshing[contenteditable] {
+		caret-color: transparent;
+	}
+
 	.segment:not(:first-child) {
 		margin-top: 1em;
 	}

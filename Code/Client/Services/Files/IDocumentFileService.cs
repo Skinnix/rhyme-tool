@@ -43,36 +43,37 @@ public class WebDefaultDocumentFileService(IJSRuntime js) : IDocumentFileService
 	public Task<SystemRequestResult<IFileContent?>> TrySelectFileAsync(CancellationToken cancellation = default) => throw new NotSupportedException();
 	public Task<SystemRequestResult<IFileContent?>> TryLoadFileAsync(string id, CancellationToken cancellation = default) => throw new NotSupportedException();
 
-	public Task<SystemRequestResult<IFileContent>> OpenSelectedFileAsync(IBrowserFile file, CancellationToken cancellation = default)
-		=> Task.FromResult(new SystemRequestResult<IFileContent>(SystemRequestResultType.Granted, new WebFileContent(js, file)));
+	public async Task<SystemRequestResult<IFileContent>> OpenSelectedFileAsync(IBrowserFile file, CancellationToken cancellation = default)
+		=> new SystemRequestResult<IFileContent>(SystemRequestResultType.Granted, await WebFileContent.Create(js, file, cancellation));
 
-	private sealed class WebFileContent(IJSRuntime js, IBrowserFile file) : IFileContent
+	private sealed class WebFileContent(IJSRuntime js, MemoryStream content, string fileName) : IFileContent
 	{
-		private MemoryStream? content;
-
 		string? IFileContent.Id => null;
 
-		string IFileContent.NameWithExtension => file.Name;
-		string IFileContent.Name => Path.GetFileNameWithoutExtension(file.Name);
+		string IFileContent.NameWithExtension => fileName;
+		string IFileContent.Name => Path.GetFileNameWithoutExtension(fileName);
 
 		public bool CanRead => true;
 		public bool CanWrite => true;
 
+		public static async Task<WebFileContent> Create(IJSRuntime js, IBrowserFile file, CancellationToken cancellation = default)
+		{
+			using var stream = file.OpenReadStream(cancellationToken: cancellation);
+			var content = new MemoryStream();
+			await stream.CopyToAsync(content, cancellation);
+			return new WebFileContent(js, content, file.Name);
+		}
+
 		public async Task<Stream> ReadAsync(CancellationToken cancellation = default)
 		{
-			if (content is null)
-			{
-				Console.WriteLine("Test");
-				using var stream = file.OpenReadStream(cancellationToken: cancellation);
-
-				content = new MemoryStream();
-				await stream.CopyToAsync(content, cancellation);
-			}
-
 			content.Seek(0, SeekOrigin.Begin);
+			Console.WriteLine("Test4");
 			var result = new MemoryStream(content.Length <= int.MaxValue ? (int)content.Length : int.MaxValue);
+			Console.WriteLine("Test5");
 			await content.CopyToAsync(result, cancellation);
+			Console.WriteLine("Test6");
 			result.Seek(0, SeekOrigin.Begin);
+			Console.WriteLine("Test7");
 			return result;
 		}
 
@@ -85,7 +86,7 @@ public class WebDefaultDocumentFileService(IJSRuntime js) : IDocumentFileService
 				data = stream.ToArray();
 			}
 
-			await js.InvokeVoidAsync("saveAsFile", data, file.Name);
+			await js.InvokeVoidAsync("saveAsFile", data, fileName);
 		}
 	}
 }

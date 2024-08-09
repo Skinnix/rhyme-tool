@@ -85,22 +85,55 @@ function handleBeforeInput(element, reference, event) {
 		}
 	};
 
-	//handle event
-	//document.getSelection().removeAllRanges();
+	//hide caret
+	element.classList.add('refreshing');
 	originalRange.collapse(true);
-	reference.invokeMethodAsync('OnBeforeInput', {
-		inputType: event.inputType,
-		data: data,
-		selection: selection,
-	}).then(function (result) {
+
+	//handle event
+	if (reference.invokeMethod) {
+		var result = reference.invokeMethod('OnBeforeInput', {
+			inputType: event.inputType,
+			data: data,
+			selection: selection,
+		});
+		
 		if (result.selection) {
 			//set new range
 			setSelectionRange(element, result.selection.metaline, result.selection.lineId, result.selection.lineIndex, result.selection.range);
 		} else {
 			//restore old range
-			getSelection().addRange(copyRange);
+			var selection = getSelection();
+			if (selection.rangeCount == 1) {
+				var range = selection.getRangeAt(0);
+				range.setStart(copyRange.startContainer, copyRange.startOffset);
+				range.setEnd(copyRange.endContainer, copyRange.endOffset);
+			} else {
+				if (selection.rangeCount > 0)
+					selection.removeAllRanges();
+				selection.addRange(copyRange);
+			}
 		}
-	});
+
+		//show caret
+		element.classList.remove('refreshing');
+	} else {
+		reference.invokeMethodAsync('OnBeforeInput', {
+			inputType: event.inputType,
+			data: data,
+			selection: selection,
+		}).then(function (result) {
+			if (result.selection) {
+				//set new range
+				setSelectionRange(element, result.selection.metaline, result.selection.lineId, result.selection.lineIndex, result.selection.range);
+			} else {
+				//restore old range
+				getSelection().addRange(copyRange);
+			}
+
+			//show caret
+			element.classList.remove('refreshing');
+		});
+	}
 }
 
 function getLineId(node) {
@@ -237,11 +270,21 @@ function setSelectionRange(wrapper, metaline, lineId, lineIndex, selectionRange)
 	var end = selectionRange.start == selectionRange.end ? start : findNodeAndOffset(lineElement, selectionRange.end);
 
 	//set selection
-	var range = new Range();
-	range.setStart(start.node, start.offset);
-	range.setEnd(end.node, end.offset);
+	var selection = document.getSelection();
+	var range;
+	if (selection.rangeCount == 1) {
+		var range = selection.getRangeAt(0);
+		range.setStart(start.node, start.offset);
+		range.setEnd(end.node, end.offset);
+	} else {
+		if (selection.rangeCount > 0)
+			selection.removeAllRanges();
 
-	document.getSelection().addRange(range);
+		var range = new Range();
+		range.setStart(start.node, start.offset);
+		range.setEnd(end.node, end.offset);
+		document.getSelection().addRange(range);
+	}
 }
 
 

@@ -97,13 +97,13 @@
     }
 
     [JSInvokable("OnBeforeInput")]
-    public async Task<JsMetalineEditResult> OnBeforeInput(InputEventData data)
+    public JsMetalineEditResult OnBeforeInput(InputEventData data)
     {
         var startEditor = lineEditors[data.Selection.Start.Metaline];
         if (data.Selection.End.Metaline != data.Selection.Start.Metaline)
             return new JsMetalineEditResult(false, null); //TODO: for now, we don't support multi-line selections
 
-        var editResult = await startEditor.HandleInput(data);
+        var editResult = startEditor.HandleInput(data);
         if (editResult == null)
             return new JsMetalineEditResult(false, null);
 
