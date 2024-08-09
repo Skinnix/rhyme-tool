@@ -14,6 +14,7 @@ public abstract record SheetDisplayLineElementBase
 	public required SheetDisplaySliceInfo? Slice { get; init; }
 
 	public int DisplayOffset { get; internal set; }
+	public int DisplayLength { get; internal set; }
 
 	public override string ToString() => ToString(formatter: null);
 	public abstract string ToString(ISheetFormatter? formatter = null);
@@ -28,6 +29,12 @@ public record SheetDisplayLineVoid : SheetDisplayLineElement
 {
     public override int GetLength(ISheetFormatter? formatter) => 0;
     public override string ToString(ISheetFormatter? formatter = null) => string.Empty;
+}
+
+public record SheetDisplayLineBreakPoint(int Index, int Offset) : SheetDisplayLineElement
+{
+	public override int GetLength(ISheetFormatter? formatter) => 0;
+	public override string ToString(ISheetFormatter? formatter = null) => string.Empty;
 }
 
 public record SheetDisplayLineSpace(int Count) : SheetDisplayLineElement

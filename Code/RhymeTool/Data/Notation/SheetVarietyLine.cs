@@ -1974,6 +1974,8 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 		internal class LineBuilders
 		{
+			private int breakPointIndex;
+
 			public SheetVarietyLine Owner { get; }
 			public SheetDisplayTextLine.Builder TextLine { get; }
 			public SheetDisplayChordLine.Builder ChordLine { get; }
@@ -1988,6 +1990,20 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				Owner = owner;
 				TextLine = textLine;
 				ChordLine = chordLine;
+			}
+
+			public void AddBreakPoint(int componentIndex, int textLineOffset, int chordLineOffset)
+			{
+				var index = breakPointIndex++;
+
+				TextLine.Append(new SheetDisplayLineBreakPoint(index, textLineOffset)
+				{
+					Slice = new SheetDisplaySliceInfo(componentIndex, ContentOffset.Zero, IsVirtual: true)
+				});
+				ChordLine.Append(new SheetDisplayLineBreakPoint(index, chordLineOffset)
+				{
+					Slice = new SheetDisplaySliceInfo(componentIndex, ContentOffset.Zero, IsVirtual: true)
+				});
 			}
 		}
 	}
@@ -2053,7 +2069,13 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 				//Verlängere die Textzeile auch um diese Differenz
 				builders.TextLine.ExtendLength(required, 0);
+
+				//Füge einen Breakpoint ein
+				builders.AddBreakPoint(componentIndex, 0, firstAttachment.Attachment.Offset.Value);
 			}
+
+			//Füge einen Breakpoint ein
+			builders.AddBreakPoint(componentIndex, 0, firstAttachment.Attachment?.Offset.Value ?? 0);
 
 			//Speichere aktuelle Textlänge für Render Bounds
 			var textStartIndex = builders.TextLine.CurrentLength;

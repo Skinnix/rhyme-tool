@@ -114,36 +114,12 @@
                 break;
         }
     }
-
-    void RenderLineTypeButton(SheetDisplayLine display)
-    {
-        <span class="dropdown line-type">
-            <a class="btn btn-tiny btn-outline-secondary dropdown-toggle" href="javascript:void(0)" data-bs-toggle="dropdown" aria-expanded="false">
-                @switch (display)
-                {
-                    case SheetDisplayChordLine _:
-                        <i class="fa-solid fa-music"></i>
-                        break;
-                    case SheetDisplayTextLine _:
-                        <i class="fa-solid fa-font"></i>
-                        break;
-                    default:
-                        <i class="fa-solid fa-ellipsis"></i>
-                        break;
-                }
-            </a>
-            <ul class="dropdown-menu">
-                <li><button class="dropdown-item" href="#"><i class="fa-solid fa-font"></i> Text</button></li>
-                <li><button class="dropdown-item" href="#"><i class="fa-solid fa-music"></i> Akkord</button></li>
-            </ul>
-        </span>
-    }
 }
 
 @if (Line is not null)
 {
     <span class="metaline" data-metaline="@(Line.Guid)" data-type="@Line.GetType()?.Name">
-        <span class="metaline-controls" contenteditable="false"><MetalineTypeButton Line="Line" /></span><span class="metaline-lines">
+        <span class="metaline-controls" contenteditable="false">@*<MetalineTypeButton Line="Line" />*@</span><span class="metaline-lines">
             @foreach (var display in Line.CreateDisplayLines(Formatter))
             {
                 <span @key="display" class="line-controls" contenteditable="false"><LineTypeButton Line="display" /></span>

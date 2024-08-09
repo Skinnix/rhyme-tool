@@ -115,9 +115,22 @@
             {
                 <div class="metaline">
                     <div class="metaline-lines">
-                        @foreach (var display in line.CreateDisplayLines(Formatter))
+                        @if (BreakWidth is null)
                         {
-                            RenderLine(line, display);
+                            @foreach (var display in line.CreateDisplayLines(Formatter))
+                            {
+                                RenderLine(line, display);
+                            }   
+                        }
+                        else
+                        {
+                            @foreach (var block in SheetLineBreakBlock.Create(line.CreateDisplayLines(Formatter).ToArray(), BreakWidth.Value))
+                            {
+                                foreach (var blockLine in block.Lines)
+                                {
+                                    RenderLine(line, blockLine.DisplayLine);
+                                }
+                            }
                         }
                     </div>
                 </div>
@@ -130,6 +143,7 @@
     [Parameter] public SheetDocument? Document { get; set; }
     [Parameter] public SheetDisplayMode DisplayMode { get; set; }
     [Parameter] public ISheetEditorFormatter? Formatter { get; set; }
+    [Parameter] public int? BreakWidth { get; set; }
 
     private SheetDocument? loadedDocument;
 
@@ -151,20 +165,27 @@
             if (loadedDocument is not null)
                 loadedDocument.Lines.Modified += OnLinesModified;
         }
+
+        shouldRender = true;
     }
 
-    protected override bool ShouldRender()
+    protected override bool ShouldRender() => shouldRender;
+
+    protected override void OnAfterRender(bool firstRender)
     {
-        if (!shouldRender)
-            return false;
+        base.OnAfterRender(firstRender);
 
         shouldRender = false;
-        return true;
     }
 
     private void OnLinesModified(object? sender, ModifiedEventArgs args)
     {
-        shouldRender = true;
         StateHasChanged();
+    }
+
+    private new void StateHasChanged()
+    {
+        shouldRender = true;
+        base.StateHasChanged();
     }
 }

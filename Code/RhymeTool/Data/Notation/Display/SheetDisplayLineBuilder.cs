@@ -43,6 +43,7 @@ public abstract class SheetDisplayTextLineBuilder<TLine> : SheetDisplayLineBuild
         var length = element.GetLength(formatter);
         elements.Add(element);
 		element.DisplayOffset = currentLength;
+		element.DisplayLength = length;
         currentLength += length;
     }
 

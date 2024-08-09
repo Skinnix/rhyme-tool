@@ -32,12 +32,20 @@ public abstract record SheetDisplayLine(int Id)
 				break;
 		}
 	}
+
+	public abstract SheetDisplayLine WithElements(IEnumerable<SheetDisplayLineElement> elements);
 }
 
 public sealed record SheetDisplayEmptyLine(int Id) : SheetDisplayLine(Id)
 {
 	public override IEnumerable<SheetDisplayLineElement> GetElements()
         => Enumerable.Empty<SheetDisplayLineElement>();
+
+	public override SheetDisplayLine WithElements(IEnumerable<SheetDisplayLineElement> elements)
+		=> new SheetDisplayEmptyLine(Id)
+		{
+			Editing = Editing,
+		};
 }
 
 //public sealed record SheetDisplaySpacerLine(int Length) : SheetDisplayLine
@@ -79,7 +87,13 @@ public sealed record SheetDisplayTextLine : SheetDisplayLine
 
     public override IEnumerable<SheetDisplayLineElement> GetElements() => elements;
 
-    public class Builder : SheetDisplayTextLineBuilder<SheetDisplayTextLine>
+	public override SheetDisplayLine WithElements(IEnumerable<SheetDisplayLineElement> elements)
+		=> new SheetDisplayTextLine(Id, elements)
+		{
+			Editing = Editing,
+		};
+
+	public class Builder : SheetDisplayTextLineBuilder<SheetDisplayTextLine>
     {
         public override SheetDisplayTextLine CreateDisplayLine(int id, ISheetDisplayLineEditing editing) => new(id, Elements)
 		{
@@ -109,7 +123,13 @@ public sealed record SheetDisplayChordLine : SheetDisplayLine
 
     public override IEnumerable<SheetDisplayLineElement> GetElements() => elements;
 
-    public class Builder : SheetDisplayTextLineBuilder<SheetDisplayChordLine>
+	public override SheetDisplayLine WithElements(IEnumerable<SheetDisplayLineElement> elements)
+		=> new SheetDisplayChordLine(Id, elements)
+		{
+			Editing = Editing,
+		};
+
+	public class Builder : SheetDisplayTextLineBuilder<SheetDisplayChordLine>
     {
         public override SheetDisplayChordLine CreateDisplayLine(int id, ISheetDisplayLineEditing editing) => new(id, Elements)
 		{

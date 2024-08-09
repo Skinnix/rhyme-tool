@@ -34,6 +34,14 @@ public class RenderingSettings : IConfigurable
 		set => Set(ref fontSize, value);
 	}
 
+	private int maxWidth = 100;
+	[Configurable(Name = "Maximale Breite", Toggleable = true)]
+	public int MaxWidth
+	{
+		get => maxWidth;
+		set => Set(ref maxWidth, value);
+	}
+
 	[Configurable(Name = "Transponieren", Toggleable = true)]
 	public int Transpose
 	{

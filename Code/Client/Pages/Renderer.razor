@@ -78,7 +78,8 @@
 </SectionContent>
 
 <div class="chord-sheet-wrapper" style="font-size: @(settings.FontSize)px;">
-    <SheetRenderer Document="document" DisplayMode="SheetDisplayMode.Lines" Formatter="settings.Formatter" />
+    <SheetRenderer Document="document" DisplayMode="SheetDisplayMode.Lines" Formatter="settings.Formatter"
+                   BreakWidth="settings.MaxWidth" />
 </div>
 
 @code {
