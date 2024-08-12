@@ -200,4 +200,9 @@ $separatorColor: #6c757d;
 			}
 		}
 	}
+
+	.breakpoint {
+		border-left: 1px solid blue;
+		margin-left: -1px;
+	}
 }

@@ -78,6 +78,10 @@
             case SheetDisplayLineHyphen hyphen:
                 <span class="hyphen">@hyphen.ToString(Formatter)</span>
                 break;
+
+            case SheetDisplayLineBreakPoint breakpoint:
+                <span class="breakpoint" data-breakpoint-index="@breakpoint.BreakPointIndex" data-breakpoint-offset="@breakpoint.StartingPointOffset"></span>
+                break;
         }
     }
 
@@ -106,7 +110,7 @@
     }
 }
 
-<div class="chord-sheet">
+<div class="chord-sheet debug">
     @if (Document != null)
     {
         @if (DisplayMode == SheetDisplayMode.Lines)

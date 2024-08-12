@@ -2005,6 +2005,21 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 					Slice = new SheetDisplaySliceInfo(componentIndex, ContentOffset.Zero, IsVirtual: true)
 				});
 			}
+
+			public (SheetDisplayLineBreakPoint Text, SheetDisplayLineBreakPoint Attachment) CreateBreakPoints(int componentIndex, int textLineOffset, int chordLineOffset)
+			{
+				var index = breakPointIndex++;
+
+				return (
+					new SheetDisplayLineBreakPoint(index, textLineOffset)
+					{
+						Slice = new SheetDisplaySliceInfo(componentIndex, ContentOffset.Zero, IsVirtual: true)
+					},
+					new SheetDisplayLineBreakPoint(index, chordLineOffset)
+					{
+						Slice = new SheetDisplaySliceInfo(componentIndex, ContentOffset.Zero, IsVirtual: true)
+					});
+			}
 		}
 	}
 
@@ -2057,6 +2072,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			(Attachment Attachment, SheetDisplayLineElement Display) firstAttachment = attachments
 				.Select((a, i) => (Attachment: a, Display: a.CreateDisplayAttachment(new(i, a.Offset), out _, formatter)))
 				.FirstOrDefault(a => a.Display is not null)!;
+			SheetDisplayLineBreakPoint? firstAttachmentBreakpoint = null;
 			if (firstAttachment.Attachment is not null)
 			{
 				//An welchen Offset soll das Attachment geschrieben werden?
@@ -2070,12 +2086,18 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				//Verlängere die Textzeile auch um diese Differenz
 				builders.TextLine.ExtendLength(required, 0);
 
-				//Füge einen Breakpoint ein
-				builders.AddBreakPoint(componentIndex, 0, firstAttachment.Attachment.Offset.Value);
-			}
+				//Füge einen Breakpoint auf der Textzeile ein
+				var breakPoints = builders.CreateBreakPoints(componentIndex, 0, firstAttachment.Attachment.Offset.Value);
+				builders.TextLine.Append(breakPoints.Text, formatter);
 
-			//Füge einen Breakpoint ein
-			builders.AddBreakPoint(componentIndex, 0, firstAttachment.Attachment?.Offset.Value ?? 0);
+				//Speichere den Attachment-Breakpoint
+				firstAttachmentBreakpoint = breakPoints.Attachment;
+			}
+			else
+			{
+				//Füge direkt einen Breakpoint ein
+				builders.AddBreakPoint(componentIndex, 0, 0);
+			}
 
 			//Speichere aktuelle Textlänge für Render Bounds
 			var textStartIndex = builders.TextLine.CurrentLength;
@@ -2144,6 +2166,13 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				{
 					//Stelle sicher, dass die Akkordzeile bisher so lang wie die Textzeile ist, um Content und Attachment zusammenzuhalten
 					builders.ChordLine.ExtendLength(textLineLengthBefore, 0);
+
+					//Füge beim ersten Attachment den Breakpoint ein
+					if (firstAttachmentBreakpoint is not null)
+					{
+						builders.ChordLine.Append(firstAttachmentBreakpoint, formatter);
+						firstAttachmentBreakpoint = null;
+					}
 
 					//Schreibe das Attachment
 					textLineLengthBefore = builders.ChordLine.CurrentLength;
