@@ -31,7 +31,7 @@ public record SheetDisplayLineVoid : SheetDisplayLineElement
     public override string ToString(ISheetFormatter? formatter = null) => string.Empty;
 }
 
-public record SheetDisplayLineBreakPoint(int Index, int Offset) : SheetDisplayLineElement
+public record SheetDisplayLineBreakPoint(int BreakPointIndex, int StartingPointOffset) : SheetDisplayLineElement
 {
 	public override int GetLength(ISheetFormatter? formatter) => 0;
 	public override string ToString(ISheetFormatter? formatter = null) => string.Empty;

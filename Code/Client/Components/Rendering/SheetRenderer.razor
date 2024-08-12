@@ -87,7 +87,7 @@
             RenderElement(line, element);
     }
 
-    void RenderLine(SheetLine line, SheetDisplayLine display)
+    void RenderLine(SheetLine line, SheetDisplayLine display, IEnumerable<SheetDisplayLineElement> elements)
     {
         switch (display)
         {
@@ -96,11 +96,11 @@
                 break;
 
             case SheetDisplayChordLine chords:
-                <div class="line line-chords">@{ RenderElements(line, display.GetElements()); }</div>
+                <div class="line line-chords">@{ RenderElements(line, elements); }</div>
                 break;
 
             case SheetDisplayTextLine text:
-                <div class="line line-text">@{ RenderElements(line, display.GetElements()); }</div>
+                <div class="line line-text">@{ RenderElements(line, elements); }</div>
                 break;
         }
     }
@@ -119,16 +119,16 @@
                         {
                             @foreach (var display in line.CreateDisplayLines(Formatter))
                             {
-                                RenderLine(line, display);
+                                RenderLine(line, display, display.GetElements());
                             }   
                         }
                         else
                         {
-                            @foreach (var block in SheetLineBreakBlock.Create(line.CreateDisplayLines(Formatter).ToArray(), BreakWidth.Value))
+                            @foreach (var block in SheetBlock.Create(line.CreateDisplayLines(Formatter).ToArray(), BreakWidth.Value))
                             {
                                 foreach (var blockLine in block.Lines)
                                 {
-                                    RenderLine(line, blockLine.DisplayLine);
+                                    RenderLine(line, blockLine.Line, blockLine.GetElements());
                                 }
                             }
                         }
