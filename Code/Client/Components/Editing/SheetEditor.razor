@@ -7,7 +7,7 @@
 
 @inject IJSRuntime js
 
-<div class="chord-sheet chord-sheet-editor chord-sheet-editing @(IsDebug ? "debug" : null)" contenteditable @ref="editorWrapper"
+<div class="chord-sheet chord-sheet-editor chord-sheet-editing" contenteditable @ref="editorWrapper"
      spellcheck="false" enterkeyhint="enter">
     @if (Document != null)
     {
@@ -22,13 +22,6 @@
 </div>
 
 @code {
-    private static readonly bool IsDebug =
-#if DEBUG
-    true;
-#else
-        false;
-#endif
-
     [Parameter] public SheetDocument? Document { get; set; }
     [Parameter] public ISheetEditorFormatter? Formatter { get; set; }
 
@@ -73,7 +66,7 @@
 
         if (firstRender)
         {
-            await js.InvokeVoidAsync("registerBeforeInput", editorWrapper, DotNetObjectReference.Create(this));
+            await js.InvokeVoidAsync("registerBeforeInput", editorWrapper, DotNetObjectReference.Create(this), nameof(OnBeforeInput));
         }
 
         await js.InvokeVoidAsync("console.log", "rerender: " + this.GetType().Name);
@@ -94,7 +87,7 @@
         StateHasChanged();
     }
 
-    [JSInvokable("OnBeforeInput")]
+    [JSInvokable]
     public JsMetalineEditResult OnBeforeInput(InputEventData data)
     {
         var startEditor = lineEditors[data.Selection.Start.Metaline];

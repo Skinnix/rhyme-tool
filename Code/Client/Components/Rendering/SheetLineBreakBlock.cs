@@ -8,8 +8,6 @@ using System.Threading.Tasks;
 using Skinnix.RhymeTool.Data.Notation;
 using Skinnix.RhymeTool.Data.Notation.Display;
 
-using BreakPointInLine = (int Index, Skinnix.RhymeTool.Data.Notation.Display.SheetDisplayLineBreakPoint Breakpoint, bool OnlySpacesBefore);
-
 namespace Skinnix.RhymeTool.Client.Components.Rendering;
 
 public sealed record SheetBlock(IReadOnlyList<SheetBlock.SheetBlockLine> Lines)
@@ -42,14 +40,14 @@ public sealed record SheetBlock(IReadOnlyList<SheetBlock.SheetBlockLine> Lines)
 				continue;
 			}
 
-			//Berechne aktuelle Blocklänge
+			//Berechne aktuelle Blocklänge (ignoriere aus dem aktuellen Block die Zeilen, die nur Leerzeichen enthalten)
 			var currentOffsets = currentBlockStartOffset
-				.Zip(group.Select(g => g.Breakpoint.DisplayOffset))
+				.Zip(group.Select(g => g.DisplayOffset))
 				.Select(pair => pair.First + pair.Second);
 			var currentLengths = lastBreakingGroup is null ? currentOffsets
 				: currentOffsets.Zip(lastBreakingGroup)
-				.Select(pair => pair.First - pair.Second.Breakpoint.DisplayOffset);
-			var currentLength = currentLengths.Max();
+				.Select(pair => pair.First - pair.Second.DisplayOffset);
+			var currentLength = currentLengths.Zip(group).Max(g => g.Second.OnlySpacesBefore ? 0 : g.First);
 
 			//Ist der aktuelle Block zu lang?
 			if (currentLength > maxLength)
@@ -63,7 +61,7 @@ public sealed record SheetBlock(IReadOnlyList<SheetBlock.SheetBlockLine> Lines)
 					//Beginne den neuen Block
 					lastNonSpaceBeforeGroup = group;
 					lastBreakingGroup = group;
-					currentBlockStartOffset = lastBreakingGroup.Select(g => g.Breakpoint.StartingPointOffset).ToArray();
+					currentBlockStartOffset = lastBreakingGroup.Select(g => g.StartingPointOffset).ToArray();
 					continue;
 				}
 
@@ -74,11 +72,11 @@ public sealed record SheetBlock(IReadOnlyList<SheetBlock.SheetBlockLine> Lines)
 				lastBreakingGroup = lastGroup ?? lastNonSpaceBeforeGroup;
 
 				//Beginne den neuen Block
-				currentBlockStartOffset = lastBreakingGroup.Select(g => g.Breakpoint.StartingPointOffset).ToArray();
+				currentBlockStartOffset = lastBreakingGroup.Select(g => g.StartingPointOffset).ToArray();
 
 				//Berechne aktuelle Blocklänge
 				currentLength = currentBlockStartOffset
-					.Zip(lastBreakingGroup.Select(g => g.Breakpoint.DisplayOffset))
+					.Zip(lastBreakingGroup.Select(g => g.DisplayOffset))
 					.Max(pair => pair.First + pair.Second);
 			}
 
@@ -92,12 +90,12 @@ public sealed record SheetBlock(IReadOnlyList<SheetBlock.SheetBlockLine> Lines)
 		{
 			//Berechne aktuelle Blocklänge
 			var currentOffsets = currentBlockStartOffset
-				.Zip(lastNonSpaceBeforeGroup.Select(g => g.Breakpoint.DisplayOffset))
+				.Zip(lastNonSpaceBeforeGroup.Select(g => g.DisplayOffset))
 				.Select(pair => pair.First + pair.Second);
 			var currentLengths = lastBreakingGroup is null ? currentOffsets
 				: currentOffsets.Zip(lastBreakingGroup)
-				.Select(pair => pair.First - pair.Second.Breakpoint.DisplayOffset);
-			var currentLength = currentLengths.Max();
+				.Select(pair => pair.First - pair.Second.DisplayOffset);
+			var currentLength = currentLengths.Zip(lastGroup).Max(g => g.Second.OnlySpacesBefore ? 0 : g.First);
 
 			if (currentLength > maxLength)
 			{
@@ -118,20 +116,31 @@ public sealed record SheetBlock(IReadOnlyList<SheetBlock.SheetBlockLine> Lines)
 		int index = 0;
 		bool onlySpacesBefore = true;
 		int lastBreakpointIndex = -1;
+		SheetDisplayLineElement? lastElement = null;
+		var endsWithBreakpoint = false;
 		foreach (var element in elements)
 		{
+			endsWithBreakpoint = false;
 			if (element is SheetDisplayLineBreakPoint breakpoint)
 			{
-				yield return (index, breakpoint, onlySpacesBefore);
+				yield return new(index, breakpoint.StartingPointOffset, breakpoint.DisplayOffset, onlySpacesBefore);
 				lastBreakpointIndex = breakpoint.BreakPointIndex;
 				onlySpacesBefore = true;
+				endsWithBreakpoint = true;
 			}
-			else if (element is not SheetDisplayLineSpace or SheetDisplayLineFormatSpace)
+			else if (!element.IsSpace)
 			{
 				onlySpacesBefore = false;
 			}
 
 			index++;
+			lastElement = element;
+		}
+
+		if (!endsWithBreakpoint && lastElement is not null)
+		{
+			//Füge einen Breakpoint am Ende der Zeile hinzu
+			yield return new BreakPointInLine(index, 0, lastElement.DisplayOffset + lastElement.DisplayLength, onlySpacesBefore);
 		}
 	}
 
@@ -176,7 +185,8 @@ public sealed record SheetBlock(IReadOnlyList<SheetBlock.SheetBlockLine> Lines)
 			blockLines[i] = new SheetBlockLine(lines[i], lineElements[i], startIndex, endIndex, startOffset[i]);
 		}
 
-		return new SheetBlock(blockLines);
+		var block = new SheetBlock(blockLines);
+		return block;
 	}
 
 	public sealed record SheetBlockLine
@@ -212,6 +222,8 @@ public sealed record SheetBlock(IReadOnlyList<SheetBlock.SheetBlockLine> Lines)
 				yield return elements[i + startIndex];
 		}
 	}
+
+	private record struct BreakPointInLine(int Index, int StartingPointOffset, int DisplayOffset, bool OnlySpacesBefore);
 }
 
 

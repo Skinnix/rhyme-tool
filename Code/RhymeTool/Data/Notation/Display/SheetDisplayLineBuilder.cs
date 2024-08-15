@@ -5,22 +5,14 @@ namespace Skinnix.RhymeTool.Data.Notation.Display;
 public abstract class SheetDisplayLineBuilder : IComparable<SheetDisplayLineBuilder>
 {
     public abstract int CurrentLength { get; }
+	public abstract int CurrentNonSpaceLength { get; }
 
     public abstract int CompareTo(SheetDisplayLineBuilder? other);
     public abstract SheetDisplayLine CreateDisplayLine(int id, ISheetDisplayLineEditing editing);
 
     public abstract void Append(SheetDisplayLineElement element, ISheetFormatter? formatter = null);
-    public abstract void ExtendLength(int totalLength, int minExtension);
-
-	public abstract Spacer AppendSpacer();
-
-	public abstract record Spacer : SheetDisplayLineElement
-	{
-		public override int GetLength(ISheetFormatter? formatter) => 0;
-		public override string ToString(ISheetFormatter? formatter = null) => string.Empty;
-
-		public abstract void SetLength(int length);
-	}
+	public abstract void EnsureSpaceBefore(int spaceBefore, ISheetFormatter? formatter = null);
+    public abstract void ExtendLength(int totalLength, int minExtension, ISheetFormatter? formatter = null);
 }
 
 public abstract class SheetDisplayLineBuilder<TLine> : SheetDisplayLineBuilder
@@ -38,23 +30,32 @@ public abstract class SheetDisplayTextLineBuilder<TLine> : SheetDisplayLineBuild
     private int currentLength;
     public override int CurrentLength => currentLength;
 
+	private int currentNonSpaceLength;
+	public override int CurrentNonSpaceLength => currentNonSpaceLength;
+
     public override void Append(SheetDisplayLineElement element, ISheetFormatter? formatter = null)
     {
         var length = element.GetLength(formatter);
         elements.Add(element);
 		element.DisplayOffset = currentLength;
 		element.DisplayLength = length;
+
         currentLength += length;
+		if (!element.IsSpace)
+			currentNonSpaceLength += length;
     }
 
-	public override Spacer AppendSpacer()
+	public override void EnsureSpaceBefore(int spaceBefore, ISheetFormatter? formatter = null)
 	{
-		var spacer = new SpacerImpl(this);
-		elements.Add(spacer);
-		return spacer;
+		var currentSpace = currentLength - currentNonSpaceLength;
+		var extraSpace = spaceBefore - currentSpace;
+		if (extraSpace <= 0)
+			return;
+
+		ExtendLength(0, extraSpace, formatter);
 	}
 
-	public override void ExtendLength(int totalLength, int minExtension)
+	public override void ExtendLength(int totalLength, int minExtension, ISheetFormatter? formatter = null)
     {
 		if (minExtension < 0) minExtension = 0;
 		if (totalLength < currentLength) totalLength = currentLength;
@@ -65,42 +66,13 @@ public abstract class SheetDisplayTextLineBuilder<TLine> : SheetDisplayLineBuild
         if (currentLength >= totalLength)
             return;
 
-        var space = new SheetDisplayLineFormatSpace(totalLength - currentLength)
+		var length = totalLength - currentLength;
+        var space = new SheetDisplayLineFormatSpace(length)
 		{
-			DisplayOffset = currentLength
+			DisplayOffset = currentLength,
+			DisplayLength = length,
 		};
         elements.Add(space);
         currentLength = totalLength;
     }
-
-	private sealed record SpacerImpl : Spacer
-	{
-		private readonly SheetDisplayTextLineBuilder<TLine> owner;
-
-		[SetsRequiredMembers]
-		public SpacerImpl(SheetDisplayTextLineBuilder<TLine> owner)
-		{
-			this.owner = owner;
-
-			Slice = null;
-		}
-
-		public override void SetLength(int length)
-		{
-			if (length == 0)
-			{
-				owner.elements.Remove(this);
-			}
-			else
-			{
-				owner.elements.Replace(this, new SheetDisplayLineFormatSpace(length));
-				owner.currentLength += length;
-			}
-		}
-
-		public bool Equals(SpacerImpl? other)
-			=> ReferenceEquals(this, other);
-
-		public override int GetHashCode() => 0;
-	}
 }

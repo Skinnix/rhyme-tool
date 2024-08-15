@@ -105,12 +105,12 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			yield break;
 		}
 
-		//Ist die Akkordzeile nicht leer?
-		if (builders.ChordLine.CurrentLength > 0)
-		{
-			//Strecke die Akkordzeile auf die Länge der Textzeile + 1
-			builders.ChordLine.ExtendLength(builders.TextLine.CurrentLength + 1, 0);
-		}
+		////Ist die Akkordzeile nicht leer?
+		//if (builders.ChordLine.CurrentLength > 0)
+		//{
+		//	//Strecke die Akkordzeile auf die Länge der Textzeile + 1
+		//	builders.ChordLine.ExtendLength(builders.TextLine.CurrentLength + 1, 0);
+		//}
 
 		//Zeige Akkordzeile
 		if (formatter?.ShowLine(this, builders.ChordLine) != false)
@@ -1992,7 +1992,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				ChordLine = chordLine;
 			}
 
-			public void AddBreakPoint(int componentIndex, int textLineOffset, int chordLineOffset)
+			public void AddBreakPoint(int componentIndex, int textLineOffset, int chordLineOffset, ISheetFormatter? formatter = null)
 			{
 				var index = breakPointIndex++;
 
@@ -2068,23 +2068,27 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			//Berechne Textlänge
 			var contentLength = Content.GetLength(formatter);
 
+			//Verlängere die Akkordzeile auf die Länge der Textzeile (macht das Spacing einfacher und schließt keinen Fall aus)
+			builders.ChordLine.ExtendLength(builders.TextLine.CurrentLength, 0);
+
 			//Finde das erste Attachment
 			(Attachment Attachment, SheetDisplayLineElement Display) firstAttachment = attachments
 				.Select((a, i) => (Attachment: a, Display: a.CreateDisplayAttachment(new(i, a.Offset), out _, formatter)))
 				.FirstOrDefault(a => a.Display is not null)!;
 			SheetDisplayLineBreakPoint? firstAttachmentBreakpoint = null;
+			int firstAttachmentOffset = 0;
 			if (firstAttachment.Attachment is not null)
 			{
 				//An welchen Offset soll das Attachment geschrieben werden?
 				var spaceBefore = formatter?.SpaceBefore(builders.Owner, builders.ChordLine, firstAttachment.Display)
 					?? (builders.ChordLine.CurrentLength == 0 ? 0 : 1);
-				var targetOffset = builders.ChordLine.CurrentLength + spaceBefore;
+				firstAttachmentOffset = builders.ChordLine.CurrentNonSpaceLength + spaceBefore;
 
 				//Wie viel Platz wird auf der Akkordzeile benötigt, damit das Attachment passt?
-				var required = targetOffset - firstAttachment.Attachment.Offset.Value;
+				var required = firstAttachmentOffset - firstAttachment.Attachment.Offset.Value;
 
 				//Verlängere die Textzeile auch um diese Differenz
-				builders.TextLine.ExtendLength(required, 0);
+				builders.TextLine.ExtendLength(required, 0, formatter);
 
 				//Füge einen Breakpoint auf der Textzeile ein
 				var breakPoints = builders.CreateBreakPoints(componentIndex, 0, firstAttachment.Attachment.Offset.Value);
@@ -2096,7 +2100,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			else
 			{
 				//Füge direkt einen Breakpoint ein
-				builders.AddBreakPoint(componentIndex, 0, 0);
+				builders.AddBreakPoint(componentIndex, 0, 0, formatter);
 			}
 
 			//Speichere aktuelle Textlänge für Render Bounds
@@ -2113,7 +2117,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 					//Lasse Platz vor dem Attachment
 					var spaceBefore = formatter?.SpaceBefore(builders.Owner, builders.ChordLine, block.Attachment)
 						?? (builders.ChordLine.CurrentLength == 0 ? 0 : 1);
-					builders.ChordLine.ExtendLength(0, spaceBefore);
+					builders.ChordLine.EnsureSpaceBefore(spaceBefore, formatter);
 
 					//Stelle sicher, dass die Textzeile bisher so lang wie die Akkordzeile ist, um Content und Attachment zusammenzuhalten
 					var textLineGap = builders.ChordLine.CurrentLength - builders.TextLine.CurrentLength;

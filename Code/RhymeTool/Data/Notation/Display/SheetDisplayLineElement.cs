@@ -11,6 +11,8 @@ public record struct SheetDisplaySliceInfo(int ComponentIndex, ContentOffset Con
 
 public abstract record SheetDisplayLineElementBase
 {
+	public virtual bool IsSpace => false;
+
 	public required SheetDisplaySliceInfo? Slice { get; init; }
 
 	public int DisplayOffset { get; internal set; }
@@ -27,24 +29,31 @@ public abstract record SheetDisplayLineElement : SheetDisplayLineElementBase
 
 public record SheetDisplayLineVoid : SheetDisplayLineElement
 {
-    public override int GetLength(ISheetFormatter? formatter) => 0;
+	public override bool IsSpace => true;
+
+	public override int GetLength(ISheetFormatter? formatter) => 0;
     public override string ToString(ISheetFormatter? formatter = null) => string.Empty;
 }
 
 public record SheetDisplayLineBreakPoint(int BreakPointIndex, int StartingPointOffset) : SheetDisplayLineElement
 {
+	public override bool IsSpace => true;
+
 	public override int GetLength(ISheetFormatter? formatter) => 0;
 	public override string ToString(ISheetFormatter? formatter = null) => string.Empty;
 }
 
 public record SheetDisplayLineSpace(int Count) : SheetDisplayLineElement
 {
-    public override int GetLength(ISheetFormatter? formatter) => Count;
+	public override bool IsSpace => true;
+
+	public override int GetLength(ISheetFormatter? formatter) => Count;
     public override string ToString(ISheetFormatter? formatter = null) => new string(' ', Count);
 }
 
 public record SheetDisplayLineFormatSpace : SheetDisplayLineElement
 {
+	public override bool IsSpace => true;
 	public int Count { get; init; }
 
 	[SetsRequiredMembers]

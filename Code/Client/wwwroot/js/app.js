@@ -1,4 +1,8 @@
-﻿function hideAllOffcanvases() {
+﻿function supportsSynchronousInvoke() {
+	return Blazor.reconnect === undefined;
+}
+
+function hideAllOffcanvases() {
 	const offcanvasElementList = document.querySelectorAll('.offcanvas')
 	const offcanvasList = [...offcanvasElementList].map(offcanvasEl => bootstrap.Offcanvas.getInstance(offcanvasEl));
 	for (var offcanvas of offcanvasList) {
@@ -46,6 +50,39 @@ function registerDropDownHandler(element, reference) {
 
 
 
+function registerResize(element, reference, callbackName) {
+	var timeout;
+	var handler = function () {
+		//get character width
+		var characterWidth = element.querySelector('.calculator').getBoundingClientRect().width;
+
+		//how many characters does the element fit?
+		var characters = Math.floor(element.getBoundingClientRect().width / characterWidth);
+
+		//has the number of characters changed?
+		if (characters == element.getAttribute('data-characters')) {
+			return;
+		} else {
+			element.setAttribute('data-characters', characters);
+			element.style['--characters'] = characters;
+		}
+
+		//wait for 100ms before invoking the callback
+		clearTimeout(timeout);
+		timeout = setTimeout(function () {
+			//handle resize
+			if (supportsSynchronousInvoke()) {
+				reference.invokeMethod(callbackName, characters);
+			} else {
+				reference.invokeMethodAsync(callbackName, characters);
+			}
+		}, 100);
+	};
+	new ResizeObserver(handler).observe(element);
+	handler();
+}
+
+
 
 
 
@@ -69,7 +106,7 @@ function registerBeforeInput(element, reference) {
 	element.addEventListener('beforeinput', listener);
 }
 
-function handleBeforeInput(element, reference, event) {
+function handleBeforeInput(element, reference, event, callbackName) {
 	event.preventDefault();
 	event.stopPropagation();
 
@@ -120,8 +157,8 @@ function handleBeforeInput(element, reference, event) {
 	originalRange.collapse(true);
 
 	//handle event
-	if (reference.invokeMethod) {
-		var result = reference.invokeMethod('OnBeforeInput', {
+	if (supportsSynchronousInvoke()) {
+		var result = reference.invokeMethod(callbackName, {
 			inputType: event.inputType,
 			data: data,
 			selection: selection,
@@ -147,7 +184,7 @@ function handleBeforeInput(element, reference, event) {
 		//show caret
 		element.classList.remove('refreshing');
 	} else {
-		reference.invokeMethodAsync('OnBeforeInput', {
+		reference.invokeMethodAsync(callbackName, {
 			inputType: event.inputType,
 			data: data,
 			selection: selection,

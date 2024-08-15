@@ -57,11 +57,18 @@
     }
 </SectionContent>
 
-<div class="chord-sheet-wrapper" style="font-size: @(settings.FontSize)px;">
+<div class="chord-sheet-wrapper@(IsDebug ? " debug" : null)" style="font-size: @(settings.FontSize)px;">
     <SheetEditor Document="document" Formatter="settings.Formatter" />
 </div>
 
 @code {
+    private static readonly bool IsDebug =
+#if DEBUG
+        true;
+#else
+        false;
+#endif
+
     [Parameter, SupplyParameterFromQuery] public string? Doc { get; set; }
 
     public static string GetUrl(IDocumentSource document) => GetUrl(document.Id);
