@@ -12,6 +12,8 @@ namespace Skinnix.RhymeTool.Client.Components.Rendering;
 
 public sealed record SheetBlock(IReadOnlyList<SheetBlock.SheetBlockLine> Lines)
 {
+	public bool IsEmpty => Lines.All(l => l.IsEmpty);
+
 	public static IEnumerable<SheetBlock> Create(IReadOnlyList<SheetDisplayLine> lines, IEnumerable<int> maxLengthPerLine)
 	{
 		//Lese alle Zeilenelemente
@@ -142,11 +144,11 @@ public sealed record SheetBlock(IReadOnlyList<SheetBlock.SheetBlockLine> Lines)
 				lastBreakingGroup = lastGroup ?? lastNonSpaceBeforeGroup;
 			}
 		}
-		else
-		{
-			//Erstelle den letzten Block
-			yield return CreateBlock(lines, lineElements, lastBreakingGroup, null, currentBlockStartOffset);
-		}
+
+		//Erstelle den letzten Block
+		var lastBlock = CreateBlock(lines, lineElements, lastBreakingGroup, null, currentBlockStartOffset);
+		if (!lastBlock.IsEmpty)
+			yield return lastBlock;
 	}
 
 	private static IEnumerable<BreakPointInLine> FindBreakpoints(IEnumerable<SheetDisplayLineElement> elements)
@@ -234,11 +236,12 @@ public sealed record SheetBlock(IReadOnlyList<SheetBlock.SheetBlockLine> Lines)
 		private readonly int startIndex, length;
 
 		public SheetDisplayLine Line { get; }
+		internal bool IsEmpty => !GetElements().Any(e => e is not SheetDisplayLineBreakPoint);
 
 		public SheetBlockLine(SheetDisplayLine line, SheetDisplayLineElement[] elements, int startIndex, int? endIndex, int startOffset)
 		{
 			Line = line;
-			this.elements = elements.ToArray();
+			this.elements = elements;
 			this.startIndex = startIndex;
 			this.length = endIndex.HasValue ? endIndex.Value - startIndex + 1 : elements.Length - startIndex;
 
