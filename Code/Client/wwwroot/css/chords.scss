@@ -117,7 +117,7 @@ $separatorColor: #6c757d;
 
 			.line {
 				grid-column: 2;
-				margin: 0;
+				margin: 0 0 0 calc(var(--line-indentation) * 1ch);
 				padding: 0;
 				overflow: visible;
 				white-space: pre;
@@ -181,7 +181,7 @@ $separatorColor: #6c757d;
 .chord-sheet-wrapper.debug {
 	&.autofit .chord-sheet {
 		.line {
-			box-shadow: calc(var(--characters) * 1ch) 0 0 #ff6a0024 inset;
+			box-shadow: calc((var(--characters) - var(--line-indentation)) * 1ch) 0 0 #ff6a0024 inset;
 		}
 	}
 

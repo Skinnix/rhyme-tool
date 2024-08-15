@@ -36,6 +36,8 @@ public interface ISheetFormatter
 
 public interface ISheetBuilderFormatter : ISheetFormatter
 {
+	IEnumerable<int> GetLineIndentations();
+
 	int SpaceBefore(SheetLine line, SheetDisplayLineBuilder lineBuilder, SheetDisplayLineElement element);
 	bool ShowLine(SheetLine line, SheetDisplayLineBuilder lineBuilder);
 }
@@ -85,9 +87,11 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 
     public GermanNoteMode GermanMode { get; init; } = GermanNoteMode.AlwaysB;
 
-    public int SpaceBetweenChordsOnVarietyLine { get; init; } = 1;
+    public int SpaceBetweenChordsOnTextLine { get; init; } = 1;
     public int SpaceBetweenChordsOnChordLine { get; init; } = 3;
 	public bool ShowEmptyAttachmentLines { get; init; } = false;
+
+	public List<int> LineIndentations { get; init; } = [0, 2];
 
     public SheetTransformation? Transformation { get; init; }
 
@@ -216,12 +220,16 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
         return new(note.Type.GetDisplayName(), Format(note.Accidental));
     }
 
+	public IEnumerable<int> GetLineIndentations() => LineIndentations;
+
     public int SpaceBefore(SheetLine line, SheetDisplayLineBuilder lineBuilder, SheetDisplayLineElement element)
     {
         if (lineBuilder.CurrentLength > 0 && element is SheetDisplayLineChord)
-        {
-            if (line is SheetVarietyLine)
-                return SpaceBetweenChordsOnVarietyLine;
+		{
+			if (lineBuilder.LineType == typeof(SheetDisplayTextLine))
+				return SpaceBetweenChordsOnTextLine;
+			else if (lineBuilder.LineType == typeof(SheetDisplayChordLine))
+                return SpaceBetweenChordsOnTextLine;
             else
                 return 1;
         }
@@ -231,7 +239,7 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 
 	public bool ShowLine(SheetLine line, SheetDisplayLineBuilder lineBuilder)
 	{
-		if (!ShowEmptyAttachmentLines && lineBuilder.CurrentLength == 0 && lineBuilder is SheetDisplayChordLine.Builder)
+		if (!ShowEmptyAttachmentLines && lineBuilder.CurrentNonSpaceLength == 0 && lineBuilder is SheetDisplayChordLine.Builder)
 			return false;
 
 		return true;

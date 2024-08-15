@@ -2077,7 +2077,33 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				.FirstOrDefault(a => a.Display is not null)!;
 			(SheetDisplayLineBreakPoint Text, SheetDisplayLineBreakPoint Attachment)? firstAttachmentBreakpoint = null;
 			int firstAttachmentOffset = 0;
-			if (firstAttachment.Attachment is not null)
+			if (firstAttachment.Attachment is null)
+			{
+				//Die Komponente hat keine Attachments
+
+				//Ist die Komponente nur ein einzelnes Satzzeichen und war die vorherige Komponente ein Wort?
+				if (Content.ContentType == ContentType.Punctuation && Content.Text is not null
+					&& builders.TextLine.CurrentLength == builders.TextLine.CurrentNonSpaceLength)
+				{
+					//Schreibe nur das Satzzeichen
+					var textStartLength = builders.TextLine.CurrentLength;
+					var displayText = new SheetDisplayLineText(Content.Text)
+					{
+						Slice = new SheetDisplaySliceInfo(componentIndex, ContentOffset.Zero)
+					};
+					builders.TextLine.Append(displayText);
+
+					//Berechne Render Bounds
+					contentElements = [displayText];
+					displayRenderBounds = new(textStartLength, builders.TextLine.CurrentLength, contentElements);
+					totalRenderBounds = new(displayRenderBounds.StartOffset, displayRenderBounds.EndOffset);
+					return;
+				}
+
+				//Füge direkt einen Breakpoint ein
+				builders.AddBreakPoint(componentIndex, 0, 0, formatter);
+			}
+			else
 			{
 				//An welchen Offset soll das Attachment geschrieben werden?
 				var spaceBefore = formatter?.SpaceBefore(builders.Owner, builders.ChordLine, firstAttachment.Display)
@@ -2094,11 +2120,6 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				//Füge einen Breakpoint auf der Textzeile ein
 				firstAttachmentBreakpoint = builders.CreateBreakPoints(componentIndex, 0, firstAttachment.Attachment.Offset.Value);
 				builders.TextLine.Append(firstAttachmentBreakpoint.Value.Text, formatter);
-			}
-			else
-			{
-				//Füge direkt einen Breakpoint ein
-				builders.AddBreakPoint(componentIndex, 0, 0, formatter);
 			}
 
 			//Speichere aktuelle Textlänge für Render Bounds

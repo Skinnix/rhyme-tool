@@ -4,6 +4,8 @@ namespace Skinnix.RhymeTool.Data.Notation.Display;
 
 public abstract class SheetDisplayLineBuilder : IComparable<SheetDisplayLineBuilder>
 {
+	public abstract Type LineType { get; }
+
     public abstract int CurrentLength { get; }
 	public abstract int CurrentNonSpaceLength { get; }
 
@@ -18,7 +20,9 @@ public abstract class SheetDisplayLineBuilder : IComparable<SheetDisplayLineBuil
 public abstract class SheetDisplayLineBuilder<TLine> : SheetDisplayLineBuilder
     where TLine : SheetDisplayLine
 {
-    public abstract override TLine CreateDisplayLine(int id, ISheetDisplayLineEditing editing);
+	public override Type LineType => typeof(TLine);
+
+	public abstract override TLine CreateDisplayLine(int id, ISheetDisplayLineEditing editing);
 }
 
 public abstract class SheetDisplayTextLineBuilder<TLine> : SheetDisplayLineBuilder<TLine>
@@ -42,7 +46,7 @@ public abstract class SheetDisplayTextLineBuilder<TLine> : SheetDisplayLineBuild
 
         currentLength += length;
 		if (!element.IsSpace)
-			currentNonSpaceLength += length;
+			currentNonSpaceLength = currentLength;
     }
 
 	public override void EnsureSpaceBefore(int spaceBefore, ISheetFormatter? formatter = null)

@@ -77,7 +77,7 @@ function registerResize(element, reference, callbackName) {
 			element.style['--characters'] = characters;
 		}
 
-		//wait for 100ms before invoking the callback
+		//wait for a short while before invoking the callback
 		clearTimeout(timeout);
 		timeout = setTimeout(function () {
 			//handle resize
@@ -86,7 +86,7 @@ function registerResize(element, reference, callbackName) {
 			} else {
 				reference.invokeMethodAsync(callbackName, characters);
 			}
-		}, 100);
+		}, 20);
 	};
 	new ResizeObserver(handler).observe(element);
 	handler();

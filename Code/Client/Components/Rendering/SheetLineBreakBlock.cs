@@ -12,10 +12,34 @@ namespace Skinnix.RhymeTool.Client.Components.Rendering;
 
 public sealed record SheetBlock(IReadOnlyList<SheetBlock.SheetBlockLine> Lines)
 {
-	public static IEnumerable<SheetBlock> Create(IReadOnlyList<SheetDisplayLine> lines, int maxLength)
+	public static IEnumerable<SheetBlock> Create(IReadOnlyList<SheetDisplayLine> lines, IEnumerable<int> maxLengthPerLine)
 	{
-		//Finde zuerst alle Breakpoints
+		//Lese alle Zeilenelemente
 		var lineElements = lines.Select(l => l.GetElements().ToArray()).ToArray();
+
+		//Länge der ersten Zeile
+		var maxLengthPerLineEnumerator = maxLengthPerLine.GetEnumerator();
+		int currentLineMaxLength;
+		if (maxLengthPerLineEnumerator.MoveNext())
+			currentLineMaxLength = maxLengthPerLineEnumerator.Current;
+		else
+			currentLineMaxLength = int.MaxValue;
+
+		//Sind die Zeilen sowieso kürzer?
+		if (lineElements.All(e =>
+		{
+			if (e.Length == 0) return true;
+
+			var last = e[^1];
+			return last.DisplayOffset + last.DisplayLength <= currentLineMaxLength;
+		}))
+		{
+			//Nur ein Block, der alle Elemente enthält
+			yield return CreateBlock(lines, lineElements, null, null, new int[lineElements.Length]);
+			yield break;
+		}
+
+		//Finde zuerst alle Breakpoints
 		var breakpoints = lineElements.Select(l => FindBreakpoints(l).ToArray()).ToArray();
 
 		//Stelle die Blöcke zusammen
@@ -50,13 +74,19 @@ public sealed record SheetBlock(IReadOnlyList<SheetBlock.SheetBlockLine> Lines)
 			var currentLength = currentLengths.Zip(group).Max(g => g.Second.OnlySpacesBefore ? 0 : g.First);
 
 			//Ist der aktuelle Block zu lang?
-			if (currentLength > maxLength)
+			if (currentLength > currentLineMaxLength)
 			{
 				//Sonderfall: ist es der erste Block?
 				if (lastNonSpaceBeforeGroup is null)
 				{
 					//Verwende die aktuellen Breakpoints, auch wenn der Block dann zu lang ist
 					yield return CreateBlock(lines, lineElements, null, group, currentBlockStartOffset);
+
+					//Lese nächste Zeilenlänge
+					if (maxLengthPerLineEnumerator?.MoveNext() == true)
+						currentLineMaxLength = maxLengthPerLineEnumerator.Current;
+					else
+						maxLengthPerLineEnumerator = null;
 
 					//Beginne den neuen Block
 					lastNonSpaceBeforeGroup = group;
@@ -67,6 +97,12 @@ public sealed record SheetBlock(IReadOnlyList<SheetBlock.SheetBlockLine> Lines)
 
 				//Verwende die letzten Breakpoints, ignoriere Gruppen, die nur Leerzeichen enthalten
 				yield return CreateBlock(lines, lineElements, lastBreakingGroup, lastNonSpaceBeforeGroup, currentBlockStartOffset);
+
+				//Lese nächste Zeilenlänge
+				if (maxLengthPerLineEnumerator?.MoveNext() == true)
+					currentLineMaxLength = maxLengthPerLineEnumerator.Current;
+				else
+					maxLengthPerLineEnumerator = null;
 
 				//Starte den nächsten Block bei der vorherigen Gruppe
 				lastBreakingGroup = lastGroup ?? lastNonSpaceBeforeGroup;
@@ -97,7 +133,7 @@ public sealed record SheetBlock(IReadOnlyList<SheetBlock.SheetBlockLine> Lines)
 				.Select(pair => pair.First - pair.Second.DisplayOffset);
 			var currentLength = currentLengths.Zip(lastGroup).Max(g => g.Second.OnlySpacesBefore ? 0 : g.First);
 
-			if (currentLength > maxLength)
+			if (currentLength > currentLineMaxLength)
 			{
 				//Verwende die letzten Breakpoints, ignoriere Gruppen, die nur Leerzeichen enthalten
 				yield return CreateBlock(lines, lineElements, lastBreakingGroup, lastNonSpaceBeforeGroup, currentBlockStartOffset);
