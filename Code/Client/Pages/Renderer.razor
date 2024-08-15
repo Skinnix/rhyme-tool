@@ -77,9 +77,10 @@
     }
 </SectionContent>
 
-<div @ref="wrapper" class="chord-sheet-wrapper@(IsDebug ? " debug" : null)" style="font-size: @(settings.FontSize)px; --characters: @(settings.MaxWidth)">
+<div @ref="wrapper" class="chord-sheet-wrapper@(IsDebug ? " debug" : null) @(settings.Autofit ? " autofit" : null)" style="font-size: @(settings.FontSize)px; --characters: @(maxCharacters)">
     <SheetRenderer Document="document" DisplayMode="SheetDisplayMode.Lines" Formatter="settings.Formatter"
-                   BreakWidth="settings.MaxWidth" />
+                   BreakWidth="maxCharacters" />
+
     <span class="calculator">&nbsp;</span>
 </div>
 
@@ -97,6 +98,7 @@
     public static string GetUrl(string? documentId) => documentId is null ? "/chords/renderer" : "/chords/renderer?doc=" + Uri.EscapeDataString(documentId);
 
     private ElementReference wrapper;
+    private int? maxCharacters = null;
 
     private Guid inputFileId = Guid.NewGuid();
 
@@ -146,7 +148,7 @@
     [JSInvokable]
     public void OnResize(int maxCharacters)
     {
-        settings.MaxWidth = maxCharacters;
+        this.maxCharacters = maxCharacters;
         StateHasChanged();
     }
 

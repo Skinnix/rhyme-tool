@@ -34,12 +34,12 @@ public class RenderingSettings : IConfigurable
 		set => Set(ref fontSize, value);
 	}
 
-	private int maxWidth = 100;
-	[Configurable(Name = "Maximale Breite", Toggleable = true)]
-	public int MaxWidth
+	private bool autofit = true;
+	[Configurable(Name = "Autofit")]
+	public bool Autofit
 	{
-		get => maxWidth;
-		set => Set(ref maxWidth, value);
+		get => autofit;
+		set => Set(ref autofit, value);
 	}
 
 	[Configurable(Name = "Transponieren", Toggleable = true)]

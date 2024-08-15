@@ -179,11 +179,13 @@ $separatorColor: #6c757d;
 }
 
 .chord-sheet-wrapper.debug {
-	.chord-sheet {
+	&.autofit .chord-sheet {
 		.line {
 			box-shadow: calc(var(--characters) * 1ch) 0 0 #ff6a0024 inset;
 		}
+	}
 
+	.chord-sheet {
 		.line.line-text {
 			.anchor-text, .text {
 				border-left: 1px dotted red;

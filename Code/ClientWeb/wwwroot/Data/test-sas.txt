@@ -1,6 +1,3 @@
-     Bbmaj7                             C
-drumXlegteXerXseinXSchwertXabXundXjetztXmetzeltXerXnur Saiten.
-
    Gm7                               EbΔ/11 EbΔ/11 A               A
 EsXwarXeinmalXeinXFürstensprossXXdem war seineineinein Leben mies, A
 
@@ -10,8 +7,7 @@ G5 G6b G6
 (Tempo >150)
 
 [Strophe]
-F FEG
-Emaj7/11 Emaj7/11 Emaj7/11 Emaj7/11 Emaj7/11 Emaj7/11
+    Emaj7/11 Emaj7/11 Emaj7/11 Emaj7/11 Emaj7/11 Emaj7/11
 Xmaj7/11 Xmaj7/11 Xmaj7/11 Xmaj7/11 Xmaj7/11 Xmaj7/11
    Gm7                               EbΔ/11 EbΔ/11 A               A
 Es war einmal ein Fürstenspross, dem war seineineinein Leben mies, A

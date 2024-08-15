@@ -2,13 +2,15 @@
 @using Skinnix.RhymeTool.Configuration
 @using System.ComponentModel
 
-@{
-    var i = 0;
-}
-@foreach (var property in Settings?.Properties ?? [])
-{
-    @CreateRenderer(property, $"{guid}-{i++}")
-}
+<div class="mx-1">
+    @{
+        var i = 0;
+    }
+    @foreach (var property in Settings?.Properties ?? [])
+    {
+        @CreateRenderer(property, $"{guid}-{i++}")
+    }
+</div>
 
 
 @code {

@@ -53,11 +53,21 @@ function registerDropDownHandler(element, reference) {
 function registerResize(element, reference, callbackName) {
 	var timeout;
 	var handler = function () {
+		//autofit?
+		if (!element.classList.contains('autofit'))
+			return;
+
 		//get character width
 		var characterWidth = element.querySelector('.calculator').getBoundingClientRect().width;
 
+		//get line offset
+		var lineOffset = element.querySelector('.line')?.getBoundingClientRect().left || 0;
+
+		//get element width
+		var elementRect = element.getBoundingClientRect();
+
 		//how many characters does the element fit?
-		var characters = Math.floor(element.getBoundingClientRect().width / characterWidth);
+		var characters = Math.floor((elementRect.right - lineOffset) / characterWidth) || 0;
 
 		//has the number of characters changed?
 		if (characters == element.getAttribute('data-characters')) {
@@ -86,7 +96,7 @@ function registerResize(element, reference, callbackName) {
 
 
 
-function registerBeforeInput(element, reference) {
+function registerBeforeInput(element, reference, callbackName) {
 	var existingReference = element['data-reference'];
 	if (existingReference === reference) {
 		return;
@@ -98,7 +108,7 @@ function registerBeforeInput(element, reference) {
 	}
 
 	var listener = function (event) {
-		handleBeforeInput(element, reference, event);
+		handleBeforeInput(element, reference, event, callbackName);
 	};
 	element['data-reference'] = reference;
 	element['data-listener'] = listener;

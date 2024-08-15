@@ -2075,7 +2075,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			(Attachment Attachment, SheetDisplayLineElement Display) firstAttachment = attachments
 				.Select((a, i) => (Attachment: a, Display: a.CreateDisplayAttachment(new(i, a.Offset), out _, formatter)))
 				.FirstOrDefault(a => a.Display is not null)!;
-			SheetDisplayLineBreakPoint? firstAttachmentBreakpoint = null;
+			(SheetDisplayLineBreakPoint Text, SheetDisplayLineBreakPoint Attachment)? firstAttachmentBreakpoint = null;
 			int firstAttachmentOffset = 0;
 			if (firstAttachment.Attachment is not null)
 			{
@@ -2086,16 +2086,14 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 				//Wie viel Platz wird auf der Akkordzeile benötigt, damit das Attachment passt?
 				var required = firstAttachmentOffset - firstAttachment.Attachment.Offset.Value;
+				builders.ChordLine.ExtendLength(required, 0, formatter);
 
 				//Verlängere die Textzeile auch um diese Differenz
 				builders.TextLine.ExtendLength(required, 0, formatter);
 
 				//Füge einen Breakpoint auf der Textzeile ein
-				var breakPoints = builders.CreateBreakPoints(componentIndex, 0, firstAttachment.Attachment.Offset.Value);
-				builders.TextLine.Append(breakPoints.Text, formatter);
-
-				//Speichere den Attachment-Breakpoint
-				firstAttachmentBreakpoint = breakPoints.Attachment;
+				firstAttachmentBreakpoint = builders.CreateBreakPoints(componentIndex, 0, firstAttachment.Attachment.Offset.Value);
+				builders.TextLine.Append(firstAttachmentBreakpoint.Value.Text, formatter);
 			}
 			else
 			{
@@ -2174,7 +2172,10 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 					//Füge beim ersten Attachment den Breakpoint ein
 					if (firstAttachmentBreakpoint is not null)
 					{
-						builders.ChordLine.Append(firstAttachmentBreakpoint, formatter);
+						builders.ChordLine.Append(firstAttachmentBreakpoint.Value.Attachment with
+						{
+							StartingPointOffset = builders.ChordLine.CurrentLength - firstAttachmentBreakpoint.Value.Text.DisplayOffset,
+						}, formatter);
 						firstAttachmentBreakpoint = null;
 					}
 
