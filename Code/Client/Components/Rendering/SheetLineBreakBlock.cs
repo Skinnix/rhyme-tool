@@ -142,9 +142,11 @@ public sealed record SheetBlock(IReadOnlyList<SheetBlock.SheetBlockLine> Lines)
 				lastBreakingGroup = lastGroup ?? lastNonSpaceBeforeGroup;
 			}
 		}
-
-		//Erstelle den letzten Block
-		yield return CreateBlock(lines, lineElements, lastBreakingGroup, null, currentBlockStartOffset);
+		else
+		{
+			//Erstelle den letzten Block
+			yield return CreateBlock(lines, lineElements, lastBreakingGroup, null, currentBlockStartOffset);
+		}
 	}
 
 	private static IEnumerable<BreakPointInLine> FindBreakpoints(IEnumerable<SheetDisplayLineElement> elements)

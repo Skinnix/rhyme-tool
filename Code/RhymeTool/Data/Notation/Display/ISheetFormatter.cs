@@ -87,8 +87,8 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 
     public GermanNoteMode GermanMode { get; init; } = GermanNoteMode.AlwaysB;
 
-    public int SpaceBetweenChordsOnTextLine { get; init; } = 1;
-    public int SpaceBetweenChordsOnChordLine { get; init; } = 3;
+    public int SpaceBetweenChordsOnTextLine { get; init; } = 3;
+    public int SpaceBetweenChordsOnChordLine { get; init; } = 1;
 	public bool ShowEmptyAttachmentLines { get; init; } = false;
 
 	public List<int> LineIndentations { get; init; } = [0, 2];
@@ -229,7 +229,7 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 			if (lineBuilder.LineType == typeof(SheetDisplayTextLine))
 				return SpaceBetweenChordsOnTextLine;
 			else if (lineBuilder.LineType == typeof(SheetDisplayChordLine))
-                return SpaceBetweenChordsOnTextLine;
+                return SpaceBetweenChordsOnChordLine;
             else
                 return 1;
         }

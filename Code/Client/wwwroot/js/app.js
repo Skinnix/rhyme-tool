@@ -53,21 +53,19 @@ function registerDropDownHandler(element, reference) {
 function registerResize(element, reference, callbackName) {
 	var timeout;
 	var handler = function () {
-		//autofit?
-		if (!element.classList.contains('autofit'))
-			return;
+		////autofit?
+		//if (!element.classList.contains('autofit'))
+		//	return;
 
 		//get character width
 		var characterWidth = element.querySelector('.calculator').getBoundingClientRect().width;
 
 		//get line offset
-		var lineOffset = element.querySelector('.line')?.getBoundingClientRect().left || 0;
-
-		//get element width
-		var elementRect = element.getBoundingClientRect();
-
+		var lineOffset = element.querySelector('.line')?.offsetLeft || 0;
+		
 		//how many characters does the element fit?
-		var characters = Math.floor((elementRect.right - lineOffset) / characterWidth) || 0;
+		var elementRect = element.getBoundingClientRect();
+		var characters = Math.floor((elementRect.width + element.offsetLeft - lineOffset) / characterWidth) || 0;
 
 		//has the number of characters changed?
 		if (characters == element.getAttribute('data-characters')) {

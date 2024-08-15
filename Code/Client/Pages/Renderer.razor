@@ -77,9 +77,10 @@
     }
 </SectionContent>
 
-<div @ref="wrapper" class="chord-sheet-wrapper@(IsDebug ? " debug" : null) @(settings.Autofit ? " autofit" : null)" style="font-size: @(settings.FontSize)px; --characters: @(maxCharacters)">
+<div @ref="wrapper" class="chord-sheet-wrapper@(IsDebug ? " debug" : null) @(settings.Autofit ? " autofit" : null)"
+     style="font-size: @((settings.FontSize / 100f).ToString(System.Globalization.CultureInfo.InvariantCulture))rem; --characters: @(maxCharacters)">
     <SheetRenderer Document="document" DisplayMode="SheetDisplayMode.Lines" Formatter="settings.Formatter"
-                   BreakWidth="maxCharacters" />
+                   BreakWidth="@(settings.Autofit ? maxCharacters : null)" />
 
     <span class="calculator">&nbsp;</span>
 </div>
@@ -113,7 +114,7 @@
         settings.PropertyChanged -= OnSettingsPropertyChanged;
         settings = new()
         {
-            FontSize = 16,
+            FontSize = 100,
             Formatter = new DefaultSheetFormatter()
             {
                 GermanMode = GermanNoteMode.Descriptive,
@@ -148,6 +149,9 @@
     [JSInvokable]
     public void OnResize(int maxCharacters)
     {
+        if (this.maxCharacters == maxCharacters)
+            return;
+
         this.maxCharacters = maxCharacters;
         StateHasChanged();
     }

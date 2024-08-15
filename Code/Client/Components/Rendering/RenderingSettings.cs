@@ -26,8 +26,8 @@ public class RenderingSettings : IConfigurable
 		set => Set(ref formatter, value);
 	}
 
-	private int fontSize = 16;
-	[Configurable(Name = "Schriftgröße", Toggleable = true)]
+	private int fontSize = 100;
+	[Configurable(Name = "Schriftgröße", Toggleable = true, Step = 5)]
 	public int FontSize
 	{
 		get => fontSize;

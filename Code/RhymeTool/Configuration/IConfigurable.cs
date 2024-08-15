@@ -21,6 +21,7 @@ public interface IConfigurableProperty
 	Type Type { get; }
 	bool IsToggleable { get; set; }
 	object? Value { get; set; }
+	int Step { get; }
 }
 
 public static class ConfigurableExtensions
@@ -41,6 +42,7 @@ public static class ConfigurableExtensions
 			{
 				reflectionProperty.Category = attribute.Category;
 				reflectionProperty.IsToggleable = attribute.Toggleable;
+				reflectionProperty.Step = attribute.Step;
 			}
 
 			yield return reflectionProperty;
@@ -54,6 +56,7 @@ public static class ConfigurableExtensions
 
 		public string? Category { get; set; }
 		public bool IsToggleable { get; set; }
+		public int Step { get; set; }
 
 		public abstract object? Value { get; set; }
 

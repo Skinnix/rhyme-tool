@@ -57,7 +57,8 @@
     }
 </SectionContent>
 
-<div class="chord-sheet-wrapper@(IsDebug ? " debug" : null)" style="font-size: @(settings.FontSize)px;">
+<div class="chord-sheet-wrapper@(IsDebug ? " debug" : null)"
+     style="font-size: @((settings.FontSize / 100f).ToString(System.Globalization.CultureInfo.InvariantCulture))rem;">
     <SheetEditor Document="document" Formatter="settings.Formatter" />
 </div>
 
@@ -79,7 +80,7 @@
 
     private EditingSettings settings = new()
     {
-        FontSize = 16,
+        FontSize = 100,
         Formatter = new DefaultSheetFormatter()
         {
             GermanMode = GermanNoteMode.Descriptive,

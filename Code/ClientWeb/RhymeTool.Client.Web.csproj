@@ -20,11 +20,13 @@
 
   <ItemGroup>
     <Content Remove="wwwroot\Data\test-sas.txt" />
+    <Content Remove="wwwroot\Data\test-tribute.txt" />
     <Content Remove="wwwroot\Data\test-ws-full.txt" />
     <Content Remove="wwwroot\Data\test-ws.txt" />
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="wwwroot\Data\test-tribute.txt" />
     <None Include="wwwroot\Data\test-sas.txt" />
     <None Include="wwwroot\Data\test-ws-full.txt" />
     <None Include="wwwroot\Data\test-ws.txt" />

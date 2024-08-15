@@ -18,7 +18,7 @@
         <div class="collapse show" id="property-@(EditorId)">
             <div class="input-group" role="group">
                 <button type="button" class="btn btn-outline-secondary"
-                        @onclick="() => Value--">
+                        @onclick="() => Value -= Property.Step">
                     <i class="fas fa-minus"></i>
                 </button>
 
@@ -26,7 +26,7 @@
                        @bind="Value" />
 
                 <button type="button" class="btn btn-outline-secondary"
-                        @onclick="() => Value++">
+                        @onclick="() => Value += Property.Step">
                     <i class="fas fa-plus"></i>
                 </button>
             </div>

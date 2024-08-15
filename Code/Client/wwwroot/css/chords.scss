@@ -11,6 +11,8 @@ $separatorColor: #6c757d;
 	overflow-x: auto;
 	display: flex;
 	flex-direction: row;
+	font-family: monospace;
+	line-height: 1.1em;
 
 	.calculator {
 		position: absolute;
@@ -34,8 +36,6 @@ $separatorColor: #6c757d;
 	grid-template-columns: min-content auto;
 	grid-gap: 0.4em 0.2em;
 	align-items: baseline;
-	font-family: monospace;
-	line-height: 1.1em;
 
 	.refreshing[contenteditable] {
 		caret-color: transparent;

@@ -6,6 +6,7 @@ public class ConfigurableAttribute : Attribute
 	public string? Name { get; set; }
 	public string? Category { get; set; }
 	public bool Toggleable { get; set; }
+	public int Step { get; set; } = 1;
 }
 
 [AttributeUsage(AttributeTargets.Property)]
