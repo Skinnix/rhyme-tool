@@ -367,17 +367,27 @@ function setSelectionRange(wrapper, metaline, lineId, lineIndex, selectionRange)
 	}
 	function findNodeAndOffsetFromEnd(element, offsetFromEnd) {
 		var currentOffsetFromEnd = 0;
+
+		//end?
+		if (offsetFromEnd == 0 && element.childNodes.length > 0)
+			return findNodeAndOffsetFromEnd(element.childNodes[element.childNodes.length - 1], 0);
+		else
+			return {
+				node: element,
+				offset: element.textContent.length
+			};
+
 		for (var i = element.childNodes.length - 1; i >= 0; i--) {
 			var child = element.childNodes[i];
 			var beforeOffset = currentOffsetFromEnd + child.textContent.length;
 			if (offsetFromEnd > beforeOffset)
 				return findNodeAndOffsetFromEnd(child, offsetFromEnd - currentOffsetFromEnd);
-
+				
 			//start of content?
 			if (beforeOffset == offsetFromEnd && i == 0)
 				return findNodeAndOffsetFromEnd(child, offsetFromEnd - currentOffsetFromEnd);
 
-			currentOffsetFromStart = beforeOffset;
+			currentOffsetFromEnd = beforeOffset;
 		}
 
 		return {

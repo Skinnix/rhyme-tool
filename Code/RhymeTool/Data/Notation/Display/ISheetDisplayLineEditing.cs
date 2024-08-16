@@ -1,22 +1,69 @@
-﻿namespace Skinnix.RhymeTool.Data.Notation.Display;
+﻿using System;
+using System.Diagnostics.CodeAnalysis;
+using System.Reflection.Metadata;
+
+namespace Skinnix.RhymeTool.Data.Notation.Display;
 
 public interface ISheetDisplayLineEditing
 {
-	public SheetLine Line { get; }
-	public int LineId { get; }
+	SheetLine Line { get; }
+	int LineId { get; }
 
-	public MetalineEditResult InsertContent(SheetDisplayLineEditingContext context, string content, ISheetEditorFormatter? formatter = null);
-	public MetalineEditResult DeleteContent(SheetDisplayLineEditingContext context, bool forward = false, ISheetEditorFormatter? formatter = null);
+	DelayedMetalineEditResult TryInsertContent(SheetDisplayLineEditingContext context, string content, ISheetEditorFormatter? formatter = null);
+	DelayedMetalineEditResult TryDeleteContent(SheetDisplayLineEditingContext context, DeleteDirection direction, ISheetEditorFormatter? formatter = null);
+
+	MetalineEditResult InsertContent(SheetDisplayLineEditingContext context, string content, ISheetEditorFormatter? formatter = null)
+	{
+		var tryResult = TryInsertContent(context, content, formatter);
+		if (!tryResult.Success)
+			return MetalineEditResult.Fail(tryResult.FailReason);
+
+		return tryResult.Execute();
+	}
+
+	MetalineEditResult DeleteContent(SheetDisplayLineEditingContext context, DeleteDirection direction, ISheetEditorFormatter? formatter = null)
+	{
+		var tryResult = TryDeleteContent(context, direction, formatter);
+		if (!tryResult.Success)
+			return MetalineEditResult.Fail(tryResult.FailReason);
+
+		return tryResult.Execute();
+	}
+
+	public ReasonBase? SupportsEdit(SheetDisplayMultiLineEditingContext context);
 }
 
-public record struct SheetDisplayLineEditingContext(SimpleRange SelectionRange)
+public enum DeleteDirection
 {
-	public Func<SheetLine?>? GetLineBefore { get; init; }
-	public Func<SheetLine?>? GetLineAfter { get; init; }
+	Backward,
+	Forward
 }
 
-public record MetalineEditResult(bool Success, MetalineSelectionRange? NewSelection)
+public record DelayedMetalineEditResult
 {
+	public Func<MetalineEditResult>? Execute { get; init; }
+	public ReasonBase? FailReason { get; init; }
+
+	[MemberNotNullWhen(true, nameof(Execute)), MemberNotNullWhen(false, nameof(FailReason))]
+	public bool Success => Execute is not null;
+
+	public DelayedMetalineEditResult(Func<MetalineEditResult> execute)
+	{
+		Execute = execute;
+	}
+
+	private DelayedMetalineEditResult(ReasonBase failReason)
+	{
+		FailReason = failReason;
+	}
+
+	public static DelayedMetalineEditResult Fail(ReasonBase reason)
+		=> new(reason);
+}
+
+public record MetalineEditResult
+{
+	public MetalineSelectionRange? NewSelection { get; init; }
 	public ReasonBase? FailReason { get; init; }
 
 	public bool RemoveLine { get; init; }
@@ -26,8 +73,28 @@ public record MetalineEditResult(bool Success, MetalineSelectionRange? NewSelect
 	public IReadOnlyList<SheetLine> InsertLinesAfter { get; init; } = [];
 	public IReadOnlyList<SheetDisplayLineElement> ModifiedElements { get; init; } = [];
 
+	[MemberNotNullWhen(true, nameof(NewSelection)), MemberNotNullWhen(false, nameof(FailReason))]
+	public bool Success => NewSelection is not null;
+
+	public MetalineEditResult(MetalineSelectionRange newSelection)
+	{
+		NewSelection = newSelection;
+	}
+
+	private MetalineEditResult(ReasonBase failReason)
+	{
+		FailReason = failReason;
+	}
+
 	public static MetalineEditResult Fail(ReasonBase reason)
-		=> new(false, null) { FailReason = reason };
+		=> new(reason);
+
+	public void Execute(SheetDocument document, SheetLine line)
+	{
+		//Füge ggf. Zeilen hinzu oder entferne sie
+		document.Lines.InsertAndRemove(line, RemoveLine, RemoveLineBefore, RemoveLineAfter,
+			InsertLinesBefore, InsertLinesAfter);
+	}
 }
 
 public record MetalineSelectionRange
@@ -55,5 +122,5 @@ public record MetalineSelectionRange
 public static class SheetDisplayLineEditingExtensions
 {
 	public static MetalineEditResult CreateSuccessEditResult(this ISheetDisplayLineEditing editing, SimpleRange newSelection)
-		=> new MetalineEditResult(true, new MetalineSelectionRange(editing, newSelection));
+		=> new MetalineEditResult(new MetalineSelectionRange(editing, newSelection));
 }

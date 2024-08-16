@@ -25,7 +25,8 @@ public enum RangeOverlap
 
 public readonly struct SimpleRange
 {
-	public static readonly SimpleRange Zero = new(0, 0);
+	public static readonly SimpleRange CursorAtStart = new(0, 0);
+	public static readonly SimpleRange CursorAtEnd = new(-1, -1);
 
 	public int Start { get; }
 	public int End { get; }
@@ -47,6 +48,9 @@ public readonly struct SimpleRange
 	}
 
 	public static SimpleRange CursorAt(int offset) => new(offset, offset);
+
+	public static SimpleRange AllFromStart(int start) => new(start, int.MaxValue);
+	public static SimpleRange AllToEnd(int end) => new(0, end);
 
 	public RangeOverlap CheckOverlap(int offset, int length)
 	{

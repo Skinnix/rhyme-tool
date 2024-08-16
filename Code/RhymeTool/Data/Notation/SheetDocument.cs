@@ -1,22 +1,30 @@
-﻿namespace Skinnix.RhymeTool.Data.Notation;
+﻿using Skinnix.RhymeTool.ComponentModel;
+
+namespace Skinnix.RhymeTool.Data.Notation;
 
 public class SheetDocument
 {
-    public string? Label { get; set; }
+	public event EventHandler<ModifiedEventArgs>? LinesModified;
+	public event EventHandler? TitlesChanged;
 
-	//public List<SheetSegment> Segments { get; } = new();
+	public string? Label { get; set; }
+
 	public SheetLineCollection Lines { get; }
 
     public SheetDocument()
 	{
 		Lines = new(this);
+		Lines.Modified += (s, e) => LinesModified?.Invoke(this, e);
+		Lines.TitlesChanged += (s, e) => TitlesChanged?.Invoke(this, e);
 	}
 
-    public SheetDocument(params SheetLine[] lines) : this((IEnumerable<SheetLine>)lines) { }
+	public SheetDocument(params SheetLine[] lines) : this((IEnumerable<SheetLine>)lines) { }
     public SheetDocument(IEnumerable<SheetLine> lines)
     {
 		Lines = new(this, lines);
-    }
+		Lines.Modified += (s, e) => LinesModified?.Invoke(this, e);
+		Lines.TitlesChanged += (s, e) => TitlesChanged?.Invoke(this, e);
+	}
 
 	public IEnumerable<SheetSegment> FindSegments()
 		=> Lines.OfType<ISheetTitleLine>()

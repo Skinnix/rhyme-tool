@@ -25,7 +25,7 @@ public sealed record Reason : ReasonBase
 		var fileName = Path.GetFileNameWithoutExtension(filePath);
 
 		//Trenne CamelCase
-		var parts = fileName.SplitAlternating(char.IsUpper).Take(4).ToArray();
+		var parts = fileName.SplitWhere((c1, c2) => char.IsUpper(c2)).Take(4).ToArray();
 
 		//Wie viele Teile gibt es?
 		string namePart;

@@ -6,6 +6,7 @@ namespace Skinnix.RhymeTool.Data.Notation;
 public class SheetLineCollection : IReadOnlyList<SheetLine>, IModifiable
 {
 	public event EventHandler<ModifiedEventArgs>? Modified;
+	public event EventHandler? TitlesChanged;
 
 	private readonly SheetDocument document;
 	private readonly List<SheetLine> lines;
@@ -22,7 +23,17 @@ public class SheetLineCollection : IReadOnlyList<SheetLine>, IModifiable
 	public SheetLineCollection(SheetDocument document, IEnumerable<SheetLine> lines)
 	{
 		this.document = document;
-		this.lines = new(lines);
+		this.lines = new(lines.Select(l =>
+		{
+			if (l is ISheetTitleLine titleLine)
+				titleLine.IsTitleLineChanged += OnIsTitleLineChanged;
+			return l;
+		}));
+	}
+
+	private void OnIsTitleLineChanged(object? sender, EventArgs e)
+	{
+		TitlesChanged?.Invoke(this, EventArgs.Empty);
 	}
 
 	#region ReadOnlyCollection Members
@@ -54,30 +65,46 @@ public class SheetLineCollection : IReadOnlyList<SheetLine>, IModifiable
 	public void Add(SheetLine line)
 	{
 		lines.Add(line);
+		if (line is ISheetTitleLine titleLine)
+			titleLine.IsTitleLineChanged += OnIsTitleLineChanged;
 		RaiseModified(new ModifiedEventArgs(this));
 	}
 
 	public void AddRange(IEnumerable<SheetLine> lines)
 	{
-		this.lines.AddRange(lines);
+		this.lines.AddRange(lines.Select(l =>
+		{
+			if (l is ISheetTitleLine titleLine)
+				titleLine.IsTitleLineChanged += OnIsTitleLineChanged;
+			return l;
+		}));
 		RaiseModified(new ModifiedEventArgs(this));
 	}
 
 	public void Insert(int index, SheetLine line)
 	{
 		lines.Insert(index, line);
+		if (line is ISheetTitleLine titleLine)
+			titleLine.IsTitleLineChanged += OnIsTitleLineChanged;
 		RaiseModified(new ModifiedEventArgs(this));
 	}
 
 	public void InsertRange(int index, IEnumerable<SheetLine> lines)
 	{
-		this.lines.InsertRange(index, lines);
+		this.lines.InsertRange(index, lines.Select(l =>
+		{
+			if (l is ISheetTitleLine titleLine)
+				titleLine.IsTitleLineChanged += OnIsTitleLineChanged;
+			return l;
+		}));
 		RaiseModified(new ModifiedEventArgs(this));
 	}
 
 	public void Remove(SheetLine line)
 	{
 		lines.Remove(line);
+		if (line is ISheetTitleLine titleLine)
+			titleLine.IsTitleLineChanged -= OnIsTitleLineChanged;
 		RaiseModified(new ModifiedEventArgs(this));
 	}
 
@@ -91,32 +118,66 @@ public class SheetLineCollection : IReadOnlyList<SheetLine>, IModifiable
 		//Sonderfall: Zeile ersetzen
 		if (removeLine && insertBefore.Count + insertAfter.Count == 1)
 		{
-			lines[index] = insertBefore.Count == 1 ? insertBefore.First() : insertAfter.First();
+			var current = lines[index];
+			if (current is ISheetTitleLine titleLine)
+				titleLine.IsTitleLineChanged -= OnIsTitleLineChanged;
+
+			var next = lines[index] = insertBefore.Count == 1 ? insertBefore.First() : insertAfter.First();
+			if (next is ISheetTitleLine nextTitleLine)
+				nextTitleLine.IsTitleLineChanged += OnIsTitleLineChanged;
+
 			RaiseModified(new ModifiedEventArgs(this));
 			return;
 		}
 
 		//Entferne ggf. Zeile dahinter
 		if (removeLineAfter)
+		{
+			if (lines[index + 1] is ISheetTitleLine titleLine)
+				titleLine.IsTitleLineChanged -= OnIsTitleLineChanged;
 			lines.RemoveAt(index + 1);
+		}
 
 		//Zeilen dahinter
 		var countBefore = lines.Count;
 		if (index == lines.Count - 1)
-			lines.AddRange(insertAfter);
+			lines.AddRange(insertAfter.Select(l =>
+			{
+				if (l is ISheetTitleLine titleLine)
+					titleLine.IsTitleLineChanged += OnIsTitleLineChanged;
+				return l;
+			}));
 		else
-			lines.InsertRange(index + 1, insertAfter);
+			lines.InsertRange(index + 1, insertAfter.Select(l =>
+			{
+				if (l is ISheetTitleLine titleLine)
+					titleLine.IsTitleLineChanged += OnIsTitleLineChanged;
+				return l;
+			}));
 		
 		//Zeilen davor
-		lines.InsertRange(index, insertBefore);
+		lines.InsertRange(index, insertBefore.Select(l =>
+		{
+			if (l is ISheetTitleLine titleLine)
+				titleLine.IsTitleLineChanged += OnIsTitleLineChanged;
+			return l;
+		}));
 
 		//Entferne ggf. Zeile davor
 		if (removeLineBefore)
+		{
+			if (lines[index - 1] is ISheetTitleLine titleLine)
+				titleLine.IsTitleLineChanged -= OnIsTitleLineChanged;
 			lines.RemoveAt(index - 1);
+		}
 
 		//Entferne ggf. Zeile
 		if (removeLine)
+		{
+			if (line is ISheetTitleLine titleLine)
+				titleLine.IsTitleLineChanged -= OnIsTitleLineChanged;
 			lines.Remove(line);
+		}
 
 		//Hat sich etwas verändert?
 		if (removeLine || removeLineBefore || removeLineAfter || countBefore != lines.Count)

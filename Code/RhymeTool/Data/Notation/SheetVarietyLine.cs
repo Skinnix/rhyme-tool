@@ -20,12 +20,15 @@ namespace Skinnix.RhymeTool.Data.Notation;
 
 public class SheetVarietyLine : SheetLine, ISheetTitleLine
 {
+	public event EventHandler? IsTitleLineChanged;
+
 	private readonly ComponentCollection components;
 	private readonly ContentEditing contentEditor;
 	private readonly AttachmentEditing attachmentEditor;
 
 	private ISheetBuilderFormatter? cachedFormatter;
 	private IEnumerable<SheetDisplayLine>? cachedLines;
+	private string? cachedTitle;
 
 	public ISheetDisplayLineEditing ContentEditor => contentEditor;
 	public ISheetDisplayLineEditing AttachmentEditor => attachmentEditor;
@@ -80,6 +83,15 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 	private void RaiseModifiedAndInvalidateCache()
 	{
 		InvalidateCache();
+
+		//Hat sich der Titel oder Titelstatus geändert?
+		IsTitleLine(out var title);
+		if (title != cachedTitle)
+		{
+			cachedTitle = title;
+			IsTitleLineChanged?.Invoke(this, EventArgs.Empty);
+		}
+		
 		RaiseModified(new ModifiedEventArgs(this));
 	}
 
@@ -123,9 +135,9 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 	#region Title
 	public bool IsTitleLine(out string? title)
-		=> IsTitleLine(out title, out _, out _);
+		=> CheckTitleLine(out title, out _, out _);
 
-	private bool IsTitleLine(out string? title, out IReadOnlyList<VarietyComponent> titleComponents, out int afterTitleIndex)
+	private bool CheckTitleLine(out string? title, out IReadOnlyList<VarietyComponent> titleComponents, out int afterTitleIndex)
 	{
 		//Alles, was von Klammern umschlossen ist und keine Attachments hat, ist es ein Titel
 		var titleBuilder = new StringBuilder();
@@ -182,6 +194,8 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 	public static readonly Reason RemovingFromAttachmentFailed = new("Konnte den Akkord nicht kürzen");
 	public static readonly Reason NoAttachmentAfter = new("Hiernach scheint kein Akkord zu sein");
 	public static readonly Reason CouldNotMoveAttachment = new("Verschieben des Akkords fehlgeschlagen");
+	public static readonly Reason CannotEditDifferentLineTypes = new("Mehrzeilige Bearbeitungen müssen auf dem gleichen Zeilentyp beginnen und enden");
+	public static readonly Reason CannotMultiLineEditAttachments = new("Akkorde können nicht mehrzeilig bearbeitet werden");
 
 	private SpecialContentType GetAllowedTypes(Component component)
 	{
@@ -204,147 +218,162 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			this.Line = owner;
 		}
 
-		public MetalineEditResult DeleteContent(SheetDisplayLineEditingContext context, bool forward = false, ISheetEditorFormatter? formatter = null)
+		public DelayedMetalineEditResult TryDeleteContent(SheetDisplayLineEditingContext context, DeleteDirection direction, ISheetEditorFormatter? formatter = null)
 		{
 			//Ist der Bereich leer?
 			if (context.SelectionRange.Length == 0)
 			{
 				//Wird der Zeilenumbruch am Anfang entfernt?
-				if (context.SelectionRange.Start == 0 && !forward)
+				if (context.SelectionRange.Start == 0 && direction == DeleteDirection.Backward)
 				{
 					//Gibt es eine Zeile davor?
 					var lineBefore = context.GetLineBefore?.Invoke();
 					if (lineBefore is null)
-						return MetalineEditResult.Fail(NoLineBefore);
+						return DelayedMetalineEditResult.Fail(NoLineBefore);
 
 					//Ist die vorherige Zeile leer?
 					if (lineBefore is SheetEmptyLine)
 					{
 						//Lösche die vorherige Zeile
-						return new MetalineEditResult(true, new MetalineSelectionRange(this, SimpleRange.Zero))
+						return new DelayedMetalineEditResult(() =>
 						{
-							RemoveLineBefore = true,
-						};
+							return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAtStart))
+							{
+								RemoveLineBefore = true,
+							};
+						});
 					}
 
 					//Ist die vorherige Zeile keine VarietyLine?
 					if (lineBefore is not SheetVarietyLine varietyBefore)
-						return MetalineEditResult.Fail(NotVarietyLine);
+						return DelayedMetalineEditResult.Fail(NotVarietyLine);
 
-					//Füge alle Komponenten dieser Zeile an das Ende der vorherigen Zeile an
-					var lastComponent = varietyBefore.components.Count == 0 ? null : varietyBefore.components[^1];
-					varietyBefore.components.AddRange(Line.components);
-
-					//Setze den Cursor an die Position, die mal das Ende der vorherigen Zeile war
-					SpecialCursorPosition? specialCursorPosition = lastComponent is not null ? SpecialCursorPosition.Behind(lastComponent) : null;
-
-					//Prüfe, ob die Komponenten zusammengefügt werden können
-					if (lastComponent is not null && Line.components.Count > 0)
+					//Bearbeitung wird funktionieren
+					return new DelayedMetalineEditResult(() =>
 					{
-						var mergeResult = lastComponent.TryMerge(Line.components[0], ContentOffset.FarEnd, formatter);
-						if (mergeResult is not null)
+						//Füge alle Komponenten dieser Zeile an das Ende der vorherigen Zeile an
+						var lastComponent = varietyBefore.components.Count == 0 ? null : varietyBefore.components[^1];
+						varietyBefore.components.AddRange(Line.components);
+
+						//Setze den Cursor an die Position, die mal das Ende der vorherigen Zeile war
+						SpecialCursorPosition? specialCursorPosition = lastComponent is not null ? SpecialCursorPosition.Behind(lastComponent) : null;
+
+						//Prüfe, ob die Komponenten zusammengefügt werden können
+						if (lastComponent is not null && Line.components.Count > 0)
 						{
-							//Entferne die zusammengefügte Komponente
-							varietyBefore.components.Remove(Line.components[0]);
+							var mergeResult = lastComponent.TryMerge(Line.components[0], ContentOffset.FarEnd, formatter);
+							if (mergeResult is not null)
+							{
+								//Entferne die zusammengefügte Komponente
+								varietyBefore.components.Remove(Line.components[0]);
 
-							//Setze den Cursor zwischen die neu zusammengefügten Komponenten
-							specialCursorPosition = SpecialCursorPosition.FromStart(lastComponent, mergeResult.Value.LengthBefore, SpecialCursorVirtualPositionType.KeepRight);
+								//Setze den Cursor zwischen die neu zusammengefügten Komponenten
+								specialCursorPosition = SpecialCursorPosition.FromStart(lastComponent, mergeResult.Value.LengthBefore, SpecialCursorVirtualPositionType.KeepRight);
+							}
 						}
-					}
 
-					//Die vorherige Zeile muss neu gezeichnet werden
-					varietyBefore.RaiseModifiedAndInvalidateCache();
-
-					//Berechne Cursorposition
-					int cursorPosition;
-					if (specialCursorPosition is not null)
-					{
-						//Erzeuge Displayelemente, damit die Cursorposition berechnet werden kann
-						varietyBefore.CreateDisplayLines(formatter);
+						//Die vorherige Zeile muss neu gezeichnet werden
+						varietyBefore.RaiseModifiedAndInvalidateCache();
 
 						//Berechne Cursorposition
-						cursorPosition = specialCursorPosition.Value.Calculate(varietyBefore, formatter);
-					}
-					else
-					{
-						//Setze den Cursor an die Position, die mal das Ende der vorherigen Zeile war
-						cursorPosition = lastComponent?.DisplayRenderBounds.EndOffset ?? 0;
-					}
+						int cursorPosition;
+						if (specialCursorPosition is not null)
+						{
+							//Erzeuge Displayelemente, damit die Cursorposition berechnet werden kann
+							varietyBefore.CreateDisplayLines(formatter);
 
-					//Erzeuge das Ergebnis
-					return new MetalineEditResult(true, new MetalineSelectionRange(varietyBefore.ContentEditor, SimpleRange.CursorAt(cursorPosition)))
-					{
-						RemoveLine = true,
-					};
+							//Berechne Cursorposition
+							cursorPosition = specialCursorPosition.Value.Calculate(varietyBefore, formatter);
+						}
+						else
+						{
+							//Setze den Cursor an die Position, die mal das Ende der vorherigen Zeile war
+							cursorPosition = lastComponent?.DisplayRenderBounds.EndOffset ?? 0;
+						}
+
+						//Erzeuge das Ergebnis
+						return new MetalineEditResult(new MetalineSelectionRange(varietyBefore.ContentEditor, SimpleRange.CursorAt(cursorPosition)))
+						{
+							RemoveLine = true,
+						};
+					});
 				}
 
 				//Wird der Zeilenumbruch am Ende entfernt?
-				if (forward && (Line.components.Count == 0 || context.SelectionRange.End >= Line.components[^1].DisplayRenderBounds.EndOffset))
+				if (direction == DeleteDirection.Forward
+					&& (Line.components.Count == 0 || context.SelectionRange.End >= Line.components[^1].DisplayRenderBounds.EndOffset))
 				{
 					//Gibt es eine Zeile danach?
 					var lineAfter = context.GetLineAfter?.Invoke();
 					if (lineAfter is null)
-						return MetalineEditResult.Fail(NoLineAfter);
+						return DelayedMetalineEditResult.Fail(NoLineAfter);
 
 					//Ist die nächste Zeile leer?
 					if (lineAfter is SheetEmptyLine)
 					{
 						//Lösche die nächste Zeile
-						return new MetalineEditResult(true, new MetalineSelectionRange(this, SimpleRange.Zero))
+						return new DelayedMetalineEditResult(() =>
 						{
-							RemoveLineAfter = true,
-						};
+							return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAtStart))
+							{
+								RemoveLineAfter = true,
+							};
+						});
 					}
 
 					//Ist die nächste Zeile keine VarietyLine?
 					if (lineAfter is not SheetVarietyLine varietyAfter)
-						return MetalineEditResult.Fail(NotVarietyLine);
+						return DelayedMetalineEditResult.Fail(NotVarietyLine);
 
-					//Füge alle Komponenten der nächsten Zeile an das Ende dieser Zeile an
-					var lastComponent = Line.components.Count == 0 ? null : Line.components[^1];
-					Line.components.AddRange(varietyAfter.components);
-
-					//Setze den Cursor an die Position, die mal das Ende der vorherigen Zeile war
-					SpecialCursorPosition? specialCursorPosition = lastComponent is not null ? SpecialCursorPosition.Behind(lastComponent) : null;
-
-					//Prüfe, ob die Komponenten zusammengefügt werden können
-					if (lastComponent is not null && varietyAfter.components.Count > 0)
+					//Bearbeitung wird funktionieren
+					return new DelayedMetalineEditResult(() =>
 					{
-						var mergeResult = lastComponent.TryMerge(varietyAfter.components[0], ContentOffset.FarEnd, formatter);
-						if (mergeResult is not null)
+						//Füge alle Komponenten der nächsten Zeile an das Ende dieser Zeile an
+						var lastComponent = Line.components.Count == 0 ? null : Line.components[^1];
+						Line.components.AddRange(varietyAfter.components);
+
+						//Setze den Cursor an die Position, die mal das Ende der vorherigen Zeile war
+						SpecialCursorPosition? specialCursorPosition = lastComponent is not null ? SpecialCursorPosition.Behind(lastComponent) : null;
+
+						//Prüfe, ob die Komponenten zusammengefügt werden können
+						if (lastComponent is not null && varietyAfter.components.Count > 0)
 						{
-							//Entferne die zusammengefügte Komponente
-							Line.components.Remove(varietyAfter.components[0]);
+							var mergeResult = lastComponent.TryMerge(varietyAfter.components[0], ContentOffset.FarEnd, formatter);
+							if (mergeResult is not null)
+							{
+								//Entferne die zusammengefügte Komponente
+								Line.components.Remove(varietyAfter.components[0]);
 
-							//Setze den Cursor zwischen die neu zusammengefügten Komponenten
-							specialCursorPosition = SpecialCursorPosition.FromStart(lastComponent, mergeResult.Value.LengthBefore, SpecialCursorVirtualPositionType.KeepLeft);
+								//Setze den Cursor zwischen die neu zusammengefügten Komponenten
+								specialCursorPosition = SpecialCursorPosition.FromStart(lastComponent, mergeResult.Value.LengthBefore, SpecialCursorVirtualPositionType.KeepLeft);
+							}
 						}
-					}
 
-					//Diese Zeile muss neu gezeichnet werden
-					Line.RaiseModifiedAndInvalidateCache();
-
-					//Berechne Cursorposition
-					int cursorPosition;
-					if (specialCursorPosition is not null)
-					{
-						//Erzeuge Displayelemente, damit die Cursorposition berechnet werden kann
-						Line.CreateDisplayLines(formatter);
+						//Diese Zeile muss neu gezeichnet werden
+						Line.RaiseModifiedAndInvalidateCache();
 
 						//Berechne Cursorposition
-						cursorPosition = specialCursorPosition.Value.Calculate(Line, formatter);
-					}
-					else
-					{
-						//Setze den Cursor an die Position, die mal das Ende der vorherigen Zeile war
-						cursorPosition = lastComponent?.DisplayRenderBounds.EndOffset ?? 0;
-					}
+						int cursorPosition;
+						if (specialCursorPosition is not null)
+						{
+							//Erzeuge Displayelemente, damit die Cursorposition berechnet werden kann
+							Line.CreateDisplayLines(formatter);
 
-					//Setze den Cursor an die Position, die mal das Ende dieser Zeile war
-					return new MetalineEditResult(true, new MetalineSelectionRange(this, SimpleRange.CursorAt(cursorPosition)))
-					{
-						RemoveLineAfter = true,
-					};
+							//Berechne Cursorposition
+							cursorPosition = specialCursorPosition.Value.Calculate(Line, formatter);
+						}
+						else
+						{
+							//Setze den Cursor an die Position, die mal das Ende der vorherigen Zeile war
+							cursorPosition = lastComponent?.DisplayRenderBounds.EndOffset ?? 0;
+						}
+
+						//Setze den Cursor an die Position, die mal das Ende dieser Zeile war
+						return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAt(cursorPosition)))
+						{
+							RemoveLineAfter = true,
+						};
+					});
 				}
 
 				//Prüfe Cursorposition relativ zu den umliegenden Komponenten
@@ -376,7 +405,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				}
 
 				//Lösche das Zeichen vor oder hinter dem Cursor
-				if (forward)
+				if (direction == DeleteDirection.Forward)
 				{
 					//Steht der Cursor am Ende einer Komponente?
 					if (endComponent is not null && nextComponent is not null)
@@ -424,17 +453,18 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				}
 			}
 
-			return DeleteAndInsertContent(context, formatter, null, !forward);
+			//Bearbeitung wird funktionieren
+			return new DelayedMetalineEditResult(() => DeleteAndInsertContent(context, formatter, null, direction));
 		}
 
-		public MetalineEditResult InsertContent(SheetDisplayLineEditingContext context, string content, ISheetEditorFormatter? formatter)
+		public DelayedMetalineEditResult TryInsertContent(SheetDisplayLineEditingContext context, string content, ISheetEditorFormatter? formatter)
 		{
 			//Wird eine neue Zeile eingefügt?
 			if (content == "\n")
 			{
 				//Dabei Inhalt überschreiben ist nicht erlaubt
 				if (context.SelectionRange.Length > 0)
-					return MetalineEditResult.Fail(CannotDeleteWithLinebreak);
+					return DelayedMetalineEditResult.Fail(CannotDeleteWithLinebreak);
 
 				//Am Anfang?
 				if (context.SelectionRange.Start == 0 && context.SelectionRange.End == 0)
@@ -443,76 +473,85 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 					var newEmptyLine = new SheetEmptyLine();
 
 					//Füge die neue Zeile davor ein
-					return new MetalineEditResult(true, new MetalineSelectionRange(this, SimpleRange.Zero))
+					return new DelayedMetalineEditResult(() =>
 					{
-						InsertLinesBefore = [newEmptyLine]
-					};
+						return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAtStart))
+						{
+							InsertLinesBefore = [newEmptyLine]
+						};
+					});
 				}
 
-				//Finde den Punkt, an dem die Zeile getrennt werden soll
-				var index = 0;
-				var newLine = new SheetVarietyLine();
-				foreach (var component in Line.components)
+				//Bearbeitung wird funktionieren
+				return new DelayedMetalineEditResult(() =>
 				{
-					//Liegt die Komponente komplett vor dem Bereich?
-					if (component.DisplayRenderBounds.EndOffset <= context.SelectionRange.Start)
+					//Finde den Punkt, an dem die Zeile getrennt werden soll
+					var index = 0;
+					var newLine = new SheetVarietyLine();
+					foreach (var component in Line.components)
 					{
-						index++;
-						continue;
+						//Liegt die Komponente komplett vor dem Bereich?
+						if (component.DisplayRenderBounds.EndOffset <= context.SelectionRange.Start)
+						{
+							index++;
+							continue;
+						}
+
+						//Liegt der Bereich in der Komponente?
+						if (component.DisplayRenderBounds.StartOffset < context.SelectionRange.Start)
+						{
+							//Teile die Komponente
+							var splitOffset = component.DisplayRenderBounds.GetContentOffset(context.SelectionRange.Start);
+							var end = component.SplitEnd(splitOffset.ContentOffset, formatter);
+
+							//Füge das Ende in die neue Zeile ein
+							newLine.components.Add(end);
+							index++;
+							continue;
+						}
+
+						//Füge die Komponente in die neue Zeile ein
+						newLine.components.Add(component);
 					}
 
-					//Liegt der Bereich in der Komponente?
-					if (component.DisplayRenderBounds.StartOffset < context.SelectionRange.Start)
+					//Ist die neue Zeile leer?
+					if (newLine.components.Count == 0)
 					{
-						//Teile die Komponente
-						var splitOffset = component.DisplayRenderBounds.GetContentOffset(context.SelectionRange.Start);
-						var end = component.SplitEnd(splitOffset.ContentOffset, formatter);
+						//Erzeuge eine neue leere Zeile
+						var newEmptyLine = new SheetEmptyLine();
 
-						//Füge das Ende in die neue Zeile ein
-						newLine.components.Add(end);
-						index++;
-						continue;
+						//Füge die neue Zeile danach ein
+						return new MetalineEditResult(new MetalineSelectionRange(newEmptyLine, SimpleRange.CursorAtStart))
+						{
+							InsertLinesAfter = [newEmptyLine]
+						};
 					}
 
-					//Füge die Komponente in die neue Zeile ein
-					newLine.components.Add(component);
-				}
+					//Entferne alle verschobenen Komponenten
+					Line.components.RemoveRange(index, Line.components.Count - index);
 
-				//Ist die neue Zeile leer?
-				if (newLine.components.Count == 0)
-				{
-					//Erzeuge eine neue leere Zeile
-					var newEmptyLine = new SheetEmptyLine();
+					//Zeichne diese Zeile neu
+					Line.RaiseModifiedAndInvalidateCache();
 
 					//Füge die neue Zeile danach ein
-					return new MetalineEditResult(true, new MetalineSelectionRange(newEmptyLine, SimpleRange.Zero))
+					return new MetalineEditResult(new MetalineSelectionRange(newLine.ContentEditor, SimpleRange.CursorAtStart))
 					{
-						InsertLinesAfter = [newEmptyLine]
+						InsertLinesAfter = [newLine]
 					};
-				}
-
-				//Entferne alle verschobenen Komponenten
-				Line.components.RemoveRange(index, Line.components.Count - index);
-
-				//Zeichne diese Zeile neu
-				Line.RaiseModifiedAndInvalidateCache();
-
-				//Füge die neue Zeile danach ein
-				return new MetalineEditResult(true, new MetalineSelectionRange(newLine.ContentEditor, SimpleRange.Zero))
-				{
-					InsertLinesAfter = [newLine]
-				};
+				});
 			}
 			else if (content.Contains('\n'))
 			{
 				//Zeilenumbrüche müssen einzeln eingefügt werden
-				return MetalineEditResult.Fail(CannotInsertMultipleLines);
+				return DelayedMetalineEditResult.Fail(CannotInsertMultipleLines);
 			}
 
-			return DeleteAndInsertContent(context, formatter, content, false);
+			//Bearbeitung wird funktionieren
+			return new DelayedMetalineEditResult(() => DeleteAndInsertContent(context, formatter, content, default));
 		}
 
-		private MetalineEditResult DeleteAndInsertContent(SheetDisplayLineEditingContext context, ISheetEditorFormatter? formatter, string? content, bool deleteBackward)
+		private MetalineEditResult DeleteAndInsertContent(SheetDisplayLineEditingContext context,
+			ISheetEditorFormatter? formatter, string? content, DeleteDirection direction)
 		{
 			//Finde alle Komponente im Bereich
 			Component? leftEdge = null;
@@ -749,7 +788,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				{
 					//Setze den Cursor auf diese Position
 					specialCursorPosition = SpecialCursorPosition.FromStart(leftEdge, leftEdgeOverlapOffset.ContentOffset,
-						deleteBackward ? SpecialCursorVirtualPositionType.KeepRight : SpecialCursorVirtualPositionType.KeepLeft);
+						direction == DeleteDirection.Backward ? SpecialCursorVirtualPositionType.KeepRight : SpecialCursorVirtualPositionType.KeepLeft);
 				}
 			}
 
@@ -863,9 +902,11 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				{
 					//Setze den Cursor an das Ende des Bereichs
 					if (rightEdge is not null)
-						specialCursorPosition = SpecialCursorPosition.Before(rightEdge, deleteBackward ? SpecialCursorVirtualPositionType.KeepRight : SpecialCursorVirtualPositionType.KeepLeft);
+						specialCursorPosition = SpecialCursorPosition.Before(rightEdge,
+							direction == DeleteDirection.Backward ? SpecialCursorVirtualPositionType.KeepRight : SpecialCursorVirtualPositionType.KeepLeft);
 					else if (leftEdge is not null)
-						specialCursorPosition = SpecialCursorPosition.Behind(leftEdge, deleteBackward ? SpecialCursorVirtualPositionType.KeepRight : SpecialCursorVirtualPositionType.KeepLeft);
+						specialCursorPosition = SpecialCursorPosition.Behind(leftEdge,
+							direction == DeleteDirection.Backward ? SpecialCursorVirtualPositionType.KeepRight : SpecialCursorVirtualPositionType.KeepLeft);
 				}
 
 				//Der Rand wurde getrimmt
@@ -945,7 +986,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			{
 				//Ersetze die Zeile durch eine Leerzeile
 				var newLine = new SheetEmptyLine();
-				return new MetalineEditResult(true, new(newLine, SimpleRange.CursorAt(0)))
+				return new MetalineEditResult(new(newLine, SimpleRange.CursorAt(0)))
 				{
 					RemoveLine = true,
 					InsertLinesBefore = [newLine]
@@ -963,7 +1004,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			}
 
 			//Setze Cursorposition
-			return this.CreateSuccessEditResult(SimpleRange.CursorAt(cursorPosition));
+			return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAt(cursorPosition)));
 		}
 
 		private readonly record struct SpecialCursorPosition(SpecialCursorPositionType Type, Component Component,
@@ -1021,6 +1062,29 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 			return result;
 		}
+
+		public ReasonBase? SupportsEdit(SheetDisplayMultiLineEditingContext context)
+		{
+			//Bin ich Start- oder Endzeile?
+			if (context.StartLine == this)
+			{
+				//Die Endzeile muss vom gleichen Typ sein
+				if (context.EndLine is ContentEditing)
+					return null;
+				else
+					return CannotEditDifferentLineTypes;
+			}
+			else if (context.EndLine == this)
+			{
+				//Die Startzeile muss vom gleichen Typ sein
+				if (context.StartLine is ContentEditing)
+					return null;
+				else
+					return CannotEditDifferentLineTypes;
+			}
+
+			return null;
+		}
 	}
 
 	private class AttachmentEditing : ISheetDisplayLineEditing
@@ -1035,12 +1099,12 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			this.Line = owner;
 		}
 
-		public MetalineEditResult DeleteContent(SheetDisplayLineEditingContext context, bool forward = false, ISheetEditorFormatter? formatter = null)
+		public DelayedMetalineEditResult TryDeleteContent(SheetDisplayLineEditingContext context, DeleteDirection direction, ISheetEditorFormatter? formatter = null)
 		{
 			//Ist der Bereich leer?
 			if (context.SelectionRange.Length == 0)
 			{
-				if (forward)
+				if (direction == DeleteDirection.Forward)
 					context.SelectionRange = new SimpleRange(context.SelectionRange.Start, context.SelectionRange.Start + 1);
 				else
 					context.SelectionRange = new SimpleRange(context.SelectionRange.Start - 1, context.SelectionRange.Start);
@@ -1053,7 +1117,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			if (attachments.Count == 1)
 			{
 				//Bearbeite das Attachment
-				return EditAttachment(attachments[0].Component, attachments[0].Attachment, context.SelectionRange, null, formatter);
+				return TryEditAttachment(attachments[0].Component, attachments[0].Attachment, context.SelectionRange, null, formatter);
 			}
 
 			//Liegen mehrere Attachments im Bereich?
@@ -1061,22 +1125,26 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			{
 				//Liegen sie nicht alle komplett im Bereich?
 				if (!attachments.All(a => a.Attachment.RenderBounds.StartOffset >= context.SelectionRange.Start && a.Attachment.RenderBounds.EndOffset <= context.SelectionRange.End))
-					return MetalineEditResult.Fail(CannotPartiallyEditAttachments);
+					return DelayedMetalineEditResult.Fail(CannotPartiallyEditAttachments);
 
-				//Lösche die Attachments
-				foreach (var (component, attachment) in attachments)
-					component.RemoveAttachment(attachment);
+				//Bearbeitung wird funktionieren
+				return new DelayedMetalineEditResult(() =>
+				{
+					//Lösche die Attachments
+					foreach (var (component, attachment) in attachments)
+						component.RemoveAttachment(attachment);
 
-				//Modified-Event
-				Line.RaiseModifiedAndInvalidateCache();
-				return this.CreateSuccessEditResult(SimpleRange.CursorAt(context.SelectionRange.Start));
+					//Modified-Event
+					Line.RaiseModifiedAndInvalidateCache();
+					return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAt(context.SelectionRange.Start)));
+				});
 			}
 
 			//Finde das nächste Attachment und verschiebe es nach links
-			return FindAndMoveNextAttachment(context.SelectionRange.Start, new(-context.SelectionRange.Length), formatter);
+			return TryFindAndMoveNextAttachment(context.SelectionRange.Start, new(-context.SelectionRange.Length), formatter);
 		}
 
-		public MetalineEditResult InsertContent(SheetDisplayLineEditingContext context, string content, ISheetEditorFormatter? formatter)
+		public DelayedMetalineEditResult TryInsertContent(SheetDisplayLineEditingContext context, string content, ISheetEditorFormatter? formatter)
 		{
 			//Finde alle Attachments im Bereich
 			var attachments = FindAttachmentsInRange(context.SelectionRange, formatter).ToList();
@@ -1085,14 +1153,14 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			if (attachments.Count == 1)
 			{
 				//Bearbeite das Attachment
-				return EditAttachment(attachments[0].Component, attachments[0].Attachment, context.SelectionRange, content, formatter);
+				return TryEditAttachment(attachments[0].Component, attachments[0].Attachment, context.SelectionRange, content, formatter);
 			}
 
 			//Liegt mehr als ein Attachment im Bereich?
 			if (attachments.Count > 1)
 			{
 				//Bearbeiten von mehreren Attachments nicht möglich
-				return MetalineEditResult.Fail(CannotInsertMultipleAttachments);
+				return DelayedMetalineEditResult.Fail(CannotInsertMultipleAttachments);
 			}
 
 			//Werden Whitespaces eingefügt?
@@ -1100,62 +1168,74 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			{
 				//Finde das nächste Attachment und verschiebe es nach rechts
 				var moveOffset = new ContentOffset(content.Length - context.SelectionRange.Length);
-				return FindAndMoveNextAttachment(context.SelectionRange.Start, moveOffset, formatter);
+				return TryFindAndMoveNextAttachment(context.SelectionRange.Start, moveOffset, formatter);
 			}
 
 			//Ist der Bereich eine Selektion?
 			if (context.SelectionRange.Length > 0)
-				return MetalineEditResult.Fail(CannotInsertAttachmentsIntoRange);
+				return DelayedMetalineEditResult.Fail(CannotInsertAttachmentsIntoRange);
 
 			//Finde die Komponente, in der der Inhalt eingefügt werden soll
 			var component = Line.components.OfType<VarietyComponent>()
 				.FirstOrDefault(c => c.DisplayRenderBounds.StartOffset <= context.SelectionRange.Start && c.DisplayRenderBounds.EndOffset > context.SelectionRange.End);
 			if (component is null)
-				return MetalineEditResult.Fail(NoComponentFoundHere);
+				return DelayedMetalineEditResult.Fail(NoComponentFoundHere);
 
 			//Liegt ein Attachment direkt vor oder hinter der Position?
 			var before = component.Attachments.OfType<VarietyComponent.VarietyAttachment>().LastOrDefault(a => a.RenderBounds.EndOffset == context.SelectionRange.Start - 1);
 			var after = component.Attachments.OfType<VarietyComponent.VarietyAttachment>().FirstOrDefault(a => a.RenderBounds.StartOffset == context.SelectionRange.End);
 			if (before is not null)
 			{
-				//Füge den Inhalt ans Ende des Attachments an
-				before.InsertContent(content, ContentOffset.FarEnd, formatter);
+				//Bearbeitung wird funktionieren
+				return new DelayedMetalineEditResult(() =>
+				{
+					//Füge den Inhalt ans Ende des Attachments an
+					before.InsertContent(content, ContentOffset.FarEnd, formatter);
 
-				//Erzeuge die Displayelemente der Zeile neu
-				Line.RaiseModifiedAndInvalidateCache();
-				Line.CreateDisplayLines(formatter);
+					//Erzeuge die Displayelemente der Zeile neu
+					Line.RaiseModifiedAndInvalidateCache();
+					Line.CreateDisplayLines(formatter);
 
-				//Setze den Cursor hinter das Attachment
-				var cursorPosition = before.RenderBounds.EndOffset;
-				return this.CreateSuccessEditResult(SimpleRange.CursorAt(cursorPosition));
+					//Setze den Cursor hinter das Attachment
+					var cursorPosition = before.RenderBounds.EndOffset;
+					return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAt(cursorPosition)));
+				});
 			}
 			else if (after is not null)
 			{
-				//Füge den Inhalt an den Anfang des Attachments an
-				after.InsertContent(content, ContentOffset.Zero, formatter);
+				//Bearbeitung wird funktionieren
+				return new DelayedMetalineEditResult(() =>
+				{
+					//Füge den Inhalt an den Anfang des Attachments an
+					after.InsertContent(content, ContentOffset.Zero, formatter);
 
-				//Erzeuge die Displayelemente der Zeile neu
-				Line.RaiseModifiedAndInvalidateCache();
-				Line.CreateDisplayLines(formatter);
+					//Erzeuge die Displayelemente der Zeile neu
+					Line.RaiseModifiedAndInvalidateCache();
+					Line.CreateDisplayLines(formatter);
 
-				//Setze den Cursor hinter den eingefügten Text
-				var cursorPosition = after.RenderBounds.StartOffset + content.Length;
-				return this.CreateSuccessEditResult(SimpleRange.CursorAt(cursorPosition));
+					//Setze den Cursor hinter den eingefügten Text
+					var cursorPosition = after.RenderBounds.StartOffset + content.Length;
+					return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAt(cursorPosition)));
+				});
 			}
 			else
 			{
-				//Erzeuge ein neues Attachment
-				var componentOffset = component.DisplayRenderBounds.GetContentOffset(context.SelectionRange.Start);
-				var newAttachment = VarietyComponent.VarietyAttachment.FromString(componentOffset.ContentOffset, content, formatter);
-				component.AddAttachment(newAttachment);
+				//Bearbeitung wird funktionieren
+				return new DelayedMetalineEditResult(() =>
+				{
+					//Erzeuge ein neues Attachment
+					var componentOffset = component.DisplayRenderBounds.GetContentOffset(context.SelectionRange.Start);
+					var newAttachment = VarietyComponent.VarietyAttachment.FromString(componentOffset.ContentOffset, content, formatter);
+					component.AddAttachment(newAttachment);
 
-				//Erzeuge die Displayelemente der Zeile neu
-				Line.RaiseModifiedAndInvalidateCache();
-				Line.CreateDisplayLines(formatter);
+					//Erzeuge die Displayelemente der Zeile neu
+					Line.RaiseModifiedAndInvalidateCache();
+					Line.CreateDisplayLines(formatter);
 
-				//Setze den Cursor hinter das eingefügte Attachment
-				var cursorPosition = newAttachment.RenderBounds.EndOffset;
-				return this.CreateSuccessEditResult(SimpleRange.CursorAt(cursorPosition));
+					//Setze den Cursor hinter das eingefügte Attachment
+					var cursorPosition = newAttachment.RenderBounds.EndOffset;
+					return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAt(cursorPosition)));
+				});
 			}
 		}
 
@@ -1196,49 +1276,59 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			}
 		}
 
-		private MetalineEditResult EditAttachment(VarietyComponent component, VarietyComponent.VarietyAttachment attachment, SimpleRange selectionRange, string? content, ISheetEditorFormatter? formatter)
+		private DelayedMetalineEditResult TryEditAttachment(VarietyComponent component, VarietyComponent.VarietyAttachment attachment,
+			SimpleRange selectionRange, string? content, ISheetEditorFormatter? formatter)
 		{
 			//Kürze das Attachment
 			var attachmentOffset = attachment.RenderBounds.GetContentOffset(selectionRange.Start);
 			var selectionContentLength = attachment.RenderBounds.GetContentOffset(selectionRange.End) - attachmentOffset;
 			var attachmentDisplayLength = attachment.RenderBounds.Length;
 			var removedLength = 0;
+			Action? doRemove = null;
 			if (selectionRange.Length > 0)
 			{
-				if (attachment.TryRemoveContent(attachmentOffset, selectionContentLength, formatter))
-					removedLength = selectionRange.Length;
+				doRemove = attachment.TryRemoveContent(attachmentOffset, selectionContentLength, formatter);
+				if (doRemove is null)
+					return DelayedMetalineEditResult.Fail(RemovingFromAttachmentFailed);
 				else if (content is null)
-					return MetalineEditResult.Fail(RemovingFromAttachmentFailed);
+					removedLength = selectionRange.Length;
 			}
-			
-			//Füge den Inhalt ein
-			if (content is not null)
-				attachment.InsertContent(content, attachmentOffset, formatter);
 
-			//Entferne das Attachment, falls es jetzt leer ist
-			if (attachment.IsEmpty)
-				component.RemoveAttachment(attachment);
+			//Bearbeitung wird funktionieren
+			return new DelayedMetalineEditResult(() =>
+			{
+				//Lösche ggf. den Inhalt
+				doRemove?.Invoke();
 
-			//Erzeuge die Displayelemente der Zeile neu
-			Line.RaiseModifiedAndInvalidateCache();
-			Line.CreateDisplayLines(formatter);
+				//Füge den Inhalt ein
+				if (content is not null)
+					attachment.InsertContent(content, attachmentOffset, formatter);
 
-			//TODO: Cursorposition beim Bearbeiten von Attachments optimieren
-			//Berechne die Cursorposition
-			var cursorPosition = selectionRange.Start - attachmentDisplayLength + removedLength;
-			if (!attachment.IsEmpty)
-				cursorPosition += attachment.RenderBounds.Length;
+				//Entferne das Attachment, falls es jetzt leer ist
+				if (attachment.IsEmpty)
+					component.RemoveAttachment(attachment);
 
-			//Fertig
-			return this.CreateSuccessEditResult(SimpleRange.CursorAt(cursorPosition));
+				//Erzeuge die Displayelemente der Zeile neu
+				Line.RaiseModifiedAndInvalidateCache();
+				Line.CreateDisplayLines(formatter);
+
+				//TODO: Cursorposition beim Bearbeiten von Attachments optimieren
+				//Berechne die Cursorposition
+				var cursorPosition = selectionRange.Start - attachmentDisplayLength + removedLength;
+				if (!attachment.IsEmpty)
+					cursorPosition += attachment.RenderBounds.Length;
+
+				//Fertig
+				return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAt(cursorPosition)));
+			});
 		}
 
-		private MetalineEditResult FindAndMoveNextAttachment(int startOffset, ContentOffset moveOffset, ISheetEditorFormatter? formatter)
+		private DelayedMetalineEditResult TryFindAndMoveNextAttachment(int startOffset, ContentOffset moveOffset, ISheetEditorFormatter? formatter)
 		{
 			//Finde das nächste Attachment
 			var nextAttachment = FindAttachmentsInRange(new SimpleRange(startOffset, int.MaxValue), formatter).FirstOrDefault();
 			if (nextAttachment.Attachment is null)
-				return MetalineEditResult.Fail(NoAttachmentAfter);
+				return DelayedMetalineEditResult.Fail(NoAttachmentAfter);
 
 			//Berechne den neuen Offset
 			var newOffset = nextAttachment.Attachment.Offset + moveOffset;
@@ -1251,283 +1341,45 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 					newOffset = contentLength - new ContentOffset(1);
 			}
 
-			//Hat sich der Offset nicht verändert?
+			//Wird at sich der Offset nicht verändern?
 			if (newOffset == nextAttachment.Attachment.Offset)
-				return MetalineEditResult.Fail(CouldNotMoveAttachment);
+				return DelayedMetalineEditResult.Fail(CouldNotMoveAttachment);
 
-			//Verschiebe das Attachment
-			nextAttachment.Attachment.SetOffset(newOffset);
+			//Bearbeitung wird funktionieren
+			return new DelayedMetalineEditResult(() =>
+			{
+				//Verschiebe das Attachment
+				nextAttachment.Attachment.SetOffset(newOffset);
 
-			//Zeile bearbeitet
-			Line.RaiseModifiedAndInvalidateCache();
-			return this.CreateSuccessEditResult(SimpleRange.CursorAt(moveOffset < ContentOffset.Zero ? startOffset : startOffset + moveOffset.Value));
+				//Zeile bearbeitet
+				Line.RaiseModifiedAndInvalidateCache();
+				var cursorPosition = moveOffset < ContentOffset.Zero ? startOffset : startOffset + moveOffset.Value;
+				return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAt(cursorPosition)));
+			});
 		}
 
-		//private LineEditResult DeleteAndInsertContent(SimpleRange selectionRange, ISheetFormatter? formatter, string? content)
-		//{
-		//	//Finde alle Attachments im Bereich
-		//	(VarietyComponent Component, VarietyAttachment Attachment)? before = null;
-		//	(VarietyComponent Component, VarietyAttachment Attachment)? after = null;
-		//	List<(VarietyComponent Component, VarietyAttachment Attachment)> fullyInside = new();
-		//	VarietyComponent? selectionStartComponent = null;
-		//	var rangeStartsOnAttachment = false;
-		//	var index = -1;
-		//	foreach (var component in owner.components)
-		//	{
-		//		//Liegt die Komponente komplett vor dem Bereich?
-		//		if (component.TotalRenderBounds.EndOffset < selectionRange.Start)
-		//			continue;
+		public ReasonBase? SupportsEdit(SheetDisplayMultiLineEditingContext context)
+		{
+			//Bin ich Start- oder Endzeile?
+			if (context.StartLine == this)
+			{
+				//Die Endzeile muss vom gleichen Typ sein
+				if (context.EndLine is AttachmentEditing)
+					return CannotMultiLineEditAttachments;
+				else
+					return CannotEditDifferentLineTypes;
+			}
+			else if (context.EndLine == this)
+			{
+				//Die Startzeile muss vom gleichen Typ sein
+				if (context.StartLine is AttachmentEditing)
+					return CannotMultiLineEditAttachments;
+				else
+					return CannotEditDifferentLineTypes;
+			}
 
-		//		//Liegt die Komponente komplett hinter dem Bereich?
-		//		if (component.TotalRenderBounds.StartOffset > selectionRange.End)
-		//			break;
-
-		//		//Ist die Komponente keine VarietyComponent?
-		//		if (component is not VarietyComponent varietyComponent)
-		//			return LineEditResult.Fail;
-
-		//		//Liegt der Beginn des Bereichs in dieser Komponente?
-		//		if (selectionStartComponent is null)
-		//			selectionStartComponent = varietyComponent;
-
-		//		//Gehe durch alle Attachments
-		//		foreach (var attachment in varietyComponent.Attachments)
-		//		{
-		//			//Liegt das Attachment komplett vor dem Bereich?
-		//			if (attachment.RenderBounds.EndOffset < selectionRange.Start)
-		//				continue;
-
-		//			//Liegt das Attachment komplett hinter dem Bereich?
-		//			if (attachment.RenderBounds.StartOffset > selectionRange.End)
-		//				break;
-
-		//			//das Attachment kein VarietyComponent?
-		//			if (attachment is not VarietyAttachment varietyAttachment)
-		//				return LineEditResult.Fail;
-
-		//			//Beginnt das Attachment vor dem Bereich?
-		//			if (before is null && varietyAttachment.RenderBounds.StartOffset < selectionRange.Start)
-		//			{
-		//				//Die Komponente ist der linke Rand
-		//				before = (varietyComponent, varietyAttachment);
-		//			}
-
-		//			//Beginnt das Attachment mit dem Bereich?
-		//			if (varietyAttachment.RenderBounds.StartOffset == selectionRange.Start)
-		//				rangeStartsOnAttachment = true;
-
-		//			//Endet das Attachment nach dem Bereich?
-		//			if (after is null && varietyAttachment.RenderBounds.EndOffset > selectionRange.End)
-		//			{
-		//				//Das Attachment ist der rechte Rand
-		//				after = (varietyComponent, varietyAttachment);
-		//			}
-
-		//			//Liegt das Attachment komplett im Bereich?
-		//			if (varietyAttachment != before?.Attachment && varietyAttachment != after?.Attachment
-		//				&& varietyAttachment.RenderBounds.StartOffset >= selectionRange.Start && varietyAttachment.RenderBounds.EndOffset <= selectionRange.End)
-		//			{
-		//				//Das Attachment liegt im Bereich
-		//				fullyInside.Add((varietyComponent, varietyAttachment));
-		//			}
-		//		}
-		//	}
-
-		//	//Prüfe auf Änderungen
-		//	var removedAnything = fullyInside.Count != 0;
-		//	var contentAdded = false;
-
-		//	//Trenne den Textinhalt an Whitespaces
-		//	var contentSplit = content is not null && string.IsNullOrWhiteSpace(content) ? [content]
-		//		: content?.Split(new char[0], StringSplitOptions.RemoveEmptyEntries);
-
-		//	//Sonderfall: mehrere Attachments auf einmal
-		//	if (contentSplit?.Length > 1)
-		//	{
-		//		//Die Anzahl muss übereinstimmen und alle Attachments müssen im Bereich liegen
-		//		if (before is not null || after is not null || fullyInside.Count != contentSplit.Length)
-		//			return LineEditResult.Fail;
-
-		//		//Gehe durch die Attachments und ersetze sie
-		//		foreach ((var attachment, var newContent) in fullyInside.Zip(contentSplit))
-		//		{
-		//			//Ersetze das Attachment
-		//			attachment.Attachment.ReplaceContent(newContent, formatter);
-		//		}
-
-		//		//Fertig
-		//		return new LineEditResult(true, new SimpleRange(selectionRange.Start, selectionRange.Start));
-		//	}
-
-		//	//Content muss aus einem Teil bestehen
-		//	var contentText = contentSplit is null ? null : contentSplit[0];
-
-		//	//Hinzufügen nur möglich, wenn nicht mehr als ein Attachment bearbeitet wird
-		//	if (contentText is not null)
-		//	{
-		//		var totalEditCount = fullyInside.Count;
-		//		if (before is not null)
-		//			totalEditCount++;
-		//		if (after is not null && after.Value.Attachment != before?.Attachment)
-		//			totalEditCount++;
-		//		if (totalEditCount > 1)
-		//			return LineEditResult.Fail;
-		//	}
-
-		//	//Gibt es eine Überlappung am linken Rand?
-		//	if (before is not null)
-		//	{
-		//		//Kürze das Attachment
-		//		var tailLength = selectionRange.Start - before.Value.Attachment.RenderBounds.StartOffset;
-		//		if (before.Value.Attachment.TryRemoveContent(tailLength, selectionRange.Length, formatter))
-		//			removedAnything = true;
-
-		//		//Gibt es einen Inhalt?
-		//		if (contentText is not null)
-		//		{
-		//			//Versuche den Inhalt hinzuzufügen
-		//			if (TryAddContent(selectionRange, before.Value.Component, before.Value.Attachment, contentText, formatter))
-		//			{
-		//				contentAdded = true;
-		//				contentText = null;
-		//			}
-		//		}
-		//	}
-
-		//	//Gibt es einen Inhalt und beginnt der Bereich mit einem Attachment?
-		//	if (contentText is not null && rangeStartsOnAttachment)
-		//	{
-		//		//Füge den Inhalt am Anfang des Attachments ein
-		//		var firstFullyInside = fullyInside.FirstOrDefault();
-		//		if (firstFullyInside.Component is not null)
-		//		{
-		//			//Versuche den Inhalt hinzuzufügen
-		//			if (TryAddContent(selectionRange, firstFullyInside.Component, firstFullyInside.Attachment, contentText, formatter))
-		//			{
-		//				contentAdded = true;
-		//				contentText = null;
-
-		//				//Das Attachment muss nicht mehr bearbeitet werden
-		//				fullyInside.RemoveAt(0);
-		//			}
-		//		}
-		//	}
-
-		//	//Gibt es eine Überlappung am rechten Rand?
-		//	if (after is not null && after.Value.Attachment != before?.Attachment)
-		//	{
-		//		//Kürze das Attachment
-		//		var overlap = selectionRange.End - after.Value.Attachment.RenderBounds.StartOffset;
-		//		if (after.Value.Attachment.TryRemoveContent(0, overlap, formatter))
-		//			removedAnything = true;
-
-		//		//Gibt es einen Inhalt?
-		//		if (contentText is not null)
-		//		{
-		//			//Versuche den Inhalt hinzuzufügen
-		//			if (TryAddContent(selectionRange, after.Value.Component, after.Value.Attachment, contentText, formatter))
-		//			{
-		//				contentAdded = true;
-		//				contentText = null;
-		//			}
-		//		}
-		//	}
-
-		//	//Entferne alle Attachments, die komplett im Bereich liegen
-		//	foreach (var (component, attachment) in fullyInside)
-		//		component.RemoveAttachment(attachment);
-
-		//	//Wurde der Content immer noch nicht hinzugefügt?
-		//	if (contentText is not null)
-		//	{
-		//		if (!string.IsNullOrWhiteSpace(contentText) && selectionStartComponent is not null)
-		//		{
-		//			//Erzeuge ein neues Attachment
-		//			var newAttachment = new VarietyAttachment(selectionRange.Start - selectionStartComponent.ContentRenderBounds.StartOffset, contentText);
-		//			selectionStartComponent.AddAttachment(newAttachment);
-		//			contentAdded = true;
-		//			contentText = null;
-		//		}
-		//	}
-
-		//	//Prüfe, ob Attachments zusammengefügt werden sollen
-		//	if (before is not null && before.Value.Attachment != after?.Attachment
-		//		&& before.Value.Component == after?.Component)
-		//	{
-		//		//Versuche die Komponenten zusammenzufügen
-		//		if (before.Value.Attachment.TryMergeContents(after.Value.Attachment, formatter))
-		//		{
-		//			//Entferne das rechte Attachment
-		//			after.Value.Component.RemoveAttachment(after.Value.Attachment);
-		//			removedAnything = true;
-		//			before = null;
-		//		}
-		//	}
-
-		//	//Prüfe, ob der linke Rand entfernt werden kann
-		//	if (before is not null && before.Value.Attachment.IsEmpty)
-		//	{
-		//		//Entferne das linke Randattachment
-		//		before.Value.Component.RemoveAttachment(before.Value.Attachment);
-		//		removedAnything = true;
-		//	}
-
-		//	//Prüfe, ob der rechte Rand entfernt werden kann
-		//	if (after is not null && after.Value.Attachment != before?.Attachment && after.Value.Attachment.IsEmpty)
-		//	{
-		//		//Entferne das rechte Randattachment
-		//		after.Value.Component.RemoveAttachment(after.Value.Attachment);
-		//		removedAnything = true;
-		//	}
-
-		//	//Nicht erfolgreich?
-		//	if (!removedAnything && !contentAdded)
-		//		return LineEditResult.Fail;
-
-		//	//Modified-Event
-		//	owner.RaiseModified(new ModifiedEventArgs(owner));
-		//	var selectionOffset = selectionRange.Start + (contentText?.Length ?? 0);
-		//	return new LineEditResult(true, new SimpleRange(selectionOffset, selectionOffset));
-		//}
-
-		//private static bool TryAddContent(SimpleRange selectionRange, VarietyComponent component, VarietyAttachment attachment, string contentText, ISheetFormatter? formatter)
-		//{
-		//	//Whitespace?
-		//	if (string.IsNullOrWhiteSpace(contentText))
-		//	{
-		//		//Direkt am Anfang des Attachments?
-		//		if (selectionRange.Start == attachment.RenderBounds.StartOffset)
-		//		{
-		//			//Verschiebe das Attachment nach rechts
-		//			attachment.SetOffset(attachment.Offset + 1);
-
-		//			//Content wurde hinzugefügt
-		//			return true;
-		//		}
-
-		//		//Trenne das Attachment und füge ggf. das neue Attachment hinzu
-		//		var newAttachment = attachment.SplitEnd(selectionRange.Start - attachment.RenderBounds.StartOffset, formatter);
-		//		if (newAttachment is not null)
-		//		{
-		//			//Verschiebe das Attachment um eins nach hinten
-		//			newAttachment.SetOffset(newAttachment.Offset + 1);
-		//			component.AddAttachment(newAttachment);
-
-		//			//Content wurde hinzugefügt
-		//			return true;
-		//		}
-		//	}
-		//	else
-		//	{
-		//		//Füge den Inhalt hinzu
-		//		attachment.InsertContent(contentText, selectionRange.Start - attachment.RenderBounds.StartOffset, formatter);
-
-		//		//Content wurde hinzugefügt
-		//		return true;
-		//	}
-
-		//	return false;
-		//}
+			return null;
+		}
 	}
 	#endregion
 
@@ -2283,8 +2135,11 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			//Ist der Inhalt der Anfang eines Titels?
 			var text = textElement.Text;
 			var sliceIndex = 0;
-			if (!isCurrentlyWritingTitle && text.StartsWith('['))
+			if (!isCurrentlyWritingTitle)
 			{
+				if (!text.StartsWith('['))
+					yield break; //nur Text
+				
 				//Trenne öffnende Klammer
 				yield return new SheetDisplayLineSegmentTitleBracket("[")
 				{
@@ -2610,16 +2465,15 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				=> RenderBounds = bounds;
 
 			#region Editing
-			internal bool TryRemoveContent(ContentOffset offset, ContentOffset length, ISheetEditorFormatter? formatter)
+			internal Action? TryRemoveContent(ContentOffset offset, ContentOffset length, ISheetEditorFormatter? formatter)
 			{
 				//Entferne den Inhalt
 				var newContent = Content.RemoveContent(offset, length, SpecialContentType.Chord, formatter);
 				if (newContent is null)
-					return false;
+					return null;
 
 				//Setze den neuen Inhalt
-				Content = newContent.Value;
-				return true;
+				return () => Content = newContent.Value;
 			}
 
 			internal void InsertContent(string content, ContentOffset offset, ISheetEditorFormatter? formatter)

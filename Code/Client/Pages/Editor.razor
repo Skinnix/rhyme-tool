@@ -4,6 +4,7 @@
 @using Skinnix.RhymeTool.Client.Components.Configuration
 @using Skinnix.RhymeTool.Client.Components.Rendering
 @using Skinnix.RhymeTool.Client.Services
+@using Skinnix.RhymeTool.ComponentModel
 @using Skinnix.RhymeTool.Data.Notation
 @using Skinnix.RhymeTool.Data.Notation.Display
 @using Skinnix.RhymeTool.Client.Components.Editing
@@ -96,9 +97,25 @@
         documentSource = await documentService.TryGetDocument(Doc);
         if (documentSource is not null)
         {
+            if (document is not null)
+            {
+                document.Lines.Modified -= OnDocumentLinesModified;
+                document.TitlesChanged -= OnDocumentTitlesChanged;
+            }
             document = await documentSource.LoadAsync();
+            if (document is not null)
+            {
+                document.Lines.Modified += OnDocumentLinesModified;
+                document.TitlesChanged += OnDocumentTitlesChanged;
+            }
         }
     }
+
+    private void OnDocumentTitlesChanged(object? sender, EventArgs e)
+        => StateHasChanged();
+
+    private void OnDocumentLinesModified(object? sender, ModifiedEventArgs e)
+        => StateHasChanged();
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

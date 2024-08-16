@@ -24,6 +24,7 @@
 @code {
     public static readonly Reason UnknownEditType = new("Unbekannter Bearbeitungstyp");
     public static readonly Reason MultilineEditNotSupported = new("Mehrzeilige Bearbeitung wird noch nicht unterstützt");
+    public static readonly Reason LineNotFound = new("Zeile nicht gefunden");
 
     [Parameter] public SheetDocument? Document { get; set; }
     [Parameter] public ISheetEditorFormatter? Formatter { get; set; }
@@ -73,37 +74,23 @@
         }
 
         await js.InvokeVoidAsync("console.log", "rerender: " + this.GetType().Name);
+        shouldRender = false;
     }
 
     protected override bool ShouldRender()
     {
         if (!shouldRender)
             return false;
-        
-        shouldRender = false;
+
         return true;
     }
 
-    private void OnLinesModified(object? sender, ModifiedEventArgs args)
+    private new void StateHasChanged()
     {
         shouldRender = true;
-        StateHasChanged();
+        base.StateHasChanged();
     }
 
-    [JSInvokable]
-    public JsMetalineEditResult OnBeforeInput(InputEventData data)
-    {
-        var startEditor = lineEditors[data.Selection.Start.Metaline];
-        if (data.Selection.End.Metaline != data.Selection.Start.Metaline)
-            return new JsMetalineEditResult(false, null, MultilineEditNotSupported); //TODO: for now, we don't support multi-line selections
-
-        var editResult = startEditor.HandleInput(data);
-
-        var selection = editResult.NewSelection is null ? null
-            : new JsMetalineSelectionRange(editResult.NewSelection.Metaline.Guid, editResult.NewSelection.LineId, editResult.NewSelection.LineIndex, editResult.NewSelection.Range);
-        return new JsMetalineEditResult(editResult.Success, selection, editResult.FailReason);
-    }
-
-    public record JsMetalineEditResult(bool Success, JsMetalineSelectionRange? Selection, ReasonBase? FailReason);
-    public record JsMetalineSelectionRange(Guid Metaline, int? LineId, int? LineIndex, SimpleRange Range);
+    private void OnLinesModified(object? sender, ModifiedEventArgs args)
+        => StateHasChanged();
 }

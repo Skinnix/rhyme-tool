@@ -5,6 +5,7 @@
 @using Skinnix.RhymeTool.Client.Components.Rendering
 @using Skinnix.RhymeTool.Client.Services
 @using Skinnix.RhymeTool.Client.Services.Files
+@using Skinnix.RhymeTool.ComponentModel
 @using Skinnix.RhymeTool.Data.Notation
 @using Skinnix.RhymeTool.Data.Notation.Display
 @using Skinnix.RhymeTool.Client.Components.Editing
@@ -88,7 +89,7 @@
 @code {
     private static readonly bool IsDebug =
 #if DEBUG
-        true;
+    true;
 #else
         false;
 #endif

@@ -23,6 +23,7 @@ public static class StringExtensions
 			{
 				//Gib den nächsten Abschnitt zurück
 				yield return s[lastOffset..offset];
+				condition = !condition;
 				lastOffset = offset;
 			}
 		}

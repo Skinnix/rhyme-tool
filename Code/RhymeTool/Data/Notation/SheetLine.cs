@@ -10,6 +10,8 @@ public interface ISheetLine
 
 public interface ISheetTitleLine : ISheetLine
 {
+	event EventHandler? IsTitleLineChanged;
+
 	bool IsTitleLine(out string? title);
 }
 
@@ -46,63 +48,75 @@ public class SheetEmptyLine : SheetLine, ISheetDisplayLineEditing
 		}
     }
 
-	public MetalineEditResult DeleteContent(SheetDisplayLineEditingContext context, bool forward = false, ISheetEditorFormatter? formatter = null)
+	public DelayedMetalineEditResult TryDeleteContent(SheetDisplayLineEditingContext context, DeleteDirection direction, ISheetEditorFormatter? formatter = null)
 	{
-		if (forward)
+		if (direction == DeleteDirection.Forward)
 		{
 			//Gibt es eine Zeile danach?
 			var lineAfter = context.GetLineAfter?.Invoke();
 			if (lineAfter is null)
-				return MetalineEditResult.Fail(NoLineAfter);
+				return DelayedMetalineEditResult.Fail(NoLineAfter);
 
 			//Ist die Zeile auch leer?
 			if (lineAfter is SheetEmptyLine)
 			{
 				//Lösche die nächste Zeile
-				return new MetalineEditResult(true, new MetalineSelectionRange(this, SimpleRange.Zero))
+				return new DelayedMetalineEditResult(() =>
 				{
-					RemoveLineAfter = true,
-				};
+					return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAtStart))
+					{
+						RemoveLineAfter = true,
+					};
+				});
 			}
 
 			//Lösche diese Zeile
-			return new MetalineEditResult(true, new MetalineSelectionRange(lineAfter, SimpleRange.Zero, 0))
+			return new DelayedMetalineEditResult(() =>
 			{
-				RemoveLine = true,
-			};
+				return new MetalineEditResult(new MetalineSelectionRange(lineAfter, SimpleRange.CursorAtStart, 0))
+				{
+					RemoveLine = true,
+				};
+			});
 		}
 		else
 		{
 			//Gibt es eine Zeile davor?
 			var lineBefore = context.GetLineBefore?.Invoke();
 			if (lineBefore is null)
-				return MetalineEditResult.Fail(NoLineBefore);
+				return DelayedMetalineEditResult.Fail(NoLineBefore);
 
 			//Lösche diese Zeile
-			return new MetalineEditResult(true, new MetalineSelectionRange(lineBefore, SimpleRange.Zero, -1))
+			return new DelayedMetalineEditResult(() =>
 			{
-				RemoveLine = true,
-			};
+				return new MetalineEditResult(new MetalineSelectionRange(lineBefore, SimpleRange.CursorAtEnd, -1))
+				{
+					RemoveLine = true,
+				};
+			});
 		}
 	}
 
-	public MetalineEditResult InsertContent(SheetDisplayLineEditingContext context, string content, ISheetEditorFormatter? formatter = null)
+	public DelayedMetalineEditResult TryInsertContent(SheetDisplayLineEditingContext context, string content, ISheetEditorFormatter? formatter = null)
 	{
 		//Wird nur ein Zeilenumbruch eingefügt?
 		if (content == "\n")
 		{
 			//Erstelle eine neue leere Zeile
 			var newLine = new SheetEmptyLine();
-			return new MetalineEditResult(true, new MetalineSelectionRange(newLine, SimpleRange.Zero))
+			return new DelayedMetalineEditResult(() =>
 			{
-				InsertLinesAfter = [newLine]
-			};
+				return new MetalineEditResult(new MetalineSelectionRange(newLine, SimpleRange.CursorAtStart))
+				{
+					InsertLinesAfter = [newLine]
+				};
+			});
 		}
 
 		//Update den Context, damit die Auswahl immer auf Null steht
 		context = context with
 		{
-			SelectionRange = SimpleRange.Zero,
+			SelectionRange = SimpleRange.CursorAtStart,
 		};
 
 		//Ersetze die Zeile mit einer VarietyLine und füge dann den Content ein
@@ -111,13 +125,18 @@ public class SheetEmptyLine : SheetLine, ISheetDisplayLineEditing
 
 		//Nicht erfolgreich?
 		if (!varietyLineResult.Success)
-			return varietyLineResult;
+			return DelayedMetalineEditResult.Fail(varietyLineResult.FailReason);
 
 		//Ersetze diese Zeile mit der neuen Zeile
-		return varietyLineResult with
+		return new DelayedMetalineEditResult(() =>
 		{
-			RemoveLine = true,
-			InsertLinesAfter = [varietyLine, ..varietyLineResult.InsertLinesAfter]
-		};
+			return varietyLineResult with
+			{
+				RemoveLine = true,
+				InsertLinesAfter = [varietyLine, ..varietyLineResult.InsertLinesAfter]
+			};
+		});
 	}
+
+	public ReasonBase? SupportsEdit(SheetDisplayMultiLineEditingContext context) => null;
 }

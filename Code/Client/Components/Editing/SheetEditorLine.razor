@@ -181,6 +181,15 @@
         StateHasChanged();
     }
 
+    public SheetDisplayLine? TryGetLine(int lineId)
+    {
+        if (Line is null || Document is null) throw new InvalidOperationException("Editor not initialized");
+
+        //Finde die Zeile
+        var lines = Line.CreateDisplayLines(Formatter);
+        return lines.FirstOrDefault(l => l.Id == lineId);
+    }
+
     public MetalineEditResult HandleInput(InputEventData data)
     {
         if (Line is null || Document is null) throw new InvalidOperationException("Editor not initialized");
@@ -191,9 +200,7 @@
         var endLine = lines.FirstOrDefault(l => l.Id == data.Selection.End.Line);
 
         if (startLine is null || endLine is null || startLine != endLine)
-        {
-            return null; //TODO: for now, we don't support multiline editing
-        }
+            return MetalineEditResult.Fail(SheetEditor.MultilineEditNotSupported); //TODO: for now, we don't support multiline editing
 
         //selection range
         var selectionRange = new SimpleRange(data.Selection.Start.Offset, data.Selection.End.Offset);
@@ -223,10 +230,10 @@
             case "deleteByDrag":
             case "deleteContentBackward":
             case "deleteContent":
-                editResult = startLine.Editing.DeleteContent(context, false, Formatter);
+                editResult = startLine.Editing.DeleteContent(context, DeleteDirection.Backward, Formatter);
                 break;
             case "deleteContentForward":
-                editResult = startLine.Editing.DeleteContent(context, true, Formatter);
+                editResult = startLine.Editing.DeleteContent(context, DeleteDirection.Forward, Formatter);
                 break;
             default:
                 _ = js.InvokeVoidAsync("console.log", "unknown: " + data.InputType);
@@ -239,10 +246,8 @@
         if (!editResult.Success)
             return editResult;
 
-        //Füge ggf. Zeilen hinzu oder entferne sie
-        Document.Lines.InsertAndRemove(Line, editResult.RemoveLine, editResult.RemoveLineBefore, editResult.RemoveLineAfter,
-            editResult.InsertLinesBefore, editResult.InsertLinesAfter);
-
+        //Führe die Änderungen durch
+        editResult.Execute(Document, Line);
         StateHasChanged();
         return editResult;
     }
