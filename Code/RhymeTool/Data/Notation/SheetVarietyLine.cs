@@ -171,6 +171,18 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 	#endregion
 
 	#region Editing
+	public static readonly Reason UnknownEditingError = new("Unbekannter Fehler");
+	public static readonly Reason NotVarietyLine = new("Inkompatibler Zeilentyp");
+	public static readonly Reason CannotDeleteWithLinebreak = new("Inhalt kann nicht mit Zeilenumbruch gelöscht werden");
+	public static readonly Reason CannotInsertMultipleLines = new("Kann keinen mehrzeiligen Inhalt einfügen");
+	public static readonly Reason CannotPartiallyEditAttachments = new("Beim Bearbeiten von mehreren Akkorden müssen alle Akkorde vollständig ausgewählt sein");
+	public static readonly Reason CannotInsertMultipleAttachments = new("Beim Einfügen darf maximal ein Akkord überschrieben werden");
+	public static readonly Reason CannotInsertAttachmentsIntoRange = new("Beim Einfügen von Akkorden darf nichts selektiert sein");
+	public static readonly Reason NoComponentFoundHere = new("Hier scheint keine Komponente zu sein");
+	public static readonly Reason RemovingFromAttachmentFailed = new("Konnte den Akkord nicht kürzen");
+	public static readonly Reason NoAttachmentAfter = new("Hiernach scheint kein Akkord zu sein");
+	public static readonly Reason CouldNotMoveAttachment = new("Verschieben des Akkords fehlgeschlagen");
+
 	private SpecialContentType GetAllowedTypes(Component component)
 	{
 		//Hat eine der Komponenten Attachments?
@@ -203,7 +215,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 					//Gibt es eine Zeile davor?
 					var lineBefore = context.GetLineBefore?.Invoke();
 					if (lineBefore is null)
-						return MetalineEditResult.Fail;
+						return MetalineEditResult.Fail(NoLineBefore);
 
 					//Ist die vorherige Zeile leer?
 					if (lineBefore is SheetEmptyLine)
@@ -217,7 +229,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 					//Ist die vorherige Zeile keine VarietyLine?
 					if (lineBefore is not SheetVarietyLine varietyBefore)
-						return MetalineEditResult.Fail;
+						return MetalineEditResult.Fail(NotVarietyLine);
 
 					//Füge alle Komponenten dieser Zeile an das Ende der vorherigen Zeile an
 					var lastComponent = varietyBefore.components.Count == 0 ? null : varietyBefore.components[^1];
@@ -272,7 +284,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 					//Gibt es eine Zeile danach?
 					var lineAfter = context.GetLineAfter?.Invoke();
 					if (lineAfter is null)
-						return MetalineEditResult.Fail;
+						return MetalineEditResult.Fail(NoLineAfter);
 
 					//Ist die nächste Zeile leer?
 					if (lineAfter is SheetEmptyLine)
@@ -286,7 +298,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 					//Ist die nächste Zeile keine VarietyLine?
 					if (lineAfter is not SheetVarietyLine varietyAfter)
-						return MetalineEditResult.Fail;
+						return MetalineEditResult.Fail(NotVarietyLine);
 
 					//Füge alle Komponenten der nächsten Zeile an das Ende dieser Zeile an
 					var lastComponent = Line.components.Count == 0 ? null : Line.components[^1];
@@ -422,7 +434,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			{
 				//Dabei Inhalt überschreiben ist nicht erlaubt
 				if (context.SelectionRange.Length > 0)
-					return MetalineEditResult.Fail;
+					return MetalineEditResult.Fail(CannotDeleteWithLinebreak);
 
 				//Am Anfang?
 				if (context.SelectionRange.Start == 0 && context.SelectionRange.End == 0)
@@ -494,7 +506,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			else if (content.Contains('\n'))
 			{
 				//Zeilenumbrüche müssen einzeln eingefügt werden
-				return MetalineEditResult.Fail;
+				return MetalineEditResult.Fail(CannotInsertMultipleLines);
 			}
 
 			return DeleteAndInsertContent(context, formatter, content, false);
@@ -922,7 +934,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 			//Nicht erfolgreich?
 			if (!removedAnything && !addedContent)
-				return MetalineEditResult.Fail;
+				return MetalineEditResult.Fail(UnknownEditingError);
 
 			//Zeile bearbeitet
 			Line.RaiseModifiedAndInvalidateCache();
@@ -1049,7 +1061,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			{
 				//Liegen sie nicht alle komplett im Bereich?
 				if (!attachments.All(a => a.Attachment.RenderBounds.StartOffset >= context.SelectionRange.Start && a.Attachment.RenderBounds.EndOffset <= context.SelectionRange.End))
-					return MetalineEditResult.Fail;
+					return MetalineEditResult.Fail(CannotPartiallyEditAttachments);
 
 				//Lösche die Attachments
 				foreach (var (component, attachment) in attachments)
@@ -1080,7 +1092,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			if (attachments.Count > 1)
 			{
 				//Bearbeiten von mehreren Attachments nicht möglich
-				return MetalineEditResult.Fail;
+				return MetalineEditResult.Fail(CannotInsertMultipleAttachments);
 			}
 
 			//Werden Whitespaces eingefügt?
@@ -1093,13 +1105,13 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 			//Ist der Bereich eine Selektion?
 			if (context.SelectionRange.Length > 0)
-				return MetalineEditResult.Fail;
+				return MetalineEditResult.Fail(CannotInsertAttachmentsIntoRange);
 
 			//Finde die Komponente, in der der Inhalt eingefügt werden soll
 			var component = Line.components.OfType<VarietyComponent>()
 				.FirstOrDefault(c => c.DisplayRenderBounds.StartOffset <= context.SelectionRange.Start && c.DisplayRenderBounds.EndOffset > context.SelectionRange.End);
 			if (component is null)
-				return MetalineEditResult.Fail;
+				return MetalineEditResult.Fail(NoComponentFoundHere);
 
 			//Liegt ein Attachment direkt vor oder hinter der Position?
 			var before = component.Attachments.OfType<VarietyComponent.VarietyAttachment>().LastOrDefault(a => a.RenderBounds.EndOffset == context.SelectionRange.Start - 1);
@@ -1196,7 +1208,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				if (attachment.TryRemoveContent(attachmentOffset, selectionContentLength, formatter))
 					removedLength = selectionRange.Length;
 				else if (content is null)
-					return MetalineEditResult.Fail;
+					return MetalineEditResult.Fail(RemovingFromAttachmentFailed);
 			}
 			
 			//Füge den Inhalt ein
@@ -1226,7 +1238,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			//Finde das nächste Attachment
 			var nextAttachment = FindAttachmentsInRange(new SimpleRange(startOffset, int.MaxValue), formatter).FirstOrDefault();
 			if (nextAttachment.Attachment is null)
-				return MetalineEditResult.Fail;
+				return MetalineEditResult.Fail(NoAttachmentAfter);
 
 			//Berechne den neuen Offset
 			var newOffset = nextAttachment.Attachment.Offset + moveOffset;
@@ -1241,7 +1253,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 			//Hat sich der Offset nicht verändert?
 			if (newOffset == nextAttachment.Attachment.Offset)
-				return MetalineEditResult.Fail;
+				return MetalineEditResult.Fail(CouldNotMoveAttachment);
 
 			//Verschiebe das Attachment
 			nextAttachment.Attachment.SetOffset(newOffset);

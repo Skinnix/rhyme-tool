@@ -181,7 +181,7 @@
         StateHasChanged();
     }
 
-    public MetalineEditResult? HandleInput(InputEventData data)
+    public MetalineEditResult HandleInput(InputEventData data)
     {
         if (Line is null || Document is null) throw new InvalidOperationException("Editor not initialized");
 
@@ -234,7 +234,7 @@
         }
 
         if (editResult == null)
-            return null;
+            return MetalineEditResult.Fail(SheetEditor.UnknownEditType);
 
         if (!editResult.Success)
             return editResult;

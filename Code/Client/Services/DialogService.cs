@@ -9,8 +9,10 @@ namespace Skinnix.RhymeTool.Client.Services;
 
 public interface IDialogService
 {
-	Task ShowErrorAsync(string message, string? title);
-	Task<bool> ConfirmAsync(string message, string? title);
+	ValueTask ShowErrorAsync(string message, string? title);
+	ValueTask<bool> ConfirmAsync(string message, string? title);
+	ValueTask ShowToast(string message, string title = "Chords") => ShowToast(message, title, TimeSpan.FromSeconds(5));
+	ValueTask ShowToast(string message, string title, TimeSpan delay);
 }
 
 class DialogService : IDialogService
@@ -22,9 +24,12 @@ class DialogService : IDialogService
 		this.js = js;
 	}
 
-	public Task ShowErrorAsync(string message, string? title)
-		=> js.InvokeVoidAsync("alert", message).AsTask();
+	public ValueTask ShowErrorAsync(string message, string? title)
+		=> js.InvokeVoidAsync("alert", message);
 
-	public Task<bool> ConfirmAsync(string message, string? title)
-		=> js.InvokeAsync<bool>("confirm", message).AsTask();
+	public ValueTask<bool> ConfirmAsync(string message, string? title)
+		=> js.InvokeAsync<bool>("confirm", message);
+
+	public ValueTask ShowToast(string message, string title, TimeSpan delay)
+		=> js.InvokeVoidAsync("showToast", message, title, delay.TotalMilliseconds);
 }

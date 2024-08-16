@@ -15,6 +15,9 @@ public interface ISheetTitleLine : ISheetLine
 
 public abstract class SheetLine : DeepObservableBase, ISheetLine
 {
+	public static readonly Reason NoLineAfter = new("Keine Zeile danach");
+	public static readonly Reason NoLineBefore = new("Keine Zeile davor");
+
 	public Guid Guid { get; set; } = Guid.NewGuid();
 
     public abstract IEnumerable<SheetDisplayLine> CreateDisplayLines(ISheetBuilderFormatter? formatter = null);
@@ -50,7 +53,7 @@ public class SheetEmptyLine : SheetLine, ISheetDisplayLineEditing
 			//Gibt es eine Zeile danach?
 			var lineAfter = context.GetLineAfter?.Invoke();
 			if (lineAfter is null)
-				return MetalineEditResult.Fail;
+				return MetalineEditResult.Fail(NoLineAfter);
 
 			//Ist die Zeile auch leer?
 			if (lineAfter is SheetEmptyLine)
@@ -73,7 +76,7 @@ public class SheetEmptyLine : SheetLine, ISheetDisplayLineEditing
 			//Gibt es eine Zeile davor?
 			var lineBefore = context.GetLineBefore?.Invoke();
 			if (lineBefore is null)
-				return MetalineEditResult.Fail;
+				return MetalineEditResult.Fail(NoLineBefore);
 
 			//Lösche diese Zeile
 			return new MetalineEditResult(true, new MetalineSelectionRange(lineBefore, SimpleRange.Zero, -1))
@@ -108,7 +111,7 @@ public class SheetEmptyLine : SheetLine, ISheetDisplayLineEditing
 
 		//Nicht erfolgreich?
 		if (!varietyLineResult.Success)
-			return MetalineEditResult.Fail;
+			return varietyLineResult;
 
 		//Ersetze diese Zeile mit der neuen Zeile
 		return varietyLineResult with

@@ -47,6 +47,43 @@ function registerDropDownHandler(element, reference) {
 	});
 }
 
+function showToast(message, title, delay) {
+	//get container
+	var toastContainer = document.querySelector('.toast-container');
+
+	//create toast
+	var toast = document.createElement('div');
+	toast.classList.add('toast');
+	toast.setAttribute('role', 'alert');
+	toast.setAttribute('aria-live', 'assertive');
+	toast.setAttribute('aria-atomic', 'true');
+	toast.innerHTML = `
+<div class="toast-header">
+	<strong class="me-auto">${title}</strong>
+	<button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+</div>
+<div class="toast-body">${message}</div>`;
+
+	//append toast to container
+	toastContainer.appendChild(toast);
+	
+	//create BS toast
+	var bsToast = new bootstrap.Toast(toast, {
+		animation: true,
+		autohide: true,
+		delay: delay || 5000
+	});
+
+	//remove toast when hidden
+	toast.addEventListener('hidden.bs.toast', function () {
+		bsToast.dispose();
+		toast.remove();
+	});
+
+	//show
+	bsToast.show();
+}
+
 
 
 
@@ -191,6 +228,10 @@ function handleBeforeInput(element, reference, event, callbackName) {
 
 		//show caret
 		element.classList.remove('refreshing');
+
+		//show error
+		if (result.failReason)
+			showToast(`${result.failReason.label} (${result.failReason.code})`, 'Bearbeitungsfehler', 5000);
 	} else {
 		reference.invokeMethodAsync(callbackName, {
 			inputType: event.inputType,
@@ -207,6 +248,10 @@ function handleBeforeInput(element, reference, event, callbackName) {
 
 			//show caret
 			element.classList.remove('refreshing');
+
+			//show error
+			if (result.failReason)
+				showToast(`${result.failReason.label} (${result.failReason.code})`, 'Bearbeitungsfehler', 5000);
 		});
 	}
 }

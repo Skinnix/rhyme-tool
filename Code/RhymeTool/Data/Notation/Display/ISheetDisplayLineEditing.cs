@@ -17,7 +17,7 @@ public record struct SheetDisplayLineEditingContext(SimpleRange SelectionRange)
 
 public record MetalineEditResult(bool Success, MetalineSelectionRange? NewSelection)
 {
-	public static MetalineEditResult Fail => new(false, null);
+	public ReasonBase? FailReason { get; init; }
 
 	public bool RemoveLine { get; init; }
 	public bool RemoveLineAfter { get; init; }
@@ -25,6 +25,9 @@ public record MetalineEditResult(bool Success, MetalineSelectionRange? NewSelect
 	public IReadOnlyList<SheetLine> InsertLinesBefore { get; init; } = [];
 	public IReadOnlyList<SheetLine> InsertLinesAfter { get; init; } = [];
 	public IReadOnlyList<SheetDisplayLineElement> ModifiedElements { get; init; } = [];
+
+	public static MetalineEditResult Fail(ReasonBase reason)
+		=> new(false, null) { FailReason = reason };
 }
 
 public record MetalineSelectionRange
