@@ -1,4 +1,5 @@
 ﻿@inject NavigationManager navigation
+
 @inject IJSRuntime js
 
 <Router AppAssembly="@typeof(App).Assembly">
@@ -15,11 +16,14 @@
 </Router>
 
 @code {
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
-        base.OnParametersSet();
+        await base.OnParametersSetAsync();
 
         navigation.LocationChanged += OnLocationChanged;
+
+        if (OperatingSystem.IsBrowser())
+            await js.InvokeVoidAsync("enableSynchronousInvoke");
     }
 
     private async void OnLocationChanged(object? sender, LocationChangedEventArgs args)

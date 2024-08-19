@@ -1,5 +1,7 @@
-﻿function supportsSynchronousInvoke() {
-	return Blazor.reconnect === undefined;
+﻿var supportsSynchronousInvoke = false;
+
+function enableSynchronousInvoke() {
+	supportsSynchronousInvoke = true;
 }
 
 function hideAllOffcanvases() {
@@ -89,6 +91,9 @@ function showToast(message, title, delay) {
 
 function registerResize(element, reference, callbackName) {
 	var timeout;
+
+	var lineOffsetX = null;
+
 	var handler = function () {
 		////autofit?
 		//if (!element.classList.contains('autofit'))
@@ -98,11 +103,26 @@ function registerResize(element, reference, callbackName) {
 		var characterWidth = element.querySelector('.calculator').getBoundingClientRect().width;
 
 		//get line offset
-		var lineOffset = element.querySelector('.line')?.offsetLeft || 0;
+		if (lineOffsetX === null) {
+			//get line
+			var line = element.querySelector('.line');
+			if (line) {
+				//add all margins and paddings
+				lineOffsetX = 0;
+				var current = line;
+				var parent = line.parentElement;
+				for (var current = line, parent = line.parentElement; parent != element; current = parent, parent = current.parentElement) {
+					var width = current.offsetWidth;
+					var parentWidth = parent.offsetWidth;
+					if (width != 0 && parentWidth != 0 && parentWidth > width)
+						lineOffsetX += parentWidth - width;
+				}
+			}
+		}
 		
 		//how many characters does the element fit?
 		var elementRect = element.getBoundingClientRect();
-		var characters = Math.floor((elementRect.width + element.offsetLeft - lineOffset) / characterWidth) || 0;
+		var characters = Math.floor((elementRect.width + element.offsetLeft - lineOffsetX) / characterWidth) || 0;
 
 		//has the number of characters changed?
 		if (characters == element.getAttribute('data-characters')) {
@@ -116,7 +136,7 @@ function registerResize(element, reference, callbackName) {
 		clearTimeout(timeout);
 		timeout = setTimeout(function () {
 			//handle resize
-			if (supportsSynchronousInvoke()) {
+			if (supportsSynchronousInvoke) {
 				reference.invokeMethod(callbackName, characters);
 			} else {
 				reference.invokeMethodAsync(callbackName, characters);
@@ -202,7 +222,7 @@ function handleBeforeInput(element, reference, event, callbackName) {
 	originalRange.collapse(true);
 
 	//handle event
-	if (supportsSynchronousInvoke()) {
+	if (supportsSynchronousInvoke) {
 		var result = reference.invokeMethod(callbackName, {
 			inputType: event.inputType,
 			data: data,
