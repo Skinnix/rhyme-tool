@@ -4,6 +4,24 @@ function enableSynchronousInvoke() {
 	supportsSynchronousInvoke = true;
 }
 
+function invokeBlazor(reference, method, ...args) {
+	if (supportsSynchronousInvoke) {
+		return new Promise(function (resolve, reject) {
+			var result;
+			try {
+				result = reference.invokeMethod(method, ...args);
+			} catch (error) {
+				reject(error);
+				return;
+			}
+
+			resolve(result);
+		});
+	} else {
+		return reference.invokeMethodAsync(method, ...args);
+	}
+}
+
 function hideAllOffcanvases() {
 	const offcanvasElementList = document.querySelectorAll('.offcanvas')
 	const offcanvasList = [...offcanvasElementList].map(offcanvasEl => bootstrap.Offcanvas.getInstance(offcanvasEl));
@@ -91,40 +109,26 @@ function showToast(message, title, delay) {
 
 function registerResize(element, reference, callbackName) {
 	var timeout;
-
-	var lineOffsetX = null;
-
+	
 	var handler = function () {
-		////autofit?
-		//if (!element.classList.contains('autofit'))
-		//	return;
-
 		//get character width
 		var characterWidth = element.querySelector('.calculator').getBoundingClientRect().width;
 
 		//get line offset
-		if (lineOffsetX === null) {
-			//get line
-			var line = element.querySelector('.line');
-			if (line) {
-				//add all margins and paddings
-				lineOffsetX = 0;
-				var widths = [];
-				for (var current = line; current != element; current = current.parentElement)
-				var current = line;
-				var parent = line.parentElement;
-				for (; parent != element; current = parent) {
-					var width = current.offsetWidth;
-					var parentWidth = parent.offsetWidth;
-					if (width != 0 && parentWidth != 0 && parentWidth > width)
-						lineOffsetX += parentWidth - width;
-				}
-			}
+		var line = element.querySelector('.line');
+		var lineOffsetX = 0;
+		if (line) {
+			//find element's child containing the line
+			var topParent = line;
+			for (; topParent.parentElement != element; topParent = topParent.parentElement);
+
+			//line offset is the difference between the line's width and the parent's width
+			lineOffsetX = topParent.getBoundingClientRect().width - line.getBoundingClientRect().width;
 		}
 		
 		//how many characters does the element fit?
 		var elementRect = element.getBoundingClientRect();
-		var characters = Math.floor((elementRect.width + element.offsetLeft - lineOffsetX) / characterWidth) || 0;
+		var characters = Math.floor((elementRect.width - lineOffsetX) / characterWidth) || 0;
 
 		//has the number of characters changed?
 		if (characters == element.getAttribute('data-characters')) {
@@ -138,11 +142,7 @@ function registerResize(element, reference, callbackName) {
 		clearTimeout(timeout);
 		timeout = setTimeout(function () {
 			//handle resize
-			if (supportsSynchronousInvoke) {
-				reference.invokeMethod(callbackName, characters);
-			} else {
-				reference.invokeMethodAsync(callbackName, characters);
-			}
+			invokeBlazor(reference, callbackName, characters);
 		}, 20);
 	};
 	new ResizeObserver(handler).observe(element);
@@ -224,28 +224,17 @@ function handleBeforeInput(element, reference, event, callbackName) {
 	originalRange.collapse(true);
 
 	//handle event
-	if (supportsSynchronousInvoke) {
-		var result = reference.invokeMethod(callbackName, {
-			inputType: event.inputType,
-			data: data,
-			selection: selection,
-		});
-		
+	invokeBlazor(reference, callbackName, {
+		inputType: event.inputType,
+		data: data,
+		selection: selection,
+	}).then(function (result) {
 		if (result.selection) {
 			//set new range
 			setSelectionRange(element, result.selection.metaline, result.selection.lineId, result.selection.lineIndex, result.selection.range);
 		} else {
 			//restore old range
-			var selection = getSelection();
-			if (selection.rangeCount == 1) {
-				var range = selection.getRangeAt(0);
-				range.setStart(copyRange.startContainer, copyRange.startOffset);
-				range.setEnd(copyRange.endContainer, copyRange.endOffset);
-			} else {
-				if (selection.rangeCount > 0)
-					selection.removeAllRanges();
-				selection.addRange(copyRange);
-			}
+			getSelection().addRange(copyRange);
 		}
 
 		//show caret
@@ -254,28 +243,7 @@ function handleBeforeInput(element, reference, event, callbackName) {
 		//show error
 		if (result.failReason)
 			showToast(`${result.failReason.label} (${result.failReason.code})`, 'Bearbeitungsfehler', 5000);
-	} else {
-		reference.invokeMethodAsync(callbackName, {
-			inputType: event.inputType,
-			data: data,
-			selection: selection,
-		}).then(function (result) {
-			if (result.selection) {
-				//set new range
-				setSelectionRange(element, result.selection.metaline, result.selection.lineId, result.selection.lineIndex, result.selection.range);
-			} else {
-				//restore old range
-				getSelection().addRange(copyRange);
-			}
-
-			//show caret
-			element.classList.remove('refreshing');
-
-			//show error
-			if (result.failReason)
-				showToast(`${result.failReason.label} (${result.failReason.code})`, 'Bearbeitungsfehler', 5000);
-		});
-	}
+	});
 }
 
 function getLineId(node) {
@@ -448,9 +416,6 @@ window.addEventListener('load', function () {
 	document.documentElement.addEventListener('dragenter', function (e) {
 		document.documentElement.classList.add('dragover');
 		dragTargets.add(e.target);
-
-		console.log('dragenter');
-		console.log(e.target);
 	});
 
 	document.documentElement.addEventListener('dragleave', function (e) {
@@ -459,9 +424,6 @@ window.addEventListener('load', function () {
 		if (dragTargets.size == 0) {
 			document.documentElement.classList.remove('dragover');
 		}
-
-		console.log('dragleave');
-		console.log(e.target);
 	});
 
 	document.documentElement.addEventListener('drop', function (e) {
