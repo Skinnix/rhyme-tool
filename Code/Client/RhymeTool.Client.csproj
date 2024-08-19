@@ -37,4 +37,8 @@
     <SassFilesToCompile Remove="shared\SideMenuLayout.razor.scss" />
   </ItemGroup>
 
+  <ItemGroup>
+    <SassFilesToCompile Remove="pages\Renderer.razor.scss" />
+  </ItemGroup>
+
 </Project>

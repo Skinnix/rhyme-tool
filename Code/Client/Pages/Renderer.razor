@@ -78,13 +78,61 @@
     }
 </SectionContent>
 
-<div @ref="wrapper" class="chord-sheet-wrapper@(IsDebug ? " debug" : null) @(settings.Autofit ? " autofit" : null)"
+<div @ref="wrapper" class="chord-sheet-wrapper w-100 overflow-x-hidden @(IsDebug ? "debug" : null) @(settings.Autofit ? "autofit" : null)"
      style="font-size: @((settings.FontSize / 100f).ToString(System.Globalization.CultureInfo.InvariantCulture))rem; --characters: @(maxCharacters)">
     <SheetRenderer Document="document" DisplayMode="SheetDisplayMode.Lines" Formatter="settings.Formatter"
                    BreakWidth="@(settings.Autofit ? maxCharacters : null)" />
 
     <span class="calculator">&nbsp;</span>
 </div>
+
+<footer class="sticky-bottom" id="bottomMenu">
+    <div class="container-xxl">
+        @if (document != null)
+        {
+            <div class="d-inline-flex flex-row flex-wrap bg-body px-2 pt-2">
+                <input class="btn-check" type="checkbox" id="autofitCheck"
+                        @bind="settings.Autofit" />
+
+                <label for="autofitCheck" class="btn btn-outline-secondary me-2 mb-2">Autofit</label>
+
+                <div class="input-group flex-nowrap me-2 mb-2">
+                    <label class="input-group-text">Schrift</label>
+
+                    <button type="button" class="btn btn-outline-secondary"
+                            @onclick="() => settings.FontSize -= 10">
+                        <i class="fas fa-minus"></i>
+                    </button>
+
+                    <input type="number" class="form-control small-number text-center align-middle p-0" step="10"
+                            @bind="settings.FontSize" />
+
+                    <button type="button" class="btn btn-outline-secondary"
+                            @onclick="() => settings.FontSize += 10">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+
+                <div class="input-group flex-nowrap mb-2">
+                    <label class="input-group-text">Transponieren</label>
+
+                    <button type="button" class="btn btn-outline-secondary"
+                            @onclick="() => settings.Transpose -= 1">
+                        <i class="fas fa-minus"></i>
+                    </button>
+
+                    <input type="number" class="form-control small-number text-center align-middle p-0" step="1"
+                            @bind="settings.Transpose" />
+
+                    <button type="button" class="btn btn-outline-secondary"
+                            @onclick="() => settings.Transpose += 1">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+        }
+    </div>
+</footer>
 
 @code {
     private static readonly bool IsDebug =
@@ -114,13 +162,13 @@
 
         settings.PropertyChanged -= OnSettingsPropertyChanged;
         settings = new()
-        {
-            FontSize = 100,
-            Formatter = new DefaultSheetFormatter()
             {
-                GermanMode = GermanNoteMode.Descriptive,
-            }
-        };
+                FontSize = 100,
+                Formatter = new DefaultSheetFormatter()
+                {
+                    GermanMode = GermanNoteMode.Descriptive,
+                }
+            };
         settings.PropertyChanged += OnSettingsPropertyChanged;
 
         var documentSource = await documentService.TryGetDocument(Doc);
@@ -198,9 +246,9 @@
         if (!new Uri(currentUri, url).Equals(currentUri))
         {
             navigation.NavigateTo(GetUrl(documentSource), new NavigationOptions()
-            {
-                ReplaceHistoryEntry = true,
-            });
+                {
+                    ReplaceHistoryEntry = true,
+                });
             return;
         }
 
