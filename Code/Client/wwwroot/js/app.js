@@ -109,9 +109,11 @@ function registerResize(element, reference, callbackName) {
 			if (line) {
 				//add all margins and paddings
 				lineOffsetX = 0;
+				var widths = [];
+				for (var current = line; current != element; current = current.parentElement)
 				var current = line;
 				var parent = line.parentElement;
-				for (var current = line, parent = line.parentElement; parent != element; current = parent, parent = current.parentElement) {
+				for (; parent != element; current = parent) {
 					var width = current.offsetWidth;
 					var parentWidth = parent.offsetWidth;
 					if (width != 0 && parentWidth != 0 && parentWidth > width)
