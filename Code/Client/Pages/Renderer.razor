@@ -90,14 +90,14 @@
     <div class="container-xxl">
         @if (document != null)
         {
-            <div class="d-inline-flex flex-row flex-wrap bg-body px-2 pt-2">
+            <div class="d-inline-flex flex-row flex-wrap bg-body border border-light-subtle rounded px-2 pt-2">
                 <input class="btn-check" type="checkbox" id="autofitCheck"
                         @bind="settings.Autofit" />
 
-                <label for="autofitCheck" class="btn btn-outline-secondary me-2 mb-2">Autofit</label>
+                <label for="autofitCheck" class="btn btn-outline-secondary me-2 mb-2" title="Autofit"><i class="fa-solid fa-maximize"></i></label>
 
                 <div class="input-group flex-nowrap me-2 mb-2">
-                    <label class="input-group-text">Schrift</label>
+                    <label class="input-group-text" title="Schriftgröße"><i class="fa-solid fa-text-height"></i></label>
 
                     <button type="button" class="btn btn-outline-secondary"
                             @onclick="() => settings.FontSize -= 10">
@@ -114,7 +114,7 @@
                 </div>
 
                 <div class="input-group flex-nowrap mb-2">
-                    <label class="input-group-text">Transponieren</label>
+                    <label class="input-group-text" title="Transponieren"><i class="fa-solid fa-music"></i></label>
 
                     <button type="button" class="btn btn-outline-secondary"
                             @onclick="() => settings.Transpose -= 1">
