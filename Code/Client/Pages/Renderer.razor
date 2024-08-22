@@ -78,7 +78,7 @@
     }
 </SectionContent>
 
-<div @ref="wrapper" class="chord-sheet-wrapper w-100 overflow-x-hidden @(IsDebug ? "debug" : null) @(settings.Autofit ? "autofit" : null)"
+<div @ref="wrapper" class="chord-sheet-wrapper w-100 @(IsDebug ? "debug" : null) @(settings.Autofit ? "autofit" : null)"
      style="font-size: @((settings.FontSize / 100f).ToString(System.Globalization.CultureInfo.InvariantCulture))rem; --characters: @(maxCharacters)">
     <SheetRenderer Document="document" DisplayMode="SheetDisplayMode.Lines" Formatter="settings.Formatter"
                    BreakWidth="@(settings.Autofit ? maxCharacters : null)" />
@@ -86,7 +86,7 @@
     <span class="calculator">&nbsp;</span>
 </div>
 
-<footer class="sticky-bottom" id="bottomMenu">
+<footer class="fixed-bottom" id="bottomMenu">
     <div class="container-xxl">
         @if (document != null)
         {
@@ -94,9 +94,9 @@
                 <input class="btn-check" type="checkbox" id="autofitCheck"
                         @bind="settings.Autofit" />
 
-                <label for="autofitCheck" class="btn btn-outline-secondary me-2 mb-2" title="Autofit"><i class="fa-solid fa-maximize"></i></label>
+                <label for="autofitCheck" class="btn btn-sm btn-outline-secondary me-2 mb-2" title="Autofit"><i class="fa-solid fa-maximize"></i></label>
 
-                <div class="input-group flex-nowrap me-2 mb-2">
+                <div class="input-group input-group-sm flex-nowrap me-2 mb-2">
                     <label class="input-group-text" title="Schriftgröße"><i class="fa-solid fa-text-height"></i></label>
 
                     <button type="button" class="btn btn-outline-secondary"
@@ -113,7 +113,7 @@
                     </button>
                 </div>
 
-                <div class="input-group flex-nowrap mb-2">
+                <div class="input-group input-group-sm flex-nowrap mb-2">
                     <label class="input-group-text" title="Transponieren"><i class="fa-solid fa-music"></i></label>
 
                     <button type="button" class="btn btn-outline-secondary"

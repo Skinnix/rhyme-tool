@@ -25,7 +25,7 @@
 {
     <h2>Ordner</h2>
     <div class="row mb-3">
-        <div class="col-sm-6">
+        <div class="col">
             @if (workingDirectoryError)
             {
                 <text>Es ist ein Fehler aufgetreten.</text>
@@ -45,19 +45,19 @@
             }
         </div>
 
-        <div class="col-sm-6">
-            <button type="button" class="btn btn-secondary d-block w-100" @onclick="SelectWorkingDirectory">
+        <div class="col-sm-4 col-md-3 col-lg-2 d-flex align-items-center">
+            <button type="button" class="btn btn-secondary d-block w-100 my-2" @onclick="SelectWorkingDirectory">
                 @if (waitingForDirectoryPermission)
                 {
-                    <text>Bestätigen und Auswählen</text>
+                    <text>Bestätigen</text>
                 }
                 else if (currentWorkingDirectory is not null)
                 {
-                    <text>Arbeitsverzeichnis ändern</text>
+                    <text>Ändern</text>
                 }
                 else
                 {
-                    <text>Arbeitsverzeichnis auswählen</text>
+                    <text>Auswählen</text>
                 }
             </button>
         </div>
