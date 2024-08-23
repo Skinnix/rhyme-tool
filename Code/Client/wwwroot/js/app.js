@@ -152,98 +152,171 @@ function registerResize(element, reference, callbackName) {
 
 
 
+function attachmentStartDrag(event) {
+	//get the chord's position
+	var attachmentElement = event.target.parentElement;
+	var attachmentStart = getNodeAndOffset(function (node) {
+		return node && node.classList && node.classList.contains('line');
+	}, attachmentElement, 0);
 
-function registerBeforeInput(element, reference, callbackName) {
-	var existingReference = element['data-reference'];
+	//get chord length
+	var attachmentLength = attachmentElement.textContent.length;
+
+	//get line ID
+	var lineId = getLineId(attachmentElement);
+	
+	//store the chord's selection in the dataTransfer object
+	var selection = {
+		start: {
+			metaline: lineId.metaline,
+			line: lineId.line,
+			offset: attachmentStart.offset
+		},
+		end: {
+			metaline: lineId.metaline,
+			line: lineId.line,
+			offset: attachmentStart.offset + attachmentLength
+		}
+	};
+	event.dataTransfer.setData('text/json', JSON.stringify({
+		drag: selection
+	}));
+
+	//store the chord's text in the dataTransfer object
+	event.dataTransfer.setData('text', chordElement.textContent);
+}
+
+
+function registerBeforeInput(wrapper, reference, callbackName) {
+	//prevent double registration
+	var existingReference = wrapper['data-reference'];
 	if (existingReference === reference) {
 		return;
 	} else if (existingReference) {
-		var existingListener = element['data-listener'];
+		var existingListener = wrapper['data-listener'];
 		if (existingListener) {
-			element.removeEventListener('beforeinput', existingListener);
+			wrapper.removeEventListener('beforeinput', existingListener);
 		}
 	}
 
-	var listener = function (event) {
-		handleBeforeInput(element, reference, event, callbackName);
-	};
-	element['data-reference'] = reference;
-	element['data-listener'] = listener;
+	//store current request promise and running requests
+	var currentRequest = null;
+	
+	//store listener data
+	wrapper['data-reference'] = reference;
+	wrapper['data-listener'] = handleBeforeInput;
 
-	element.addEventListener('beforeinput', listener);
+	//add listener
+	wrapper.addEventListener('beforeinput', handleBeforeInput);
+
+	function handleBeforeInput(event) {
+		//stop normal event
+		event.preventDefault();
+		event.stopPropagation();
+
+		//get content and additional data
+		var content = event.data;
+		var dragSelection = null;
+		if (content === null && event.dataTransfer) {
+			content = event.dataTransfer.getData('text');
+			var json = event.dataTransfer.getData('text/json');
+			if (json) {
+				var jsonData = JSON.parse(json);
+				dragSelection = jsonData.drag;
+			}
+		}
+
+		//store necessary event data
+		var inputType = event.inputType;
+
+		//is there already a request?
+		if (currentRequest) {
+			//chain the request
+			currentRequest = currentRequest.then(function () {
+				return sendInputEvent(inputType, content, dragSelection);
+			});
+		} else {
+			currentRequest = sendInputEvent(inputType, content, dragSelection);
+		}
+	}
+	
+	function sendInputEvent(inputType, content, dragSelection) {
+        var originalSelection = getSelection();
+        var originalRange = originalSelection.rangeCount == 0 ? null : originalSelection.getRangeAt(0);
+        var copyRange = originalRange.cloneRange();
+        var selectionRange = getSelectionRange(originalSelection, wrapper, function(node) {
+            return node && node.classList && node.classList.contains('line');
+        });
+
+        //get selection lines
+        var selectionStartLine = getLineId(selectionRange.start.node);
+        var selectionEndLine = getLineId(selectionRange.end.node);
+
+        //collapse empty, line-spanning selections
+        if (originalRange.toString() === '' && selectionStartLine != selectionEndLine) {
+            if (inputType == 'deleteContent' || inputType == 'deleteContentBackward') {
+                selectionRange.start = selectionRange.end;
+                selectionStartLine = selectionEndLine;
+            } else if (inputType == 'deleteContentForward') {
+                selectionRange.end = selectionRange.start;
+                selectionEndLine = selectionStartLine;
+            }
+        }
+
+        var selection = {
+            start: {
+                metaline: selectionStartLine.metaline,
+                line: selectionStartLine.line,
+                offset: selectionRange.start.offset
+            },
+            end: {
+                metaline: selectionEndLine.metaline,
+                line: selectionEndLine.line,
+                offset: selectionRange.end.offset
+            }
+        };
+
+        //hide caret
+        wrapper.classList.add('refreshing');
+        originalRange.collapse(true);
+
+        //drag selection?
+        if (dragSelection) {
+            //invoke drag event first
+            return invokeLineEdit(reference, callbackName, 'deleteByDrag', null, dragSelection, wrapper, null, true).then(function() {
+                //invoke actual edit event
+                invokeLineEdit(reference, callbackName, inputType, content, selection, wrapper, copyRange);
+			});
+        } else {
+            //invoke edit event
+			return invokeLineEdit(reference, callbackName, inputType, content, selection, wrapper, copyRange);
+        }
+    }
 }
 
-function handleBeforeInput(element, reference, event, callbackName) {
-	event.preventDefault();
-	event.stopPropagation();
-
-	//get data
-	var data = event.data;
-	if (data === null && event.dataTransfer) {
-		data = event.dataTransfer.getData('text');
-	}
-
-	//get selection
-	var originalSelection = getSelection();
-	var originalRange = originalSelection.rangeCount == 0 ? null : originalSelection.getRangeAt(0);
-	var copyRange = originalRange.cloneRange();
-	var selectionRange = getSelectionRange(originalSelection, element, function (node) {
-		return node && node.classList && node.classList.contains('line');
-	});
-
-	//get selection lines
-	var selectionStartLine = getLineId(selectionRange.start.node);
-	var selectionEndLine = getLineId(selectionRange.end.node);
-
-	//collapse empty, line-spanning selections
-	if (originalRange.toString() === '' && selectionStartLine != selectionEndLine) {
-		if (event.inputType == 'deleteContent' || event.inputType == 'deleteContentBackward') {
-			selectionRange.start = selectionRange.end;
-			selectionStartLine = selectionEndLine;
-		} else if (event.inputType == 'deleteContentForward') {
-			selectionRange.end = selectionRange.start;
-			selectionEndLine = selectionStartLine;
-		}
-	}
-
-	var selection = {
-		start: {
-			metaline: selectionStartLine.metaline,
-			line: selectionStartLine.line,
-			offset: selectionRange.start.offset
-		},
-		end: {
-			metaline: selectionEndLine.metaline,
-			line: selectionEndLine.line,
-			offset: selectionRange.end.offset
-		}
-	};
-
-	//hide caret
-	element.classList.add('refreshing');
-	originalRange.collapse(true);
-
-	//handle event
-	invokeBlazor(reference, callbackName, {
-		inputType: event.inputType,
-		data: data,
-		selection: selection,
+function invokeLineEdit(reference, callbackName, inputType, content, selection, wrapper, copyRange, ignoreSelection) {
+    return invokeBlazor(reference, callbackName, {
+        inputType: inputType,
+		data: content,
+        selection: selection,
 	}).then(function (result) {
-		if (result.selection) {
-			//set new range
-			setSelectionRange(element, result.selection.metaline, result.selection.lineId, result.selection.lineIndex, result.selection.range);
-		} else {
-			//restore old range
-			getSelection().addRange(copyRange);
+		if (!ignoreSelection) {
+			if (result.selection) {
+				//set new range
+				setSelectionRange(wrapper, result.selection.metaline, result.selection.lineId, result.selection.lineIndex, result.selection.range);
+			} else if (copyRange) {
+				//restore old range
+				getSelection().addRange(copyRange);
+			}
+
+			//show caret
+			wrapper.classList.remove('refreshing');
 		}
 
-		//show caret
-		element.classList.remove('refreshing');
-
-		//show error
-		if (result.failReason)
-			showToast(`${result.failReason.label} (${result.failReason.code})`, 'Bearbeitungsfehler', 5000);
-	});
+        //show error
+        if (result.failReason)
+            showToast(`${result.failReason.label} (${result.failReason.code})`, 'Bearbeitungsfehler', 5000);
+    });
 }
 
 function getLineId(node) {
@@ -263,26 +336,26 @@ function getLineId(node) {
 	}
 }
 
-function getSelectionRange(selection, wrapper, elementCondition) {
-	function getNodeAndOffset(wrapper, elementCondition, node, offset) {
-		if (!offset)
-			offset = 0;
+function getNodeAndOffset(elementCondition, node, offset) {
+	if (!offset)
+		offset = 0;
 
-		for (; !elementCondition(node); node = node.parentElement) {
-			for (var current = node.previousSibling; current; current = current.previousSibling) {
-				if (current.nodeType == Node.COMMENT_NODE)
-					continue;
+	for (; !elementCondition(node); node = node.parentElement) {
+		for (var current = node.previousSibling; current; current = current.previousSibling) {
+			if (current.nodeType == Node.COMMENT_NODE)
+				continue;
 
-				offset += current.textContent?.length || 0;
-			}
+			offset += current.textContent?.length || 0;
 		}
+	}
 
-		return {
-			node: node,
-			offset: offset
-		};
+	return {
+		node: node,
+		offset: offset
 	};
+}
 
+function getSelectionRange(selection, wrapper, elementCondition) {
 	if (selection.anchorNode === selection.extentNode && elementCondition(selection.anchorNode)) {
 		return {
 			start: {
@@ -303,8 +376,8 @@ function getSelectionRange(selection, wrapper, elementCondition) {
 	if (!wrapper.contains(range.startContainer) || !wrapper.contains(range.endContainer))
 		return null;
 
-	var start = getNodeAndOffset(wrapper, elementCondition, range.startContainer, range.startOffset);
-	var end = getNodeAndOffset(wrapper, elementCondition, range.endContainer, range.endOffset);
+	var start = getNodeAndOffset(elementCondition, range.startContainer, range.startOffset);
+	var end = getNodeAndOffset(elementCondition, range.endContainer, range.endOffset);
 	
 	return {
 		start: start,

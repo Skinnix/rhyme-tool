@@ -144,7 +144,7 @@ $separatorColor: #6c757d;
 
 	.chord {
 		color: $chordColor;
-		white-space: normal;
+		position: relative;
 
 		.accidental:not(:empty) {
 			display: inline-block;
@@ -166,6 +166,29 @@ $separatorColor: #6c757d;
 
 	.anchor-text {
 		text-decoration: underline;
+	}
+
+	.attachment {
+		.drag-handle {
+			display: none;
+			cursor: move;
+			position: absolute;
+			top: 0;
+			left: 0;
+			color: transparent;
+
+			&::after {
+				content: var(--content);
+			}
+		}
+
+		&:active .drag-handle {
+			display: inline-block;
+		}
+
+		&.text {
+			text-decoration: underline;
+		}
 	}
 }
 

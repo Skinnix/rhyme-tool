@@ -3,8 +3,6 @@ using Skinnix.RhymeTool.Data.Notation;
 
 namespace Skinnix.RhymeTool.Data.Notation.Display;
 
-public interface ISheetDisplayLineElementSource;
-
 public readonly record struct VirtualContentOffset(ContentOffset ContentOffset, int VirtualOffset);
 
 public record struct SheetDisplaySliceInfo(int ComponentIndex, ContentOffset ContentOffset, bool IsVirtual = false);
@@ -14,6 +12,8 @@ public abstract record SheetDisplayLineElementBase
 	public virtual bool IsSpace => false;
 
 	public required SheetDisplaySliceInfo? Slice { get; init; }
+
+	public IReadOnlyCollection<SheetDisplayTag> Tags { get; init; } = Array.Empty<SheetDisplayTag>();
 
 	public int DisplayOffset { get; internal set; }
 	public int DisplayLength { get; internal set; }

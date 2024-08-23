@@ -196,6 +196,8 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 	public static readonly Reason CouldNotMoveAttachment = new("Verschieben des Akkords fehlgeschlagen");
 	public static readonly Reason CannotEditDifferentLineTypes = new("Mehrzeilige Bearbeitungen müssen auf dem gleichen Zeilentyp beginnen und enden");
 	public static readonly Reason CannotMultiLineEditAttachments = new("Akkorde können nicht mehrzeilig bearbeitet werden");
+	public static readonly Reason NoMoveNeeded = new("Kein Verschieben notwendig");
+	public static readonly Reason AlreadyAttachmentAtTargetOffset = new("An der Zielposition ist bereits ein Akkord");
 
 	private SpecialContentType GetAllowedTypes(Component component)
 	{
@@ -1141,7 +1143,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			}
 
 			//Finde das nächste Attachment und verschiebe es nach links
-			return TryFindAndMoveNextAttachment(context.SelectionRange.Start, new(-context.SelectionRange.Length), formatter);
+			return TryFindAndMoveNextAttachment(context.SelectionRange, 0, formatter);
 		}
 
 		public DelayedMetalineEditResult TryInsertContent(SheetDisplayLineEditingContext context, string content, ISheetEditorFormatter? formatter)
@@ -1166,9 +1168,8 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			//Werden Whitespaces eingefügt?
 			if (string.IsNullOrWhiteSpace(content))
 			{
-				//Finde das nächste Attachment und verschiebe es nach rechts
-				var moveOffset = new ContentOffset(content.Length - context.SelectionRange.Length);
-				return TryFindAndMoveNextAttachment(context.SelectionRange.Start, moveOffset, formatter);
+				//Finde das nächste Attachment und verschiebe es
+				return TryFindAndMoveNextAttachment(context.SelectionRange, content.Length, formatter);
 			}
 
 			//Ist der Bereich eine Selektion?
@@ -1279,6 +1280,20 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 		private DelayedMetalineEditResult TryEditAttachment(VarietyComponent component, VarietyComponent.VarietyAttachment attachment,
 			SimpleRange selectionRange, string? content, ISheetEditorFormatter? formatter)
 		{
+			//Werden Whitespaces am Anfang des Attachments eingefügt oder gelöscht?
+			if (string.IsNullOrWhiteSpace(content) && selectionRange.End <= attachment.RenderBounds.StartOffset)
+			{
+				//Verschiebe das Attachment
+				return TryMoveAttachment(component, attachment, selectionRange, selectionRange, content?.Length ?? 0, formatter);
+			}
+
+			//Werden Whitespaces am Ende des Attachments eingefügt oder gelöscht?
+			if (string.IsNullOrWhiteSpace(content) && selectionRange.Start >= attachment.RenderBounds.EndOffset)
+			{
+				//Verschiebe das nächste Attachment
+				return TryFindAndMoveNextAttachment(selectionRange, content?.Length ?? 0, formatter);
+			}
+
 			//Kürze das Attachment
 			var attachmentOffset = attachment.RenderBounds.GetContentOffset(selectionRange.Start);
 			var selectionContentLength = attachment.RenderBounds.GetContentOffset(selectionRange.End) - attachmentOffset;
@@ -1323,40 +1338,183 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			});
 		}
 
-		private DelayedMetalineEditResult TryFindAndMoveNextAttachment(int startOffset, ContentOffset moveOffset, ISheetEditorFormatter? formatter)
+		private DelayedMetalineEditResult TryFindAndMoveNextAttachment(SimpleRange selection, int contentMove, ISheetEditorFormatter? formatter)
 		{
 			//Finde das nächste Attachment
-			var nextAttachment = FindAttachmentsInRange(new SimpleRange(startOffset, int.MaxValue), formatter).FirstOrDefault();
+			var nextAttachment = FindAttachmentsInRange(new SimpleRange(selection.Start + 1, int.MaxValue), formatter).FirstOrDefault();
 			if (nextAttachment.Attachment is null)
 				return DelayedMetalineEditResult.Fail(NoAttachmentAfter);
 
-			//Berechne den neuen Offset
-			var newOffset = nextAttachment.Attachment.Offset + moveOffset;
-			if (newOffset < ContentOffset.Zero)
-				newOffset = ContentOffset.Zero;
-			else
+			//Verschiebe das Attachment
+			return TryMoveAttachment(nextAttachment.Component, nextAttachment.Attachment,
+				new SimpleRange(nextAttachment.Attachment.RenderBounds.StartOffset - selection.Length, nextAttachment.Attachment.RenderBounds.StartOffset),
+				selection, contentMove, formatter);
+		}
+
+		private DelayedMetalineEditResult TryMoveAttachment(VarietyComponent component, VarietyComponent.VarietyAttachment attachment,
+			SimpleRange editSelection, SimpleRange cursorSelection, int contentMove, ISheetEditorFormatter? formatter)
+		{
+			//Keine Verschiebung?
+			if (contentMove - editSelection.Length == 0)
+				return DelayedMetalineEditResult.Fail(NoMoveNeeded);
+
+			//Finde die Zielkomponente
+			var targetGenericComponent = contentMove > 0
+				? Line.components.Select((c, i) => (Component: c, Index: i)).FirstOrDefault(c => c.Component.TotalRenderBounds.EndOffset > editSelection.Start + contentMove)
+				: Line.components.Select((c, i) => (Component: c, Index: i)).LastOrDefault(c => c.Component.TotalRenderBounds.StartOffset <= editSelection.Start);
+			if (targetGenericComponent.Component is not VarietyComponent targetComponent)
+				return DelayedMetalineEditResult.Fail(NoComponentFoundHere);
+
+			//Finde den Zieloffset
+			var virtualTargetOffset = targetComponent.DisplayRenderBounds.GetContentOffset(editSelection.Start + contentMove);
+			var targetOffset = virtualTargetOffset.ContentOffset;
+			if (virtualTargetOffset.VirtualOffset != 0)
 			{
-				var contentLength = nextAttachment.Component.Content.GetLength(formatter);
-				if (newOffset >= contentLength)
-					newOffset = contentLength - new ContentOffset(1);
+				//Verschiebung nach links oder rechts?
+				if (contentMove - editSelection.Length > 0)
+				{
+					//Verschiebe das Attachment eins weiter nach rechts
+					targetOffset += ContentOffset.One;
+				}
 			}
 
-			//Wird at sich der Offset nicht verändern?
-			if (newOffset == nextAttachment.Attachment.Offset)
-				return DelayedMetalineEditResult.Fail(CouldNotMoveAttachment);
+			//Ist das Attachment schon am Ende der Komponente?
+			if (targetOffset >= targetComponent.Content.GetLength(formatter))
+			{
+				//Finde die nächste Komponente
+				var nextComponentIndex = targetGenericComponent.Index + 1;
+				if (nextComponentIndex >= Line.components.Count)
+					return DelayedMetalineEditResult.Fail(NoComponentFoundHere);
+				var nextComponent = Line.components[nextComponentIndex] as VarietyComponent;
+				if (nextComponent is null)
+					return DelayedMetalineEditResult.Fail(NoComponentFoundHere);
 
-			//Bearbeitung wird funktionieren
+				//Verschiebe an den Anfang der nächsten Komponente
+				targetComponent = nextComponent;
+				targetOffset = ContentOffset.Zero;
+			}
+
+			//Ist am Zieloffset kein Platz?
+			if (targetComponent.Attachments.Any(a => a.Offset == targetOffset))
+			{
+				//Verschiebung nicht möglich
+				return DelayedMetalineEditResult.Fail(AlreadyAttachmentAtTargetOffset);
+			}
+
+			//Bewege das Attachment
+			var moveAction = TryMoveAttachmentTo(component, attachment, targetComponent, targetOffset, formatter);
+			if (moveAction is null)
+				return DelayedMetalineEditResult.Fail(CouldNotMoveAttachment);
 			return new DelayedMetalineEditResult(() =>
 			{
-				//Verschiebe das Attachment
-				nextAttachment.Attachment.SetOffset(newOffset);
+				//Bewege das Attachment
+				moveAction();
 
 				//Zeile bearbeitet
 				Line.RaiseModifiedAndInvalidateCache();
-				var cursorPosition = moveOffset < ContentOffset.Zero ? startOffset : startOffset + moveOffset.Value;
+
+				//Ergebnis
+				var cursorPosition = cursorSelection.Start + contentMove;
 				return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAt(cursorPosition)));
 			});
 		}
+
+		private Action? TryMoveAttachmentTo(VarietyComponent component, VarietyComponent.VarietyAttachment attachment,
+			VarietyComponent targetComponent, ContentOffset targetOffset, ISheetEditorFormatter? formatter)
+		{
+			//Wird das Attachment nicht verschoben?
+			if (targetComponent == component && targetOffset == attachment.Offset)
+				return null;
+
+			//Hat sich die Komponente nicht verändert?
+			if (component == targetComponent)
+			{
+				//Verschiebe das Attachment
+				return () => attachment.SetOffset(targetOffset);
+			}
+
+			//Verschiebe das Attachment in die andere Komponente
+			return () =>
+			{
+				component.RemoveAttachment(attachment);
+				attachment.SetOffset(targetOffset);
+				targetComponent.AddAttachment(attachment);
+			};
+		}
+
+		//private Action? TryMoveAttachment(VarietyComponent component, VarietyComponent.VarietyAttachment attachment,
+		//	ContentOffset contentMoveOffset, int displayMoveOffset, ISheetEditorFormatter? formatter)
+		//{
+		//	//Wird das Attachment nicht verschoben?
+		//	if (contentMoveOffset == ContentOffset.Zero && displayMoveOffset == 0)
+		//		return null;
+
+		//	//Wird das Attachment verschoben, aber in eine formatierungsbedingte Lücke, die die Verschiebung "schlucken" würde?
+		//	if (contentMoveOffset == ContentOffset.Zero)
+		//	{
+		//		//Verschiebe das Attachment um eine Stelle
+		//		contentMoveOffset = new ContentOffset(displayMoveOffset < 0 ? -1 : 1);
+		//	}
+
+		//	//Berechne den neuen Offset
+		//	var newContentOffset = attachment.Offset + contentMoveOffset;
+		//	if (newContentOffset < ContentOffset.Zero)
+		//	{
+		//		//Versuche das Attachment auf eine andere Komponente zu verschieben
+		//		return TryMoveAttachmentOver(component, attachment, displayMoveOffset, formatter);
+		//	}
+		//	else
+		//	{
+		//		var contentLength = component.Content.GetLength(formatter);
+		//		if (newContentOffset >= contentLength)
+		//		{
+		//			//Versuche das Attachment auf eine andere Komponente zu verschieben
+		//			return TryMoveAttachmentOver(component, attachment, displayMoveOffset, formatter);
+		//		}
+		//	}
+
+		//	//Wird at sich der Offset nicht verändern?
+		//	if (newContentOffset == attachment.Offset)
+		//		return null;
+
+		//	//Bearbeitung wird funktionieren
+		//	return () =>
+		//	{
+		//		//Verschiebe das Attachment
+		//		attachment.SetOffset(newContentOffset);
+		//	};
+		//}
+
+		//private Action? TryMoveAttachmentOver(VarietyComponent component, VarietyComponent.VarietyAttachment attachment,
+		//	int moveOffset, ISheetEditorFormatter? formatter = null)
+		//{
+		//	var newOffset = attachment.RenderBounds.StartOffset + moveOffset;
+		//	//Finde die Komponente, in die das Attachment verschoben werden soll
+		//	var componentOffset = attachment.Offset + newOffset;
+		//	var targetComponent = Line.components.FirstOrDefault(c
+		//		=> c.TotalRenderBounds.StartOffset <= componentOffset && c.TotalRenderBounds.EndOffset > componentOffset);
+
+		//	//Nicht gefunden?
+		//	if (targetComponent is null)
+		//		return null;
+
+		//	//Finde den Offset innerhalb der Komponente
+
+		//	//Finde die vorherige Komponente
+		//	var componentIndex = Line.components.IndexOf(component);
+		//	componentIndex--;
+		//	if (componentIndex > 0 && Line.components[componentIndex - 1] is VarietyComponent previousComponent)
+		//	{
+		//		//Ist in der vorherigen Komponente noch Platz?
+		//		var previousContentLength = previousComponent.Content.GetLength(formatter);
+		//		newOffset += previousContentLength;
+		//	}
+		//	else
+		//	{
+		//		//Verschiebe das Attachment an den Anfang der Komponente
+		//		newOffset = ContentOffset.Zero;
+		//	}
+		//}
 
 		public ReasonBase? SupportsEdit(SheetDisplayMultiLineEditingContext context)
 		{
@@ -2458,7 +2616,10 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				out Action<RenderBounds> setRenderBounds, ISheetFormatter? formatter)
 			{
 				setRenderBounds = SetRenderBounds;
-				return Content.CreateElement(sliceInfo, formatter);
+				return Content.CreateElement(sliceInfo, formatter) with
+				{
+					Tags = [SheetDisplayTag.Attachment]
+				};
 			}
 
 			private void SetRenderBounds(RenderBounds bounds)

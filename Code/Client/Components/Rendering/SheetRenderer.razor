@@ -14,73 +14,51 @@
         @(format.Type)<span class="accidental">@format.Accidental</span>
     }
 
-    void RenderChord(Chord chord)
+    void RenderChordContent(Chord chord)
     {
-        <span class="chord">
-            <span class="chord-root">@{ RenderNote(chord.Root); }</span><span class="chord-quality">@chord.Quality.ToString(Formatter)</span>
+        <span class="chord-root">@{ RenderNote(chord.Root); }</span><span class="chord-quality">@chord.Quality.ToString(Formatter)</span>
 
-            @if (chord.Alterations.Count > 0)
-            {
-                var firstAlteration = true;
-                <span class="chord-alterations">
-                    @foreach (var alteration in chord.Alterations)
+        @if (chord.Alterations.Count > 0)
+        {
+            var firstAlteration = true;
+            <span class="chord-alterations">
+                @foreach (var alteration in chord.Alterations)
+                {
+                    if (!firstAlteration)
                     {
-                        if (!firstAlteration)
-                        {
-                            <span class="chord-alteration-separator">/</span>
-                        }
-                        firstAlteration = false;
-
-                        <span class="chord-alteration">@alteration.ToString(Formatter)</span>
+                        <span class="chord-alteration-separator">/</span>
                     }
-                </span>
-            }
+                    firstAlteration = false;
 
-            @if (chord.Bass != null)
-            {
-                <span class="chord-bass-separator">/</span><span class="chord-bass">@{ RenderNote(chord.Bass.Value, true); }</span>
-            }
-        </span>
+                    <span class="chord-alteration">@alteration.ToString(Formatter)</span>
+                }
+            </span>
+        }
+
+        @if (chord.Bass != null)
+        {
+            <span class="chord-bass-separator">/</span><span class="chord-bass">@{ RenderNote(chord.Bass.Value, true); }</span>
+        }
     }
 
     void RenderElement(SheetLine line, SheetDisplayLineElement element)
     {
         switch (element)
         {
-            case SheetDisplayLineFormatSpace formatSpace:
-                <span class="format-space">@formatSpace.ToString(Formatter)</span>
-                break;
-
-            case SheetDisplayLineSpace space:
-                <span class="space">@space.ToString(Formatter)</span>
-                break;
-
             case SheetDisplayLineChord chord:
-                RenderChord(chord.Chord);
-                break;
-
-            case SheetDisplayLineText text:
-                <span class="text">@text.ToString(Formatter)</span>
-                break;
-
-            case SheetDisplayLineAnchorText anchorText:
-                <span class="anchor-text">@anchorText.ToString(Formatter)</span>
-                break;
-
-            case SheetDisplayLineSegmentTitleBracket titleBracket:
-                <span class="segment-title-bracket">@titleBracket.ToString(Formatter)</span>
+                <span class="@GetElementClasses(element)">@{ RenderChordContent(chord.Chord); }</span>
                 break;
 
             case SheetDisplayLineSegmentTitleText titleText:
-                <span class="segment-title" id="sheetSegment-@(line.Guid)">@titleText.ToString(Formatter)</span>
-                break;
-
-            case SheetDisplayLineHyphen hyphen:
-                <span class="hyphen">@hyphen.ToString(Formatter)</span>
+                <span class="@GetElementClasses(element)" id="sheetSegment-@(line.Guid)">@titleText.ToString(Formatter)</span>
                 break;
 
             case SheetDisplayLineBreakPoint breakpoint:
-                <span class="breakpoint" data-breakpoint-index="@breakpoint.BreakPointIndex" data-breakpoint-offset="@breakpoint.StartingPointOffset"></span>
+                <span class="@GetElementClasses(element)" data-breakpoint-index="@breakpoint.BreakPointIndex" data-breakpoint-offset="@breakpoint.StartingPointOffset"></span>
+                break;
+
+            default:
+                <span class="@GetElementClasses(element)">@element.ToString(Formatter)</span>
                 break;
         }
     }
@@ -203,4 +181,28 @@
         shouldRender = true;
         base.StateHasChanged();
     }
+
+    public static string? GetElementClasses(SheetDisplayLineElement element)
+    {
+        var classes = GetElementBaseClass(element);
+        if (element.Tags.Contains(SheetDisplayTag.Attachment))
+            classes += " attachment";
+
+        return classes;
+    }
+
+    public static string? GetElementBaseClass(SheetDisplayLineElement element)
+        => element switch
+    {
+        SheetDisplayLineFormatSpace => "format-space",
+        SheetDisplayLineSpace => "space",
+        SheetDisplayLineChord => "chord",
+        SheetDisplayLineText => "text",
+        SheetDisplayLineAnchorText => "anchor-text",
+        SheetDisplayLineSegmentTitleBracket => "segment-title-bracket",
+        SheetDisplayLineSegmentTitleText => "segment-title",
+        SheetDisplayLineHyphen => "hyphen",
+        SheetDisplayLineBreakPoint => "breakpoint",
+        _ => null
+    };
 }
