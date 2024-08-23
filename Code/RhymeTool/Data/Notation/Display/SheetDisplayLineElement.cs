@@ -1,5 +1,4 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using Skinnix.RhymeTool.Data.Notation;
 
 namespace Skinnix.RhymeTool.Data.Notation.Display;
 
@@ -24,7 +23,8 @@ public abstract record SheetDisplayLineElementBase
 
 public abstract record SheetDisplayLineElement : SheetDisplayLineElementBase
 {
-    public abstract int GetLength(ISheetFormatter? formatter);
+    public virtual int GetLength(ISheetFormatter? formatter)
+		=> ToString(formatter).Length;
 }
 
 public record SheetDisplayLineVoid : SheetDisplayLineElement
@@ -70,7 +70,6 @@ public record SheetDisplayLineFormatSpace : SheetDisplayLineElement
 
 public record SheetDisplayLineText(string Text) : SheetDisplayLineElement
 {
-    public override int GetLength(ISheetFormatter? formatter) => Text.Length;
     public override string ToString(ISheetFormatter? formatter = null) => Text;
 }
 
@@ -78,25 +77,26 @@ public record SheetDisplayLineAnchorText(string Text) : SheetDisplayLineElement
 {
     public IReadOnlyCollection<SheetDisplayLineElement> Targets { get; init; } = Array.Empty<SheetDisplayLineElement>();
 
-    public override int GetLength(ISheetFormatter? formatter) => Text.Length;
     public override string ToString(ISheetFormatter? formatter = null) => Text;
 }
 
 public record SheetDisplayLineChord(Chord Chord) : SheetDisplayLineElement
 {
-    public override int GetLength(ISheetFormatter? formatter) => Chord.ToString(formatter).Length;
     public override string ToString(ISheetFormatter? formatter = null) => Chord.ToString(formatter);
+}
+
+public record SheetDisplayLineFingering(Fingering Fingering) : SheetDisplayLineElement
+{
+    public override string ToString(ISheetFormatter? formatter = null) => Fingering.ToString(formatter);
 }
 
 public record SheetDisplayLineSegmentTitleText(string Text) : SheetDisplayLineElement
 {
-	public override int GetLength(ISheetFormatter? formatter) => Text.Length;
 	public override string ToString(ISheetFormatter? formatter = null) => Text;
 }
 
 public record SheetDisplayLineSegmentTitleBracket(string Text, bool IsTitleStart) : SheetDisplayLineElement
 {
-	public override int GetLength(ISheetFormatter? formatter) => Text.Length;
 	public override string ToString(ISheetFormatter? formatter = null) => Text;
 }
 

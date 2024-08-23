@@ -203,7 +203,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 		if (components.OfType<VarietyComponent>().Any(c => c.Attachments.Count > 0))
 			return SpecialContentType.None;
 
-		return SpecialContentType.Chord;
+		return SpecialContentType.All;
 	}
 
 	private class ContentEditing : ISheetDisplayLineEditing
@@ -457,7 +457,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 						//Steht der Cursor mitten in einem langgestreckten Leerzeichen?
 						else if (endComponent is null && previousComponent?.DisplayRenderBounds.EndOffset <= context.SelectionRange.Start && nextComponent is not null
-							&& (previousComponent as VarietyComponent)?.Content.ContentType == ContentType.Space)
+							&& (previousComponent as VarietyComponent)?.Content.Type == ContentType.Space)
 						{
 							//Lösche das erste Zeichen der ersten Komponente nach dem Leerzeichen
 							context.SelectionRange = new SimpleRange(previousComponent.DisplayRenderBounds.EndOffset, nextComponent.DisplayRenderBounds.StartOffset + 1);
@@ -479,8 +479,8 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 						}
 
 						//Steht der Cursor mitten in einem langgestreckten Leerzeichen?
-						else if (startComponent is null && previousComponent?.DisplayRenderBounds.EndOffset <= context.SelectionRange.Start && prepreviousComponent is not null
-							&& (previousComponent as VarietyComponent)?.Content.ContentType == ContentType.Space)
+						else if (startComponent is null && previousComponent?.DisplayRenderBounds.EndOffset < context.SelectionRange.Start && prepreviousComponent is not null
+							&& (previousComponent as VarietyComponent)?.Content.Type == ContentType.Space)
 						{
 							//Lösche das letzte Zeichen der ersten Komponente vor dem Leerzeichen
 							context.SelectionRange = new SimpleRange(previousComponent.DisplayRenderBounds.StartOffset, prepreviousComponent.DisplayRenderBounds.EndOffset - 1);
@@ -658,13 +658,13 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			//Sonderfall: wird ein Text unter einem Leerzeichen-Attachment eingegeben?
 			List<VarietyComponent>? newContentComponents = null;
 			if (content is not null && rightEdge is VarietyComponent varietyAfter
-				&& varietyAfter.Content.ContentType == ContentType.Space && varietyAfter.Attachments.Count == 1)
+				&& varietyAfter.Content.Type == ContentType.Space && varietyAfter.Attachments.Count == 1)
 			{
 				//Erzeuge Komponenten für den Inhalt
 				newContentComponents ??= CreateComponentsForContent(content, formatter);
 
 				//Hat der Inhalt genau eine Textkomponente?
-				if (newContentComponents.Count == 1 && newContentComponents[0].Content.ContentType != ContentType.Space)
+				if (newContentComponents.Count == 1 && newContentComponents[0].Content.Type != ContentType.Space)
 				{
 					//Übernimm das Attachment des Leerzeichens
 					var attachment = varietyAfter.Attachments[0];
@@ -675,7 +675,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 					Line.components.Insert(rightEdgeIndex, newContentComponents[0]);
 
 					//Füge ggf. ein Leerzeichen vor den Inhalt ein
-					if (leftEdge is VarietyComponent varietyBefore && varietyBefore.Content.ContentType != ContentType.Space)
+					if (leftEdge is VarietyComponent varietyBefore && varietyBefore.Content.Type != ContentType.Space)
 						Line.components.Insert(rightEdgeIndex, new VarietyComponent(" "));
 
 					//Anfügen erfolgreich
@@ -691,13 +691,13 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			//Sonderfall: wird ein Text mit Attachment durch ein Leerzeichen ersetzt (oder umgekehrt)?
 			if (content is not null && rangeStartsOnComponent && rangeEndsOnComponent && fullyInside.Count == 1
 				&& fullyInside[0] is VarietyComponent varietyInside && varietyInside.Attachments.Count == 1
-				&& (varietyInside.Content.ContentType == ContentType.Space) != string.IsNullOrWhiteSpace(content))
+				&& (varietyInside.Content.Type == ContentType.Space) != string.IsNullOrWhiteSpace(content))
 			{
 				//Erzeuge Komponenten für den Inhalt
 				newContentComponents ??= CreateComponentsForContent(content, formatter);
 				
 				//Hat der Inhalt genau eine Leerzeichenkomponente?
-				if (newContentComponents.Count == 1 && newContentComponents[0].Content.ContentType != varietyInside.Content.ContentType)
+				if (newContentComponents.Count == 1 && newContentComponents[0].Content.Type != varietyInside.Content.Type)
 				{
 					//Übernimm das Attachment des Textes
 					var attachment = varietyInside.Attachments[0];
@@ -760,7 +760,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 						//Versuche die erste Komponente hinten an den linken Rand anzufügen
 						var firstNewComponent = newContentComponents[0];
-						if (leftEdge.TryMerge(firstNewComponent, leftEdgeOverlapOffset.ContentOffset, formatter) is not null)
+						if (leftEdge.TryMerge(firstNewComponent, leftEdgeOverlapOffset.ContentOffset, formatter) is MergeResult mergeResult)
 						{
 							//Berechne die Gesamtlänge des eingefügten Inhalts
 							var lastNewComponent = newContentComponents[^1];
@@ -806,8 +806,13 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 								if (specialCursorPosition is null)
 								{
 									//Setze den Cursor an das Ende des eingefügten Inhalts im linken Rand
-									//cursorPosition = context.SelectionRange.Start + newContentComponents.Sum(c => c.Content.GetLength(formatter));
 									var cursorOffset = leftEdgeOverlapOffset.ContentOffset + firstNewComponent.Content.GetLength(formatter);
+									if (leftEdge is VarietyComponent varietyEdge)
+									{
+										var length = varietyEdge.Content.GetLength(formatter);
+										if (cursorOffset > length)
+											cursorOffset = length;
+									}
 									specialCursorPosition = SpecialCursorPosition.FromStart(leftEdge, cursorOffset, SpecialCursorVirtualPositionType.KeepLeft);
 								}
 							}
@@ -898,6 +903,12 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 						//Setze den Cursor an das Ende des eingefügten Inhalts
 						//cursorPosition = context.SelectionRange.Start + newContentComponents.Sum(c => c.Content.GetLength(formatter));
 						var cursorOffset = lastComponent.Content.GetLength(formatter);
+						if (rightEdge is VarietyComponent varietyEdge)
+						{
+							var length = varietyEdge.Content.GetLength(formatter);
+							if (cursorOffset > length)
+								cursorOffset = length;
+						}
 						specialCursorPosition = SpecialCursorPosition.FromStart(rightEdge, cursorOffset, SpecialCursorVirtualPositionType.KeepLeft);
 					}
 				}
@@ -1628,6 +1639,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 		Space,
 		Punctuation,
 		Chord,
+		Fingering,
 	}
 
 	[Flags]
@@ -1635,6 +1647,9 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 	{
 		None = 0,
 		Chord = 1,
+		Fingering = 2,
+
+		All = Chord | Fingering,
 	}
 
 	internal readonly record struct MergeResult(ComponentContent NewContent, ContentOffset LengthBefore)
@@ -1648,12 +1663,12 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 		public string? Text { get; }
 		public Chord? Chord { get; }
+		public Fingering? Fingering { get; }
 
-		public SpecialContentType CurrentType => Chord is not null ? SpecialContentType.Chord : SpecialContentType.None;
+		public bool IsEmpty => Chord is null && Fingering is null && string.IsNullOrEmpty(Text);
 
-		public bool IsEmpty => Chord is null && string.IsNullOrEmpty(Text);
-
-		public ContentType ContentType => Chord is not null ? ContentType.Chord
+		public ContentType Type => Chord is not null ? ContentType.Chord
+			: Fingering is not null ? ContentType.Fingering
 			: string.IsNullOrWhiteSpace(Text) ? ContentType.Space
 			: Text.All(PUNCTUATION.Contains) ? ContentType.Punctuation
 			: ContentType.Word;
@@ -1668,16 +1683,32 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			Chord = chord;
 		}
 
-		public static ComponentContent FromString(string content, ISheetEditorFormatter? formatter, SpecialContentType allowedTypes = SpecialContentType.Chord)
+		public ComponentContent(Fingering fingering)
+		{
+			Fingering = fingering;
+		}
+
+		public static ComponentContent FromString(string content, ISheetEditorFormatter? formatter, SpecialContentType allowedTypes = SpecialContentType.All)
 		{
 			if ((allowedTypes & SpecialContentType.Chord) != 0)
 			{
 				//Versuche den Inhalt als Akkord zu lesen
-				var chordLength = (formatter is not null ? formatter.TryReadChord(content, out var chord) : Chord.TryRead(content, out chord));
+				var chordLength = Chord.TryRead(formatter, content, out var chord);
 				if (chord is not null && chordLength == content.Length)
 				{
 					//Der Inhalt ist ein Akkord
 					return new(chord);
+				}
+			}
+
+			if ((allowedTypes & SpecialContentType.Fingering) != 0)
+			{
+				//Versuche den Inhalt als Fingering zu lesen
+				var fingeringLength = Fingering.TryRead(formatter, content, out var fingering);
+				if (fingering is not null && fingeringLength == content.Length)
+				{
+					//Der Inhalt ist ein Fingering
+					return new(fingering);
 				}
 			}
 
@@ -1694,10 +1725,18 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			}
 
 			//Prüfe auf Akkord
-			var read = formatter?.TryReadChord(content, out var chord) ?? Chord.TryRead(content, out chord);
+			var read = Chord.TryRead(formatter, content, out var chord);
 			if (read > 0 && chord is not null)
 			{
 				result = new ComponentContent(chord);
+				return read;
+			}
+
+			//Prüfe auf Fingering
+			read = Fingering.TryRead(formatter, content, out var fingering);
+			if (read > 0 && fingering is not null)
+			{
+				result = new ComponentContent(fingering);
 				return read;
 			}
 
@@ -1735,6 +1774,11 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				{
 					Slice = sliceInfo
 				};
+			else if (Fingering is not null)
+				return new SheetDisplayLineFingering(Fingering)
+				{
+					Slice = sliceInfo
+				};
 			else if (string.IsNullOrWhiteSpace(Text))
 				return new SheetDisplayLineSpace(Text?.Length ?? 0)
 				{
@@ -1750,7 +1794,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 		public SheetDisplayLineElement CreateDisplayElementPart(SheetDisplaySliceInfo sliceId, ContentOffset offset, ContentOffset length, ISheetBuilderFormatter? formatter)
 		{
 			//Trenne Inhalt auf
-			var textContent = Text ?? Chord?.ToString(formatter) ?? string.Empty;
+			var textContent = ToString(formatter);
 			if (offset == ContentOffset.Zero && length.Value >= textContent.Length)
 				return CreateElement(sliceId, formatter);
 
@@ -1761,9 +1805,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 		}
 
 		public ContentOffset GetLength(ISheetFormatter? formatter)
-			=> new(Text?.Length
-			?? Chord?.ToString(formatter).Length
-			?? 0);
+			=> new(ToString(formatter).Length);
 
 		internal ComponentContent? RemoveContent(ContentOffset offset, ContentOffset length, SpecialContentType allowedTypes, ISheetEditorFormatter? formatter)
 		{
@@ -1777,7 +1819,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				return null;
 
 			//Textinhalt
-			var textContent = Text ?? Chord?.ToString(formatter);
+			var textContent = ToString(formatter);
 			if (textContent is null) return null;
 
 			//Kürze den Textinhalt
@@ -1811,7 +1853,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 		{
 			//Textinhalt
 			var textContent = ToString(formatter);
-			var afterTextContent = content.Text ?? content.Chord?.ToString(formatter);
+			var afterTextContent = content.ToString(formatter);
 
 			//Füge den Textinhalt hinzu
 			var stringOffset = Math.Min(offset.Value, textContent.Length);
@@ -1845,9 +1887,9 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 		}
 
 		#region Operators
-		public string ToString(ISheetFormatter? formatter) => Text ?? Chord?.ToString(formatter) ?? string.Empty;
-
-		public override string ToString() => Text ?? Chord?.ToString() ?? string.Empty;
+		public override string ToString() => ToString(null);
+		public string ToString(ISheetFormatter? formatter)
+			=> Text ?? Chord?.ToString(formatter) ?? Fingering?.ToString(formatter) ?? string.Empty;
 		#endregion
 	}
 	#endregion
@@ -2160,7 +2202,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			Content = new(chord);
 		}
 
-		public static VarietyComponent FromString(string content, ISheetEditorFormatter? formatter, SpecialContentType allowedTypes = SpecialContentType.Chord)
+		public static VarietyComponent FromString(string content, ISheetEditorFormatter? formatter, SpecialContentType allowedTypes = SpecialContentType.All)
 			=> new VarietyComponent(ComponentContent.FromString(content, formatter, allowedTypes));
 
 		public static VarietyComponent CreateSpace(ContentOffset length, ISheetEditorFormatter? formatter)
@@ -2186,7 +2228,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				//Die Komponente hat keine Attachments
 
 				//Ist die Komponente nur ein einzelnes Satzzeichen und war die vorherige Komponente ein Wort?
-				if (Content.ContentType == ContentType.Punctuation && Content.Text is not null
+				if (Content.Type == ContentType.Punctuation && Content.Text is not null
 					&& builders.TextLine.CurrentLength == builders.TextLine.CurrentNonSpaceLength)
 				{
 					//Schreibe nur das Satzzeichen
@@ -2473,7 +2515,9 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			//Passt der Inhaltstyp nicht?
 			if (newContent.Chord is not null && Owner?.GetAllowedTypes(this).HasFlag(SpecialContentType.Chord) != true)
 				return false;
-			if (newContent.ContentType != Content.ContentType)
+			if (newContent.Fingering is not null && Owner?.GetAllowedTypes(this).HasFlag(SpecialContentType.Fingering) != true)
+				return false;
+			if (newContent.Type != Content.Type)
 				return false;
 
 			//Ersetze den Inhalt
@@ -2544,14 +2588,15 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			if (next is not VarietyComponent varietyMerge)
 				return null;
 
-			//Passen die Inhaltstypen nicht zusammen?
-			if (!CanAppendTo(Content.ContentType, varietyMerge.Content.ContentType))
-				return null;
-
 			//Füge Inhalt zusammen
 			var lengthBefore = Content.GetLength(formatter);
 			var mergeLengthBefore = varietyMerge.Content.GetLength(formatter);
 			var mergeResult = Content.MergeContents(varietyMerge.Content, offset, Owner?.GetAllowedTypes(this) ?? SpecialContentType.None, formatter);
+
+			//Passen die Inhaltstypen nicht zusammen?
+			if (!CanAppendTo(Content, varietyMerge.Content, mergeResult.NewContent))
+				return null;
+
 			Content = mergeResult.NewContent;
 			ResetDisplayCache();
 
@@ -2630,12 +2675,14 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			return true;
 		}
 
-		private static bool CanAppendTo(ContentType left, ContentType right) => left switch
+		private static bool CanAppendTo(ComponentContent left, ComponentContent right, ComponentContent total) => left switch
 		{
-			ContentType.Word => right is ContentType.Word or ContentType.Chord,
-			ContentType.Chord => right is ContentType.Word or ContentType.Chord,
-			ContentType.Space => right is ContentType.Space,
-			ContentType.Punctuation => right is ContentType.Punctuation,
+			{ Type: ContentType.Word } when total is { Type: ContentType.Fingering } => true,
+			{ Type: ContentType.Word } => right is { Type: ContentType.Word or ContentType.Chord },
+			{ Type: ContentType.Chord } => right is { Type: ContentType.Word or ContentType.Chord },
+			{ Type: ContentType.Space } => right is { Type: ContentType.Space },
+			{ Type: ContentType.Punctuation } => right is { Type: ContentType.Punctuation },
+			{ Type: ContentType.Fingering } => right is { Type: ContentType.Word or ContentType.Chord or ContentType.Punctuation or ContentType.Fingering },
 			_ => false,
 		};
 		#endregion
@@ -2718,7 +2765,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			internal Action? TryRemoveContent(ContentOffset offset, ContentOffset length, ISheetEditorFormatter? formatter)
 			{
 				//Entferne den Inhalt
-				var newContent = Content.RemoveContent(offset, length, SpecialContentType.Chord, formatter);
+				var newContent = Content.RemoveContent(offset, length, SpecialContentType.All, formatter);
 				if (newContent is null)
 					return null;
 
@@ -2729,19 +2776,19 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			internal void InsertContent(string content, ContentOffset offset, ISheetEditorFormatter? formatter)
 			{
 				//Füge Inhalt ein
-				Content = Content.MergeContents(content, offset, SpecialContentType.Chord, formatter).NewContent;
+				Content = Content.MergeContents(content, offset, SpecialContentType.All, formatter).NewContent;
 			}
 
 			internal void ReplaceContent(string content, ISheetEditorFormatter? formatter)
 			{
 				//Ersetze Inhalt
-				Content = ComponentContent.FromString(content, formatter, SpecialContentType.Chord);
+				Content = ComponentContent.FromString(content, formatter, SpecialContentType.All);
 			}
 
 			internal VarietyAttachment? SplitEnd(ContentOffset offset, ISheetEditorFormatter? formatter)
 			{
 				//Trenne den Inhalt
-				var newContent = Content.SplitEnd(offset, SpecialContentType.Chord, SpecialContentType.Chord, formatter);
+				var newContent = Content.SplitEnd(offset, SpecialContentType.All, SpecialContentType.All, formatter);
 				if (newContent is null) return null;
 				Content = newContent.Value.NewContent;
 
@@ -2753,7 +2800,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			internal bool TryMergeContents(VarietyAttachment attachment, ISheetEditorFormatter? formatter)
 			{
 				//Füge Inhalt hinzu
-				Content = Content.MergeContents(attachment.Content, ContentOffset.FarEnd, SpecialContentType.Chord, formatter).NewContent;
+				Content = Content.MergeContents(attachment.Content, ContentOffset.FarEnd, SpecialContentType.All, formatter).NewContent;
 				return true;
 			}
 			#endregion

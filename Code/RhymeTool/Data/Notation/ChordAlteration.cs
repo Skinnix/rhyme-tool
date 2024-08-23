@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Skinnix.RhymeTool;
-using Skinnix.RhymeTool.Data.Notation.Display;
 
 namespace Skinnix.RhymeTool.Data.Notation;
 

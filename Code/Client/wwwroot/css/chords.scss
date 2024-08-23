@@ -1,4 +1,5 @@
 ﻿$chordColor: var(--bs-primary);
+$fingeringColor : var(--bs-primary);
 $anchorTextColor: var(--bs-info-text-emphasis);
 $separatorColor: #6c757d;
 
@@ -163,6 +164,11 @@ $separatorColor: #6c757d;
 		.chord-alteration-separator, .chord-bass-separator {
 			color: $separatorColor;
 		}
+	}
+
+	.fingering {
+		color: $fingeringColor;
+		position: relative;
 	}
 
 	.anchor-text {

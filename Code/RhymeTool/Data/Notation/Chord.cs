@@ -3,7 +3,6 @@ using System.ComponentModel.DataAnnotations;
 using System.Runtime.Serialization;
 using System.Text;
 using Skinnix.RhymeTool;
-using Skinnix.RhymeTool.Data.Notation.Display;
 
 namespace Skinnix.RhymeTool.Data.Notation;
 
@@ -53,7 +52,10 @@ public sealed record Chord(Note Root, ChordQuality Quality)
     public string ToString(ISheetFormatter? formatter)
         => formatter?.Format(this) ?? ToString();
 
-    public static int TryRead(ReadOnlySpan<char> s, out Chord? chord)
+	public static int TryRead(ISheetEditorFormatter? formatter, ReadOnlySpan<char> s, out Chord? chord)
+		=> formatter?.TryReadChord(s, out chord) ?? TryRead(s, out chord);
+
+	public static int TryRead(ReadOnlySpan<char> s, out Chord? chord)
     {
         chord = null;
         if (s.IsEmpty)

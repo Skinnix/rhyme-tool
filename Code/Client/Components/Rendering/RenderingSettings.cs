@@ -2,6 +2,7 @@
 using System.Runtime.CompilerServices;
 using Skinnix.RhymeTool.ComponentModel;
 using Skinnix.RhymeTool.Configuration;
+using Skinnix.RhymeTool.Data.Notation;
 using Skinnix.RhymeTool.Data.Notation.Display;
 
 namespace Skinnix.RhymeTool.Client.Components.Rendering;

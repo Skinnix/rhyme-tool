@@ -1,7 +1,4 @@
-﻿
-using Skinnix.RhymeTool.Data.Notation.Display;
-
-namespace Skinnix.RhymeTool.Data.Notation;
+﻿namespace Skinnix.RhymeTool.Data.Notation;
 
 public class SheetWriter
 {

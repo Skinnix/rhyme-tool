@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using Skinnix.RhymeTool.Data.Notation.Display;
 
 using ChordInLine = (
 	Skinnix.RhymeTool.Data.Notation.Chord Chord,
@@ -205,7 +204,7 @@ public class SheetReader
 		{
 			//Wandle ggf. den Content um
 			var componentContent = content.Content;
-			if (componentContent.ContentType == SheetVarietyLine.ContentType.Chord)
+			if (componentContent.Type == SheetVarietyLine.ContentType.Chord)
 				componentContent = new SheetVarietyLine.ComponentContent(content.OriginalContent);
 
 			//Erzeuge die Komponente
@@ -218,7 +217,7 @@ public class SheetReader
 				for (; attachmentIndex < attachments.Count; attachmentIndex++)
 				{
 					//Nur Leerzeichen?
-					if (attachments[attachmentIndex].Content.ContentType == SheetVarietyLine.ContentType.Space)
+					if (attachments[attachmentIndex].Content.Type == SheetVarietyLine.ContentType.Space)
 						continue;
 
 					//Ist das Attachment zu weit hinten?
@@ -278,7 +277,7 @@ public class SheetReader
 			if (contents.Count > 0)
 			{
 				var previousContent = contents[^1];
-				if (previousContent.Content.ContentType == SheetVarietyLine.ContentType.Chord && content.Value.ContentType == SheetVarietyLine.ContentType.Chord)
+				if (previousContent.Content.Type == SheetVarietyLine.ContentType.Chord && content.Value.Type == SheetVarietyLine.ContentType.Chord)
 				{
 					//Füge die Akkorde als Text zusammen und ersetze die vorherige Komponente
 					var combinedText = new string(line[previousContent.Offset.Value..(offset + contentLength)]);
@@ -292,14 +291,14 @@ public class SheetReader
 		}
 
 		//Kann die Zeile eine reine Akkordzeile sein?
-		var hasChords = contents.Any(c => c.Content.ContentType == SheetVarietyLine.ContentType.Chord);
-		var hasWords = contents.Any(c => c.Content.ContentType == SheetVarietyLine.ContentType.Word);
+		var hasChords = contents.Any(c => c.Content.Type == SheetVarietyLine.ContentType.Chord);
+		var hasWords = contents.Any(c => c.Content.Type == SheetVarietyLine.ContentType.Word);
 		canBeAttachmentLine = hasChords && !hasWords;
 		canBeChordOnlyLine = false;
 		if (canBeAttachmentLine)
 		{
 			//Sind alle Leerkomponenten nur ein Zeichen lang?
-			if (contents.All(c => c.Content.ContentType != SheetVarietyLine.ContentType.Space || c.Length == ContentOffset.One))
+			if (contents.All(c => c.Content.Type != SheetVarietyLine.ContentType.Space || c.Length == ContentOffset.One))
 				canBeChordOnlyLine = true;
 		}
 
