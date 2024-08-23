@@ -46,19 +46,19 @@
         switch (element)
         {
             case SheetDisplayLineChord chord:
-                <span class="@GetElementClasses(element)">@{ RenderChordContent(chord.Chord); }</span>
+                <span @key="chord" class="@GetElementClasses(element)">@{ RenderChordContent(chord.Chord); }</span>
                 break;
 
-            case SheetDisplayLineSegmentTitleText titleText:
-                <span class="@GetElementClasses(element)" id="sheetSegment-@(line.Guid)">@titleText.ToString(Formatter)</span>
+            case SheetDisplayLineSegmentTitleBracket titleBracket when titleBracket.IsTitleStart:
+                <span class="scroll-anchor" id="sheetSegment-@(line.Guid)"></span><span @key="titleBracket" class="@SheetRenderer.GetElementClasses(element)">@titleBracket.ToString(Formatter)</span>
                 break;
 
             case SheetDisplayLineBreakPoint breakpoint:
-                <span class="@GetElementClasses(element)" data-breakpoint-index="@breakpoint.BreakPointIndex" data-breakpoint-offset="@breakpoint.StartingPointOffset"></span>
+                <span @key="breakpoint" class="@GetElementClasses(element)" data-breakpoint-index="@breakpoint.BreakPointIndex" data-breakpoint-offset="@breakpoint.StartingPointOffset"></span>
                 break;
 
             default:
-                <span class="@GetElementClasses(element)">@element.ToString(Formatter)</span>
+                <span @key="element" class="@GetElementClasses(element)">@element.ToString(Formatter)</span>
                 break;
         }
     }

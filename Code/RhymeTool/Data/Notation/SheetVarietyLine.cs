@@ -117,12 +117,9 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			yield break;
 		}
 
-		////Ist die Akkordzeile nicht leer?
-		//if (builders.ChordLine.CurrentLength > 0)
-		//{
-		//	//Strecke die Akkordzeile auf die Länge der Textzeile + 1
-		//	builders.ChordLine.ExtendLength(builders.TextLine.CurrentLength + 1, 0);
-		//}
+		//Nachbearbeitung der Zeilen
+		formatter?.AfterPopulateLine(this, builders.TextLine, builders.AllLines);
+		formatter?.AfterPopulateLine(this, builders.ChordLine, builders.AllLines);
 
 		//Zeige Akkordzeile
 		if (formatter?.ShowLine(this, builders.ChordLine) != false)
@@ -193,6 +190,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 	public static readonly Reason NoComponentFoundHere = new("Hier scheint keine Komponente zu sein");
 	public static readonly Reason RemovingFromAttachmentFailed = new("Konnte den Akkord nicht kürzen");
 	public static readonly Reason NoAttachmentAfter = new("Hiernach scheint kein Akkord zu sein");
+	public static readonly Reason NoAttachmentBefore = new("Hiervor scheint kein Akkord zu sein");
 	public static readonly Reason CouldNotMoveAttachment = new("Verschieben des Akkords fehlgeschlagen");
 	public static readonly Reason CannotEditDifferentLineTypes = new("Mehrzeilige Bearbeitungen müssen auf dem gleichen Zeilentyp beginnen und enden");
 	public static readonly Reason CannotMultiLineEditAttachments = new("Akkorde können nicht mehrzeilig bearbeitet werden");
@@ -220,7 +218,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			this.Line = owner;
 		}
 
-		public DelayedMetalineEditResult TryDeleteContent(SheetDisplayLineEditingContext context, DeleteDirection direction, ISheetEditorFormatter? formatter = null)
+		public DelayedMetalineEditResult TryDeleteContent(SheetDisplayLineEditingContext context, DeleteDirection direction, DeleteType type, ISheetEditorFormatter? formatter = null)
 		{
 			//Ist der Bereich leer?
 			if (context.SelectionRange.Length == 0)
@@ -406,51 +404,93 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 					previousComponent = component;
 				}
 
-				//Lösche das Zeichen vor oder hinter dem Cursor
-				if (direction == DeleteDirection.Forward)
+				//Wird ein ganzes Wort gelöscht?
+				if (type == DeleteType.Word)
 				{
-					//Steht der Cursor am Ende einer Komponente?
-					if (endComponent is not null && nextComponent is not null)
+					//Steht der Cursor am Anfang einer Komponente und soll diese gelöscht werden?
+					if (startComponent is not null && direction == DeleteDirection.Forward)
 					{
-						//Lösche das erste Zeichen der ersten Komponente danach
-						context.SelectionRange = new SimpleRange(endComponent.DisplayRenderBounds.EndOffset, nextComponent.DisplayRenderBounds.StartOffset + 1);
+						//Lösche die Komponente
+						context.SelectionRange = new SimpleRange(startComponent.DisplayRenderBounds.StartOffset, startComponent.DisplayRenderBounds.EndOffset);
 					}
 
-					//Steht der Cursor mitten in einem langgestreckten Leerzeichen?
-					else if (endComponent is null && previousComponent?.DisplayRenderBounds.EndOffset <= context.SelectionRange.Start && nextComponent is not null
-						&& (previousComponent as VarietyComponent)?.Content.ContentType == ContentType.Space)
+					//Steht der Cursor am Ende einer Komponente und soll diese gelöscht werden?
+					else if (endComponent is not null && direction == DeleteDirection.Backward)
 					{
-						//Lösche das erste Zeichen der ersten Komponente nach dem Leerzeichen
-						context.SelectionRange = new SimpleRange(previousComponent.DisplayRenderBounds.EndOffset, nextComponent.DisplayRenderBounds.StartOffset + 1);
+						//Lösche die vorherige Komponente
+						context.SelectionRange = new SimpleRange(endComponent.DisplayRenderBounds.StartOffset, endComponent.DisplayRenderBounds.EndOffset);
 					}
 
-					//Erweitere einfach die Auswahl um ein Zeichen nach rechts
+					//Steht der Cursor mitten in einer Komponente?
+					else if (previousComponent is not null)
+					{
+						//In welche Richtung soll gelöscht werden?
+						if (direction == DeleteDirection.Forward)
+						{
+							//Kürze die Komponente nach dem Cursor
+							context.SelectionRange = new SimpleRange(context.SelectionRange.Start, previousComponent.DisplayRenderBounds.EndOffset);
+						}
+						else
+						{
+							//Kürze die Komponente vor dem Cursor
+							context.SelectionRange = new SimpleRange(previousComponent.DisplayRenderBounds.StartOffset, context.SelectionRange.Start);
+						}
+					}
+
+					//Wurde keine passende Komponente gefunden?
 					else
 					{
-						context.SelectionRange = new SimpleRange(context.SelectionRange.Start, context.SelectionRange.Start + 1);
+						return DelayedMetalineEditResult.Fail(NoComponentFoundHere);
 					}
 				}
 				else
 				{
-					//Steht der Cursor am Anfang einer Komponente?
-					if (startComponent is not null && previousComponent is not null)
+					//Lösche das Zeichen vor oder hinter dem Cursor
+					if (direction == DeleteDirection.Forward)
 					{
-						//Lösche das letzte Zeichen der ersten Komponente davor
-						context.SelectionRange = new SimpleRange(previousComponent.DisplayRenderBounds.EndOffset - 1, startComponent.DisplayRenderBounds.StartOffset);
+						//Steht der Cursor am Ende einer Komponente?
+						if (endComponent is not null && nextComponent is not null)
+						{
+							//Lösche das erste Zeichen der ersten Komponente danach
+							context.SelectionRange = new SimpleRange(endComponent.DisplayRenderBounds.EndOffset, nextComponent.DisplayRenderBounds.StartOffset + 1);
+						}
+
+						//Steht der Cursor mitten in einem langgestreckten Leerzeichen?
+						else if (endComponent is null && previousComponent?.DisplayRenderBounds.EndOffset <= context.SelectionRange.Start && nextComponent is not null
+							&& (previousComponent as VarietyComponent)?.Content.ContentType == ContentType.Space)
+						{
+							//Lösche das erste Zeichen der ersten Komponente nach dem Leerzeichen
+							context.SelectionRange = new SimpleRange(previousComponent.DisplayRenderBounds.EndOffset, nextComponent.DisplayRenderBounds.StartOffset + 1);
+						}
+
+						//Erweitere einfach die Auswahl um ein Zeichen nach rechts
+						else
+						{
+							context.SelectionRange = new SimpleRange(context.SelectionRange.Start, context.SelectionRange.Start + 1);
+						}
 					}
-					
-					//Steht der Cursor mitten in einem langgestreckten Leerzeichen?
-					else if (startComponent is null && previousComponent?.DisplayRenderBounds.EndOffset <= context.SelectionRange.Start && prepreviousComponent is not null
-						&& (previousComponent as VarietyComponent)?.Content.ContentType == ContentType.Space)
-					{
-						//Lösche das letzte Zeichen der ersten Komponente vor dem Leerzeichen
-						context.SelectionRange = new SimpleRange(previousComponent.DisplayRenderBounds.StartOffset, prepreviousComponent.DisplayRenderBounds.EndOffset - 1);
-					}
-					
-					//Erweitere einfach die Auswahl um ein Zeichen nach links
 					else
 					{
-						context.SelectionRange = new SimpleRange(context.SelectionRange.Start - 1, context.SelectionRange.Start);
+						//Steht der Cursor am Anfang einer Komponente?
+						if (startComponent is not null && previousComponent is not null)
+						{
+							//Lösche das letzte Zeichen der ersten Komponente davor
+							context.SelectionRange = new SimpleRange(previousComponent.DisplayRenderBounds.EndOffset - 1, startComponent.DisplayRenderBounds.StartOffset);
+						}
+
+						//Steht der Cursor mitten in einem langgestreckten Leerzeichen?
+						else if (startComponent is null && previousComponent?.DisplayRenderBounds.EndOffset <= context.SelectionRange.Start && prepreviousComponent is not null
+							&& (previousComponent as VarietyComponent)?.Content.ContentType == ContentType.Space)
+						{
+							//Lösche das letzte Zeichen der ersten Komponente vor dem Leerzeichen
+							context.SelectionRange = new SimpleRange(previousComponent.DisplayRenderBounds.StartOffset, prepreviousComponent.DisplayRenderBounds.EndOffset - 1);
+						}
+
+						//Erweitere einfach die Auswahl um ein Zeichen nach links
+						else
+						{
+							context.SelectionRange = new SimpleRange(context.SelectionRange.Start - 1, context.SelectionRange.Start);
+						}
 					}
 				}
 			}
@@ -1101,11 +1141,42 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			this.Line = owner;
 		}
 
-		public DelayedMetalineEditResult TryDeleteContent(SheetDisplayLineEditingContext context, DeleteDirection direction, ISheetEditorFormatter? formatter = null)
+		public DelayedMetalineEditResult TryDeleteContent(SheetDisplayLineEditingContext context, DeleteDirection direction, DeleteType type, ISheetEditorFormatter? formatter = null)
 		{
 			//Ist der Bereich leer?
 			if (context.SelectionRange.Length == 0)
 			{
+				//Wird ein Wort gelöscht?
+				if (type == DeleteType.Word)
+				{
+					//Finde das nächste/vorherige Attachment
+					var attachment = direction == DeleteDirection.Forward
+						? FindAttachmentsInRange(SimpleRange.AllFromStart(context.SelectionRange.Start), formatter).FirstOrDefault()
+						: FindAttachmentsInRange(SimpleRange.AllToEnd(context.SelectionRange.Start), formatter).LastOrDefault();
+
+					//Attachment nicht gefunden?
+					if (attachment.Component is null)
+						return DelayedMetalineEditResult.Fail(direction == DeleteDirection.Forward ? NoAttachmentAfter : NoAttachmentBefore);
+
+					//Bearbeitung wird funktionieren
+					return new(() =>
+					{
+						//Lösche das Attachment
+						attachment.Component.RemoveAttachment(attachment.Attachment);
+
+						//Erzeuge die Displayelemente der Zeile neu
+						Line.RaiseModifiedAndInvalidateCache();
+						Line.CreateDisplayLines(formatter);
+
+						//Setze den Cursor an die Stelle des gelöschten Attachments
+						if (direction == DeleteDirection.Forward)
+							return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAt(attachment.Attachment.RenderBounds.StartOffset)));
+						else
+							return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAt(attachment.Attachment.RenderBounds.EndOffset)));
+					});
+				}
+
+				//Erweitere einfach die Auswahl um ein Zeichen nach rechts oder links
 				if (direction == DeleteDirection.Forward)
 					context.SelectionRange = new SimpleRange(context.SelectionRange.Start, context.SelectionRange.Start + 1);
 				else
@@ -1429,16 +1500,25 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			//Hat sich die Komponente nicht verändert?
 			if (component == targetComponent)
 			{
-				//Verschiebe das Attachment
-				return () => attachment.SetOffset(targetOffset);
+				return () =>
+				{
+					//Verschiebe das Attachment
+					attachment.SetOffset(targetOffset);
+
+					//Modified-Event
+					Line.RaiseModifiedAndInvalidateCache();
+				};
 			}
 
-			//Verschiebe das Attachment in die andere Komponente
 			return () =>
 			{
+				//Verschiebe das Attachment in die andere Komponente
 				component.RemoveAttachment(attachment);
 				attachment.SetOffset(targetOffset);
 				targetComponent.AddAttachment(attachment);
+
+				//Modified-Event
+				Line.RaiseModifiedAndInvalidateCache();
 			};
 		}
 
@@ -2002,6 +2082,8 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			public SheetDisplayTextLine.Builder TextLine { get; }
 			public SheetDisplayChordLine.Builder ChordLine { get; }
 
+			public IEnumerable<SheetDisplayLineBuilder> AllLines => [TextLine, ChordLine];
+
 			public bool IsTitleLine { get; init; }
 			public bool IsRenderingTitle { get; set; }
 
@@ -2293,17 +2375,22 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			//Ist der Inhalt der Anfang eines Titels?
 			var text = textElement.Text;
 			var sliceIndex = 0;
+			var contentOffset = element.Slice?.ContentOffset ?? ContentOffset.Zero;
 			if (!isCurrentlyWritingTitle)
 			{
 				if (!text.StartsWith('['))
 					yield break; //nur Text
 				
 				//Trenne öffnende Klammer
-				yield return new SheetDisplayLineSegmentTitleBracket("[")
+				yield return new SheetDisplayLineSegmentTitleBracket("[", true)
 				{
 					Slice = textElement.Slice,
 				};
+				if (text.Length == 1)
+					yield break;
+
 				sliceIndex++;
+				contentOffset += ContentOffset.One;
 				text = text[1..];
 				isCurrentlyWritingTitle = true;
 			}
@@ -2317,16 +2404,17 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				{
 					Slice = textElement.Slice!.Value with
 					{
-						ContentOffset = new(1),
+						ContentOffset = contentOffset,
 					},
 				};
+				contentOffset += new ContentOffset(titleText.Length);
 
 				//Trenne schließende Klammer
-				yield return new SheetDisplayLineSegmentTitleBracket("]")
+				yield return new SheetDisplayLineSegmentTitleBracket("]", false)
 				{
 					Slice = textElement.Slice!.Value with
 					{
-						ContentOffset = new(textElement.Text.Length - 1),
+						ContentOffset = contentOffset,
 					},
 				};
 			}
@@ -2338,9 +2426,10 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				{
 					Slice = textElement.Slice!.Value with
 					{
-						ContentOffset = new(1),
+						ContentOffset = contentOffset,
 					},
 				};
+				contentOffset += new ContentOffset(titleText.Length);
 			}
 			else
 			{

@@ -183,7 +183,7 @@ function attachmentStartDrag(event) {
 	}));
 
 	//store the chord's text in the dataTransfer object
-	event.dataTransfer.setData('text', chordElement.textContent);
+	event.dataTransfer.setData('text', attachmentElement.textContent);
 }
 
 
@@ -398,6 +398,31 @@ function setSelectionRange(wrapper, metaline, lineId, lineIndex, selectionRange)
 		lineElement = lineIndex < 0 ? lines[lines.length + lineIndex] : lines[lineIndex];
 	}
 
+	//no line?
+	if (!lineElement)
+		return false;
+
+	var start = findNodeAndOffset(lineElement, selectionRange.start);
+	var end = selectionRange.start == selectionRange.end ? start : findNodeAndOffset(lineElement, selectionRange.end);
+
+	//set selection
+	var selection = document.getSelection();
+	var range;
+	if (selection.rangeCount == 1) {
+		var range = selection.getRangeAt(0);
+		range.setStart(start.node, start.offset);
+		range.setEnd(end.node, end.offset);
+	} else {
+		if (selection.rangeCount > 0)
+			selection.removeAllRanges();
+
+		var range = new Range();
+		range.setStart(start.node, start.offset);
+		range.setEnd(end.node, end.offset);
+		document.getSelection().addRange(range);
+	}
+	return true;
+
 	//find selection anchors
 	function findNodeAndOffset(element, offset) {
 		if (offset < 0)
@@ -457,26 +482,6 @@ function setSelectionRange(wrapper, metaline, lineId, lineIndex, selectionRange)
 			node: element,
 			offset: element.textContent.length - offsetFromEnd
 		};
-	}
-
-	var start = findNodeAndOffset(lineElement, selectionRange.start);
-	var end = selectionRange.start == selectionRange.end ? start : findNodeAndOffset(lineElement, selectionRange.end);
-
-	//set selection
-	var selection = document.getSelection();
-	var range;
-	if (selection.rangeCount == 1) {
-		var range = selection.getRangeAt(0);
-		range.setStart(start.node, start.offset);
-		range.setEnd(end.node, end.offset);
-	} else {
-		if (selection.rangeCount > 0)
-			selection.removeAllRanges();
-
-		var range = new Range();
-		range.setStart(start.node, start.offset);
-		range.setEnd(end.node, end.offset);
-		document.getSelection().addRange(range);
 	}
 }
 

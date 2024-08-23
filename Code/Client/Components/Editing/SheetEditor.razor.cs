@@ -74,8 +74,10 @@ partial class SheetEditor
 		{
 			EditType.InsertContent => line.Editing.InsertContent(context, data.Data, Formatter),
 			EditType.InsertLine => line.Editing.InsertContent(context, "\n", Formatter),
-			EditType.DeleteBackward => line.Editing.DeleteContent(context, DeleteDirection.Backward, Formatter),
-			EditType.DeleteForward => line.Editing.DeleteContent(context, DeleteDirection.Forward, Formatter),
+			EditType.DeleteBackward => line.Editing.DeleteContent(context, DeleteDirection.Backward, DeleteType.Character, Formatter),
+			EditType.DeleteForward => line.Editing.DeleteContent(context, DeleteDirection.Forward, DeleteType.Character, Formatter),
+			EditType.DeleteWordBackward => line.Editing.DeleteContent(context, DeleteDirection.Backward, DeleteType.Word, Formatter),
+			EditType.DeleteWordForward => line.Editing.DeleteContent(context, DeleteDirection.Forward, DeleteType.Word, Formatter),
 			_ => MetalineEditResult.Fail(UnknownEditType)
 		};
 
@@ -119,8 +121,8 @@ partial class SheetEditor
 		{
 			EditType.InsertContent => context.InsertContent(data.Data, Formatter),
 			EditType.InsertLine => context.InsertContent("\n", Formatter),
-			EditType.DeleteBackward => context.DeleteContent(DeleteDirection.Backward, Formatter),
-			EditType.DeleteForward => context.DeleteContent(DeleteDirection.Forward, Formatter),
+			EditType.DeleteBackward or EditType.DeleteWordBackward => context.DeleteContent(DeleteDirection.Backward, Formatter),
+			EditType.DeleteForward or EditType.DeleteWordForward => context.DeleteContent(DeleteDirection.Forward, Formatter),
 			_ => MultilineEditResult.Fail(UnknownEditType)
 		};
 
@@ -133,6 +135,8 @@ partial class SheetEditor
 		"insertLineBreak" or "insertParagraph" => (EditType?)EditType.InsertLine,
 		"deleteByCut" or "deleteByDrag" or "deleteContentBackward" or "deleteContent" => (EditType?)EditType.DeleteBackward,
 		"deleteContentForward" => (EditType?)EditType.DeleteForward,
+		"deleteWord" or "deleteWordBackward" => (EditType?)EditType.DeleteWordBackward,
+		"deleteWordForward" => (EditType?)EditType.DeleteWordForward,
 		_ => null,
 	};
 
@@ -142,6 +146,8 @@ partial class SheetEditor
 		InsertLine,
 		DeleteBackward,
 		DeleteForward,
+		DeleteWordForward,
+		DeleteWordBackward,
 	}
 
 	public record JsMetalineEditResult(bool Success, JsMetalineSelectionRange? Selection, ReasonBase? FailReason);

@@ -54,6 +54,16 @@ public class EditingSettings : IConfigurable
 		};
 	}
 
+	[Configurable(Name = "Akkordzeilen erweitern")]
+	public bool ExtendChordLines
+	{
+		get => Formatter.ExtendAttachmentLines;
+		set => Formatter = Formatter with
+		{
+			ExtendAttachmentLines = value
+		};
+	}
+
 	private void Set<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
 	{
 		field = value;

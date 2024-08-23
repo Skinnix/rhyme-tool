@@ -94,7 +94,7 @@ public record SheetDisplayLineSegmentTitleText(string Text) : SheetDisplayLineEl
 	public override string ToString(ISheetFormatter? formatter = null) => Text;
 }
 
-public record SheetDisplayLineSegmentTitleBracket(string Text) : SheetDisplayLineElement
+public record SheetDisplayLineSegmentTitleBracket(string Text, bool IsTitleStart) : SheetDisplayLineElement
 {
 	public override int GetLength(ISheetFormatter? formatter) => Text.Length;
 	public override string ToString(ISheetFormatter? formatter = null) => Text;

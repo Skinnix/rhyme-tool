@@ -50,7 +50,8 @@
         <nav class="nav nav-pills flex-column overflow-x-hidden text-break" id="pageNavigation">
             @foreach (var segment in document.FindSegments())
             {
-                <a class="nav-link" href="@(navigation.Uri)#sheetSegment-@(segment.TitleLine.Guid)">
+                var url = $"{new Uri(navigation.Uri).GetLeftPart(UriPartial.Query)}#sheetSegment-{segment.TitleLine.Guid}";
+                <a class="nav-link" href="@url" onclick="location.replace('@url'); return false">
                     @segment.Title
                 </a>
             }
@@ -58,8 +59,7 @@
     }
 </SectionContent>
 
-<div class="chord-sheet-wrapper@(IsDebug ? " debug" : null)"
-     style="font-size: @((settings.FontSize / 100f).ToString(System.Globalization.CultureInfo.InvariantCulture))rem;">
+<div class="chord-sheet-wrapper@(IsDebug ? " debug" : null)" style="--font-percent: @settings.FontSize;">
     <SheetEditor Document="document" Formatter="settings.Formatter" />
 </div>
 
@@ -85,6 +85,7 @@
         Formatter = new DefaultSheetFormatter()
         {
             GermanMode = GermanNoteMode.Descriptive,
+            ExtendAttachmentLines = true,
         },
     };
 
@@ -120,6 +121,11 @@
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         await base.OnAfterRenderAsync(firstRender);
+
+        if (firstRender)
+        {
+            //await js.InvokeVoidAsync("startScrollSpy", "pageNavigation");
+        }
 
         await js.InvokeVoidAsync("console.log", "rerender: " + this.GetType().Name);
     }

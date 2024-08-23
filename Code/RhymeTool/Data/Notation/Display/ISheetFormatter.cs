@@ -40,6 +40,7 @@ public interface ISheetBuilderFormatter : ISheetFormatter
 
 	int SpaceBefore(SheetLine line, SheetDisplayLineBuilder lineBuilder, SheetDisplayLineElement element);
 	bool ShowLine(SheetLine line, SheetDisplayLineBuilder lineBuilder);
+	void AfterPopulateLine(SheetLine line, SheetDisplayLineBuilder lineBuilder, IEnumerable<SheetDisplayLineBuilder> allLines);
 }
 
 public interface ISheetEditorFormatter : ISheetBuilderFormatter
@@ -89,6 +90,7 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 
     public int SpaceBetweenChordsOnTextLine { get; init; } = 3;
     public int SpaceBetweenChordsOnChordLine { get; init; } = 1;
+	public bool ExtendAttachmentLines { get; init; } = false;
 	public bool ShowEmptyAttachmentLines { get; init; } = false;
 
 	public List<int> LineIndentations { get; init; } = [0, 2];
@@ -236,6 +238,16 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 
         return 0;
     }
+
+	public void AfterPopulateLine(SheetLine line, SheetDisplayLineBuilder lineBuilder, IEnumerable<SheetDisplayLineBuilder> allLines)
+	{
+		if (ExtendAttachmentLines && lineBuilder is SheetDisplayChordLine.Builder)
+		{
+			//Verlängere die Zeile auf die länge der längsten Zeile - 1
+			var length = allLines.Max(l => l.CurrentLength) - 1;
+			lineBuilder.ExtendLength(length, 0, this);
+		}
+	}
 
 	public bool ShowLine(SheetLine line, SheetDisplayLineBuilder lineBuilder)
 	{

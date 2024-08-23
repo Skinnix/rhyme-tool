@@ -14,6 +14,7 @@ $separatorColor: #6c757d;
 	font-family: monospace;
 	line-height: 1.1em;
 	padding-bottom: 8em;
+	font-size: calc(0.01rem * var(--font-percent));
 
 	.calculator {
 		position: absolute;

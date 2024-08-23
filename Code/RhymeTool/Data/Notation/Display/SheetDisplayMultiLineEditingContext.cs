@@ -15,7 +15,7 @@ public record SheetDisplayMultiLineEditingContext(SheetDocument Document,
 		{
 			GetLineAfter = () => LinesBetween.Count == 0 ? EndLine.Line : LinesBetween[1],
 		};
-		var firstLineResult = StartLine.TryDeleteContent(firstLineContext, DeleteDirection.Forward, formatter);
+		var firstLineResult = StartLine.TryDeleteContent(firstLineContext, DeleteDirection.Forward, DeleteType.Character, formatter);
 		if (!firstLineResult.Success)
 			return MultilineEditResult.Fail(firstLineResult.FailReason);
 
@@ -24,7 +24,7 @@ public record SheetDisplayMultiLineEditingContext(SheetDocument Document,
 		{
 			GetLineBefore = () => LinesBetween.Count == 0 ? StartLine.Line : LinesBetween[^1],
 		};
-		var lastLineResult = EndLine.TryDeleteContent(lastLineContext, DeleteDirection.Backward, formatter);
+		var lastLineResult = EndLine.TryDeleteContent(lastLineContext, DeleteDirection.Backward, DeleteType.Character, formatter);
 		if (!lastLineResult.Success)
 			return MultilineEditResult.Fail(lastLineResult.FailReason);
 
@@ -43,7 +43,7 @@ public record SheetDisplayMultiLineEditingContext(SheetDocument Document,
 		var combineResult = EndLine.DeleteContent(new SheetDisplayLineEditingContext(SimpleRange.CursorAtStart)
 		{
 			GetLineBefore = () => StartLine.Line,
-		}, DeleteDirection.Backward, formatter);
+		}, DeleteDirection.Backward, DeleteType.Character, formatter);
 		combineResult.Execute(Document, EndLine.Line);
 
 		//Verwende die Selektion der Kombination der Zeilen. Sollte das nicht funktioniert haben, verwende die Selektion der ersten oder letzten Zeile
@@ -76,7 +76,7 @@ public record SheetDisplayMultiLineEditingContext(SheetDocument Document,
 		{
 			GetLineBefore = () => LinesBetween.Count == 0 ? StartLine.Line : LinesBetween[^1],
 		};
-		var lastLineResult = EndLine.TryDeleteContent(lastLineContext, DeleteDirection.Backward, formatter);
+		var lastLineResult = EndLine.TryDeleteContent(lastLineContext, DeleteDirection.Backward, DeleteType.Character, formatter);
 		if (!lastLineResult.Success)
 			return MultilineEditResult.Fail(lastLineResult.FailReason);
 
@@ -95,7 +95,7 @@ public record SheetDisplayMultiLineEditingContext(SheetDocument Document,
 		var combineResult = EndLine.DeleteContent(new SheetDisplayLineEditingContext(SimpleRange.CursorAtStart)
 		{
 			GetLineBefore = () => StartLine.Line,
-		}, DeleteDirection.Backward, formatter);
+		}, DeleteDirection.Backward, DeleteType.Character, formatter);
 		combineResult.Execute(Document, EndLine.Line);
 
 		//Verwende die Selektion der Kombination der Zeilen. Sollte das nicht funktioniert haben, verwende die Selektion der ersten oder letzten Zeile

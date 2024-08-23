@@ -10,7 +10,7 @@ public interface ISheetDisplayLineEditing
 	int LineId { get; }
 
 	DelayedMetalineEditResult TryInsertContent(SheetDisplayLineEditingContext context, string content, ISheetEditorFormatter? formatter = null);
-	DelayedMetalineEditResult TryDeleteContent(SheetDisplayLineEditingContext context, DeleteDirection direction, ISheetEditorFormatter? formatter = null);
+	DelayedMetalineEditResult TryDeleteContent(SheetDisplayLineEditingContext context, DeleteDirection direction, DeleteType type, ISheetEditorFormatter? formatter = null);
 
 	MetalineEditResult InsertContent(SheetDisplayLineEditingContext context, string content, ISheetEditorFormatter? formatter = null)
 	{
@@ -21,9 +21,9 @@ public interface ISheetDisplayLineEditing
 		return tryResult.Execute();
 	}
 
-	MetalineEditResult DeleteContent(SheetDisplayLineEditingContext context, DeleteDirection direction, ISheetEditorFormatter? formatter = null)
+	MetalineEditResult DeleteContent(SheetDisplayLineEditingContext context, DeleteDirection direction, DeleteType type, ISheetEditorFormatter? formatter = null)
 	{
-		var tryResult = TryDeleteContent(context, direction, formatter);
+		var tryResult = TryDeleteContent(context, direction, type, formatter);
 		if (!tryResult.Success)
 			return MetalineEditResult.Fail(tryResult.FailReason);
 
@@ -37,6 +37,12 @@ public enum DeleteDirection
 {
 	Backward,
 	Forward
+}
+
+public enum DeleteType
+{
+	Character,
+	Word
 }
 
 public record DelayedMetalineEditResult

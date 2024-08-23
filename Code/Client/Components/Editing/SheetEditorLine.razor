@@ -57,29 +57,29 @@
     void RenderSpan(SheetDisplayLineElement element)
     {
         string? elementString = null;
-        <span class="@SheetRenderer.GetElementClasses(element)">@if (element is SheetDisplayLineChord chord)
-        {
-            RenderChordContent(chord.Chord);
-        }
-        else
-        {
-            @(elementString = element.ToString(Formatter))
-        }@if (element.Tags.Contains(SheetDisplayTag.Attachment))
-        {
-            <span class="drag-handle" draggable="true" style="--content: '@(elementString ??= element.ToString(Formatter))';" ondragstart="attachmentStartDrag(event)"></span>
-        }</span>
+        <span @key="element" class="@SheetRenderer.GetElementClasses(element)">@if (element is SheetDisplayLineChord chord)
+            {
+                RenderChordContent(chord.Chord);
+            }
+            else
+            {
+                @(elementString = element.ToString(Formatter))
+            }@if (element.Tags.Contains(SheetDisplayTag.Attachment))
+            {
+                <span class="drag-handle" draggable="true" style="--content: '@(elementString ??= element.ToString(Formatter))';" ondragstart="attachmentStartDrag(event)"></span>
+            }</span>
     }
 
     void RenderElement(SheetDisplayLineElement element)
     {
         switch (element)
         {
-            case SheetDisplayLineSegmentTitleText titleText:
-                <span class="@SheetRenderer.GetElementClasses(element)" id="sheetSegment-@(Line.Guid)">@titleText.ToString(Formatter)</span>
+            case SheetDisplayLineBreakPoint breakpoint:
+                //Keine Breakpoints im Editor
                 break;
 
-            case SheetDisplayLineBreakPoint breakpoint:
-                <span class="@SheetRenderer.GetElementClasses(element)" data-breakpoint-index="@breakpoint.BreakPointIndex" data-breakpoint-offset="@breakpoint.StartingPointOffset"></span>
+            case SheetDisplayLineSegmentTitleBracket titleBracket when titleBracket.IsTitleStart:
+                <span class="scroll-anchor" id="sheetSegment-@(Line.Guid)"></span><span @key="titleBracket" class="@SheetRenderer.GetElementClasses(element)">@titleBracket.ToString(Formatter)</span>
                 break;
 
             default:
@@ -133,6 +133,8 @@
     [Parameter] public SheetLine? Line { get; set; }
 
     private SheetLine? loadedLine;
+    private ISheetEditorFormatter? loadedFormatter;
+
     private bool shouldRender;
 
     protected override void OnParametersSet()
@@ -150,6 +152,13 @@
 
             if (loadedLine is not null)
                 loadedLine.Modified += OnLineModified;
+        }
+
+        if (Formatter != loadedFormatter)
+        {
+            shouldRender = true;
+
+            loadedFormatter = Formatter;
         }
     }
 

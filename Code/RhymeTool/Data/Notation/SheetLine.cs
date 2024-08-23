@@ -48,7 +48,7 @@ public class SheetEmptyLine : SheetLine, ISheetDisplayLineEditing
 		}
     }
 
-	public DelayedMetalineEditResult TryDeleteContent(SheetDisplayLineEditingContext context, DeleteDirection direction, ISheetEditorFormatter? formatter = null)
+	public DelayedMetalineEditResult TryDeleteContent(SheetDisplayLineEditingContext context, DeleteDirection direction, DeleteType type, ISheetEditorFormatter? formatter = null)
 	{
 		if (direction == DeleteDirection.Forward)
 		{
