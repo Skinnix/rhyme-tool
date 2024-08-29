@@ -48,8 +48,12 @@ public class SheetEmptyLine : SheetLine, ISheetDisplayLineEditing
 		}
     }
 
-	public DelayedMetalineEditResult TryDeleteContent(SheetDisplayLineEditingContext context, DeleteDirection direction, DeleteType type, ISheetEditorFormatter? formatter = null)
+	public DelayedMetalineEditResult TryDeleteContent(SheetDisplayLineEditingContext context, DeleteDirection direction, DeleteType type, bool isMultilineEdit, ISheetEditorFormatter? formatter = null)
 	{
+		//Mehrzeilige Bearbeitung ignorieren, die Zeilen werden eh zusammengefasst
+		if (isMultilineEdit)
+			return new DelayedMetalineEditResult(() => new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAtStart)));
+
 		if (direction == DeleteDirection.Forward)
 		{
 			//Gibt es eine Zeile danach?
@@ -97,7 +101,7 @@ public class SheetEmptyLine : SheetLine, ISheetDisplayLineEditing
 		}
 	}
 
-	public DelayedMetalineEditResult TryInsertContent(SheetDisplayLineEditingContext context, string content, ISheetEditorFormatter? formatter = null)
+	public DelayedMetalineEditResult TryInsertContent(SheetDisplayLineEditingContext context, string content, bool isMultilineEdit, ISheetEditorFormatter? formatter = null)
 	{
 		//Wird nur ein Zeilenumbruch eingefügt?
 		if (content == "\n")
@@ -121,7 +125,7 @@ public class SheetEmptyLine : SheetLine, ISheetDisplayLineEditing
 
 		//Ersetze die Zeile mit einer VarietyLine und füge dann den Content ein
 		var varietyLine = new SheetVarietyLine();
-		var varietyLineResult = varietyLine.ContentEditor.InsertContent(context, content, formatter);
+		var varietyLineResult = varietyLine.ContentEditor.InsertContent(context, content, isMultilineEdit, formatter);
 
 		//Nicht erfolgreich?
 		if (!varietyLineResult.Success)

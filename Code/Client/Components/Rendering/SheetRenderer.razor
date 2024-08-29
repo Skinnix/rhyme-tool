@@ -46,19 +46,19 @@
         switch (element)
         {
             case SheetDisplayLineChord chord:
-                <span @key="chord" class="@GetElementClasses(element)">@{ RenderChordContent(chord.Chord); }</span>
+                <span @key="chord.Slice" class="@GetElementClasses(element)">@{ RenderChordContent(chord.Chord); }</span>
                 break;
 
             case SheetDisplayLineSegmentTitleBracket titleBracket when titleBracket.IsTitleStart:
-                <span class="scroll-anchor" id="sheetSegment-@(line.Guid)"></span><span @key="titleBracket" class="@SheetRenderer.GetElementClasses(element)">@titleBracket.ToString(Formatter)</span>
+                <span class="scroll-anchor" id="sheetSegment-@(line.Guid)"></span><span @key="titleBracket.Slice" class="@SheetRenderer.GetElementClasses(element)">@titleBracket.ToString(Formatter)</span>
                 break;
 
             case SheetDisplayLineBreakPoint breakpoint:
-                <span @key="breakpoint" class="@GetElementClasses(element)" data-breakpoint-index="@breakpoint.BreakPointIndex" data-breakpoint-offset="@breakpoint.StartingPointOffset"></span>
+                <span class="@GetElementClasses(element)" data-breakpoint-index="@breakpoint.BreakPointIndex" data-breakpoint-offset="@breakpoint.StartingPointOffset"></span>
                 break;
 
             default:
-                <span @key="element" class="@GetElementClasses(element)">@element.ToString(Formatter)</span>
+                <span @key="element.Slice" class="@GetElementClasses(element)">@element.ToString(Formatter)</span>
                 break;
         }
     }
@@ -74,15 +74,15 @@
         switch (display)
         {
             case SheetDisplayEmptyLine empty:
-                <div class="line line-empty@(blockIndex != 0 ? " continuation" : null)" data-block-index="@blockIndex" style="--line-indentation: @(indentation)"></div>
+                <div @key="display.Id" class="line line-empty@(blockIndex != 0 ? " continuation" : null)" data-block-index="@blockIndex" style="--line-indentation: @(indentation)"></div>
                 break;
 
             case SheetDisplayChordLine chords:
-                <div class="line line-chords@(blockIndex != 0 ? " continuation" : null)" data-block-index="@blockIndex" style="--line-indentation: @(indentation)">@{ RenderElements(line, elements); }</div>
+                <div @key="display.Id" class="line line-chords@(blockIndex != 0 ? " continuation" : null)" data-block-index="@blockIndex" style="--line-indentation: @(indentation)">@{ RenderElements(line, elements); }</div>
                 break;
 
             case SheetDisplayTextLine text:
-                <div class="line line-text@(blockIndex != 0 ? " continuation" : null)" data-block-index="@blockIndex" style="--line-indentation: @(indentation)">@{ RenderElements(line, elements); }</div>
+                <div @key="display.Id" class="line line-text@(blockIndex != 0 ? " continuation" : null)" data-block-index="@blockIndex" style="--line-indentation: @(indentation)">@{ RenderElements(line, elements); }</div>
                 break;
         }
     }

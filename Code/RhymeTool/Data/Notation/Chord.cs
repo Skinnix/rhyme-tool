@@ -21,7 +21,7 @@ public enum ChordQuality : byte
     Augmented,
 }
 
-public sealed record Chord(Note Root, ChordQuality Quality)
+public sealed record Chord(Note Root, ChordQuality Quality, string OriginalText)
 {
     public Note? Bass { get; init; }
     public IReadOnlyList<ChordAlteration> Alterations { get; init; } = Array.Empty<ChordAlteration>();
@@ -146,7 +146,7 @@ public sealed record Chord(Note Root, ChordQuality Quality)
             offset--;
 
         //Erfolgreich gelesen
-        chord = new Chord(note, quality)
+        chord = new Chord(note, quality, new string(s[0..offset]))
         {
             Bass = bassNote,
             Alterations = alterations

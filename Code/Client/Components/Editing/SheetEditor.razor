@@ -81,7 +81,7 @@
             await js.InvokeVoidAsync("registerBeforeInput", editorWrapper, DotNetObjectReference.Create(this), nameof(OnBeforeInput));
         }
 
-        await js.InvokeVoidAsync("console.log", "rerender: " + this.GetType().Name);
+        await js.InvokeVoidAsync("notifyRenderFinished", this.GetType().Name);
         shouldRender = false;
     }
 

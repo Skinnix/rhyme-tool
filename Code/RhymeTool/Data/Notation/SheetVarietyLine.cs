@@ -218,7 +218,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			this.Line = owner;
 		}
 
-		public DelayedMetalineEditResult TryDeleteContent(SheetDisplayLineEditingContext context, DeleteDirection direction, DeleteType type, ISheetEditorFormatter? formatter = null)
+		public DelayedMetalineEditResult TryDeleteContent(SheetDisplayLineEditingContext context, DeleteDirection direction, DeleteType type, bool isMultilineEdit, ISheetEditorFormatter? formatter = null)
 		{
 			//Ist der Bereich leer?
 			if (context.SelectionRange.Length == 0)
@@ -499,7 +499,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			return new DelayedMetalineEditResult(() => DeleteAndInsertContent(context, formatter, null, direction));
 		}
 
-		public DelayedMetalineEditResult TryInsertContent(SheetDisplayLineEditingContext context, string content, ISheetEditorFormatter? formatter)
+		public DelayedMetalineEditResult TryInsertContent(SheetDisplayLineEditingContext context, string content, bool isMultilineEdit, ISheetEditorFormatter? formatter)
 		{
 			//Wird eine neue Zeile eingefügt?
 			if (content == "\n")
@@ -1152,7 +1152,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			this.Line = owner;
 		}
 
-		public DelayedMetalineEditResult TryDeleteContent(SheetDisplayLineEditingContext context, DeleteDirection direction, DeleteType type, ISheetEditorFormatter? formatter = null)
+		public DelayedMetalineEditResult TryDeleteContent(SheetDisplayLineEditingContext context, DeleteDirection direction, DeleteType type, bool isMultilineEdit, ISheetEditorFormatter? formatter = null)
 		{
 			//Ist der Bereich leer?
 			if (context.SelectionRange.Length == 0)
@@ -1228,7 +1228,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			return TryFindAndMoveNextAttachment(context.SelectionRange, 0, formatter);
 		}
 
-		public DelayedMetalineEditResult TryInsertContent(SheetDisplayLineEditingContext context, string content, ISheetEditorFormatter? formatter)
+		public DelayedMetalineEditResult TryInsertContent(SheetDisplayLineEditingContext context, string content, bool isMultilineEdit, ISheetEditorFormatter? formatter)
 		{
 			//Finde alle Attachments im Bereich
 			var attachments = FindAttachmentsInRange(context.SelectionRange, formatter).ToList();
@@ -1854,9 +1854,17 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			//Textinhalt
 			var textContent = ToString(formatter);
 			var afterTextContent = content.ToString(formatter);
+			var stringOffset = Math.Min(offset.Value, textContent.Length);
+
+			//Sonderfall: Wird ein Element hinten an einen Akkord angefügt?
+			if (Chord is not null && stringOffset >= textContent.Length)
+			{
+				//Verwende den ursprünglichen Text des Akkords
+				textContent = Chord.OriginalText;
+				stringOffset = textContent.Length;
+			}
 
 			//Füge den Textinhalt hinzu
-			var stringOffset = Math.Min(offset.Value, textContent.Length);
 			var newContent = textContent[0..stringOffset] + afterTextContent;
 			if (offset.Value < textContent.Length)
 				newContent += textContent[stringOffset..];
@@ -2099,7 +2107,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 		}
 	}
 
-	public abstract class Component
+	public abstract class Component : SheetLineComponent
 	{
 		internal SheetVarietyLine? Owner { get; set; }
 
@@ -2138,32 +2146,32 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				ChordLine = chordLine;
 			}
 
-			public void AddBreakPoint(int componentIndex, int textLineOffset, int chordLineOffset, ISheetFormatter? formatter = null)
+			public void AddBreakPoint(SheetLineComponent component, int textLineOffset, int chordLineOffset, ISheetFormatter? formatter = null)
 			{
 				var index = breakPointIndex++;
 
 				TextLine.Append(new SheetDisplayLineBreakPoint(index, textLineOffset)
 				{
-					Slice = new SheetDisplaySliceInfo(componentIndex, ContentOffset.Zero, IsVirtual: true)
+					Slice = new SheetDisplaySliceInfo(component, ContentOffset.Zero, IsVirtual: true)
 				});
 				ChordLine.Append(new SheetDisplayLineBreakPoint(index, chordLineOffset)
 				{
-					Slice = new SheetDisplaySliceInfo(componentIndex, ContentOffset.Zero, IsVirtual: true)
+					Slice = new SheetDisplaySliceInfo(component, ContentOffset.Zero, IsVirtual: true)
 				});
 			}
 
-			public (SheetDisplayLineBreakPoint Text, SheetDisplayLineBreakPoint Attachment) CreateBreakPoints(int componentIndex, int textLineOffset, int chordLineOffset)
+			public (SheetDisplayLineBreakPoint Text, SheetDisplayLineBreakPoint Attachment) CreateBreakPoints(SheetLineComponent component, int textLineOffset, int chordLineOffset)
 			{
 				var index = breakPointIndex++;
 
 				return (
 					new SheetDisplayLineBreakPoint(index, textLineOffset)
 					{
-						Slice = new SheetDisplaySliceInfo(componentIndex, ContentOffset.Zero, IsVirtual: true)
+						Slice = new SheetDisplaySliceInfo(component, ContentOffset.Zero, IsVirtual: true)
 					},
 					new SheetDisplayLineBreakPoint(index, chordLineOffset)
 					{
-						Slice = new SheetDisplaySliceInfo(componentIndex, ContentOffset.Zero, IsVirtual: true)
+						Slice = new SheetDisplaySliceInfo(component, ContentOffset.Zero, IsVirtual: true)
 					});
 			}
 		}
@@ -2219,7 +2227,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 			//Finde das erste Attachment
 			(Attachment Attachment, SheetDisplayLineElement Display) firstAttachment = attachments
-				.Select((a, i) => (Attachment: a, Display: a.CreateDisplayAttachment(new(i, a.Offset), out _, formatter)))
+				.Select((a, i) => (Attachment: a, Display: a.CreateDisplayAttachment(out _, formatter)))
 				.FirstOrDefault(a => a.Display is not null)!;
 			(SheetDisplayLineBreakPoint Text, SheetDisplayLineBreakPoint Attachment)? firstAttachmentBreakpoint = null;
 			int firstAttachmentOffset = 0;
@@ -2235,7 +2243,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 					var textStartLength = builders.TextLine.CurrentLength;
 					var displayText = new SheetDisplayLineText(Content.Text)
 					{
-						Slice = new SheetDisplaySliceInfo(componentIndex, ContentOffset.Zero)
+						Slice = new SheetDisplaySliceInfo(this, ContentOffset.Zero)
 					};
 					builders.TextLine.Append(displayText);
 
@@ -2247,7 +2255,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				}
 
 				//Füge direkt einen Breakpoint ein
-				builders.AddBreakPoint(componentIndex, 0, 0, formatter);
+				builders.AddBreakPoint(this, 0, 0, formatter);
 			}
 			else
 			{
@@ -2264,7 +2272,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				builders.TextLine.ExtendLength(required, 0, formatter);
 
 				//Füge einen Breakpoint auf der Textzeile ein
-				firstAttachmentBreakpoint = builders.CreateBreakPoints(componentIndex, 0, firstAttachment.Attachment.Offset.Value);
+				firstAttachmentBreakpoint = builders.CreateBreakPoints(this, 0, firstAttachment.Attachment.Offset.Value);
 				builders.TextLine.Append(firstAttachmentBreakpoint.Value.Text, formatter);
 			}
 
@@ -2395,9 +2403,8 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 				//Erzeuge das Attachment
 				var currentOffset = currentAttachment.Offset;
-				var slice = new SheetDisplaySliceInfo(componentIndex, currentOffset, false);
-				var displayAttachment = currentAttachment.CreateDisplayAttachment(slice,
-					out var setAttachmentRenderBounds, formatter);
+				var slice = new SheetDisplaySliceInfo(this, currentOffset, false);
+				var displayAttachment = currentAttachment.CreateDisplayAttachment(out var setAttachmentRenderBounds, formatter);
 
 				//Erzeuge den Inhalt
 				var displayContent = Content.CreateDisplayElementPart(slice, currentAttachment.Offset, textLength, formatter);
@@ -2499,7 +2506,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				: base(offset)
 			{ }
 
-			internal override SheetDisplayLineElement? CreateDisplayAttachment(SheetDisplaySliceInfo sliceInfo, out Action<RenderBounds> setRenderBounds, ISheetFormatter? formatter)
+			internal override SheetDisplayLineElement? CreateDisplayAttachment(out Action<RenderBounds> setRenderBounds, ISheetFormatter? formatter)
 			{
 				setRenderBounds = SetRenderBounds;
 				return null;
@@ -2693,7 +2700,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 		public override string? ToString() => Content.ToString();
 		#endregion
 
-		public abstract class Attachment
+		public abstract class Attachment : SheetLineComponent
 		{
 			public ContentOffset Offset { get; protected set; }
 
@@ -2716,8 +2723,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				Offset = offset;
 			}
 
-			internal abstract SheetDisplayLineElement? CreateDisplayAttachment(SheetDisplaySliceInfo sliceInfo,
-				out Action<RenderBounds> setRenderBounds, ISheetFormatter? formatter);
+			internal abstract SheetDisplayLineElement? CreateDisplayAttachment(out Action<RenderBounds> setRenderBounds, ISheetFormatter? formatter);
 		}
 
 		public sealed class VarietyAttachment : Attachment
@@ -2748,11 +2754,10 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			public static VarietyAttachment FromString(ContentOffset offset, string content, ISheetEditorFormatter? formatter)
 				=> new VarietyAttachment(offset, ComponentContent.FromString(content, formatter));
 
-			internal override SheetDisplayLineElement? CreateDisplayAttachment(SheetDisplaySliceInfo sliceInfo,
-				out Action<RenderBounds> setRenderBounds, ISheetFormatter? formatter)
+			internal override SheetDisplayLineElement? CreateDisplayAttachment(out Action<RenderBounds> setRenderBounds, ISheetFormatter? formatter)
 			{
 				setRenderBounds = SetRenderBounds;
-				return Content.CreateElement(sliceInfo, formatter) with
+				return Content.CreateElement(new(this, Offset), formatter) with
 				{
 					Tags = [SheetDisplayTag.Attachment]
 				};

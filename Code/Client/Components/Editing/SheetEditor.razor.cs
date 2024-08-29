@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.JSInterop;
 using Skinnix.RhymeTool.Data.Notation.Display;
 using Skinnix.RhymeTool.Data;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+using System.Runtime.Serialization;
 
 namespace Skinnix.RhymeTool.Client.Components.Editing;
 
@@ -72,12 +72,12 @@ partial class SheetEditor
 		//Bearbeitungstyp
 		var editResult = GetEditType(data) switch
 		{
-			EditType.InsertContent => line.Editing.InsertContent(context, data.Data, Formatter),
-			EditType.InsertLine => line.Editing.InsertContent(context, "\n", Formatter),
-			EditType.DeleteBackward => line.Editing.DeleteContent(context, DeleteDirection.Backward, DeleteType.Character, Formatter),
-			EditType.DeleteForward => line.Editing.DeleteContent(context, DeleteDirection.Forward, DeleteType.Character, Formatter),
-			EditType.DeleteWordBackward => line.Editing.DeleteContent(context, DeleteDirection.Backward, DeleteType.Word, Formatter),
-			EditType.DeleteWordForward => line.Editing.DeleteContent(context, DeleteDirection.Forward, DeleteType.Word, Formatter),
+			EditType.InsertContent => line.Editing.InsertContent(context, data.Data, false, Formatter),
+			EditType.InsertLine => line.Editing.InsertContent(context, "\n", false, Formatter),
+			EditType.DeleteBackward => line.Editing.DeleteContent(context, DeleteDirection.Backward, DeleteType.Character, false, Formatter),
+			EditType.DeleteForward => line.Editing.DeleteContent(context, DeleteDirection.Forward, DeleteType.Character, false, Formatter),
+			EditType.DeleteWordBackward => line.Editing.DeleteContent(context, DeleteDirection.Backward, DeleteType.Word, false, Formatter),
+			EditType.DeleteWordForward => line.Editing.DeleteContent(context, DeleteDirection.Forward, DeleteType.Word, false, Formatter),
 			_ => MetalineEditResult.Fail(UnknownEditType)
 		};
 

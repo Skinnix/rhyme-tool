@@ -55,7 +55,7 @@
     void RenderSpan(SheetDisplayLineElement element)
     {
         string? elementString = null;
-        <span @key="element" class="@SheetRenderer.GetElementClasses(element)">@if (element is SheetDisplayLineChord chord)
+        <span @key="element.Slice" class="@SheetRenderer.GetElementClasses(element)">@if (element is SheetDisplayLineChord chord)
             {
                 RenderChordContent(chord.Chord);
             }
@@ -77,7 +77,7 @@
                 break;
 
             case SheetDisplayLineSegmentTitleBracket titleBracket when titleBracket.IsTitleStart:
-                <span class="scroll-anchor" id="sheetSegment-@(Line.Guid)"></span><span @key="titleBracket" class="@SheetRenderer.GetElementClasses(element)">@titleBracket.ToString(Formatter)</span>
+                <span class="scroll-anchor" id="sheetSegment-@(Line.Guid)"></span><span @key="titleBracket.Slice" class="@SheetRenderer.GetElementClasses(element)">@titleBracket.ToString(Formatter)</span>
                 break;
 
             default:
@@ -97,15 +97,15 @@
         switch (line)
         {
             case SheetDisplayEmptyLine empty:
-                <div class="line line-empty" data-line-index="@line.Id"></div>
+                <div @key="line.Id" class="line line-empty" data-line-index="@line.Id"></div>
                 break;
 
             case SheetDisplayChordLine chords:
-                <div class="line line-chords" data-line-index="@line.Id">@{RenderElements(line.GetElements());}</div>
+                <div @key="line.Id" class="line line-chords" data-line-index="@line.Id">@{RenderElements(line.GetElements());}</div>
                 break;
 
             case SheetDisplayTextLine text:
-                <div class="line line-text" data-line-index="@line.Id">@{RenderElements(line.GetElements());}</div>
+                <div @key="line.Id" class="line line-text" data-line-index="@line.Id">@{RenderElements(line.GetElements());}</div>
                 break;
         }
     }
@@ -113,11 +113,11 @@
 
 @if (Line is not null)
 {
-    <span class="metaline" data-metaline="@(Line.Guid)" data-type="@Line.GetType()?.Name">
+    <span class="metaline" data-metaline="@Line.Guid" data-type="@Line.GetType()?.Name">
         <span class="metaline-controls" contenteditable="false">@*<MetalineTypeButton Line="Line" />*@</span><span class="metaline-lines">
             @foreach (var display in Line.CreateDisplayLines(Formatter))
             {
-                <span @key="display" class="line-controls" contenteditable="false"><LineTypeButton Line="display" /></span>
+                <span class="line-controls" contenteditable="false"><LineTypeButton Line="display" /></span>
                 RenderLine(display);
             }
         </span>
@@ -177,7 +177,7 @@
 
         await base.OnAfterRenderAsync(firstRender);
 
-        await js.InvokeVoidAsync("console.log", "rerender: " + this.GetType().Name);
+        await js.InvokeVoidAsync("notifyRenderFinished", this.GetType().Name);
     }
 
     private void OnLineModified(object? sender, ModifiedEventArgs args)

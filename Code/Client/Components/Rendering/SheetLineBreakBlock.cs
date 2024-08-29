@@ -249,7 +249,7 @@ public sealed record SheetBlock(IReadOnlyList<SheetBlock.SheetBlockLine> Lines)
 				spaceBefore = new SheetDisplayLineFormatSpace(startOffset)
 				{
 					Slice = GetElements().FirstOrDefault()?.Slice is SheetDisplaySliceInfo firstElementSlice
-						? new SheetDisplaySliceInfo(firstElementSlice.ComponentIndex, ContentOffset.Zero, IsVirtual: true)
+						? new SheetDisplaySliceInfo(firstElementSlice.Component, ContentOffset.Zero, IsVirtual: true)
 						: null
 				};
 		}

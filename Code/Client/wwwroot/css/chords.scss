@@ -40,7 +40,7 @@ $separatorColor: #6c757d;
 	grid-gap: 0.4em 0.2em;
 	align-items: baseline;
 
-	.refreshing[contenteditable] {
+	&.refreshing[contenteditable] {
 		caret-color: transparent;
 	}
 
@@ -51,6 +51,12 @@ $separatorColor: #6c757d;
 	.segment-title, .segment-title-bracket {
 		font-weight: bold;
 		font-size: 1.2em;
+	}
+
+	&.chord-sheet-editor {
+		.line {
+			width: fit-content;
+		}
 	}
 
 	&:not(.chord-sheet-editor) .segment-title-bracket {

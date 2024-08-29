@@ -15,7 +15,7 @@ public record SheetDisplayMultiLineEditingContext(SheetDocument Document,
 		{
 			GetLineAfter = () => LinesBetween.Count == 0 ? EndLine.Line : LinesBetween[1],
 		};
-		var firstLineResult = StartLine.TryDeleteContent(firstLineContext, DeleteDirection.Forward, DeleteType.Character, formatter);
+		var firstLineResult = StartLine.TryDeleteContent(firstLineContext, DeleteDirection.Forward, DeleteType.Character, true, formatter);
 		if (!firstLineResult.Success)
 			return MultilineEditResult.Fail(firstLineResult.FailReason);
 
@@ -24,7 +24,7 @@ public record SheetDisplayMultiLineEditingContext(SheetDocument Document,
 		{
 			GetLineBefore = () => LinesBetween.Count == 0 ? StartLine.Line : LinesBetween[^1],
 		};
-		var lastLineResult = EndLine.TryDeleteContent(lastLineContext, DeleteDirection.Backward, DeleteType.Character, formatter);
+		var lastLineResult = EndLine.TryDeleteContent(lastLineContext, DeleteDirection.Backward, DeleteType.Character, true, formatter);
 		if (!lastLineResult.Success)
 			return MultilineEditResult.Fail(lastLineResult.FailReason);
 
@@ -39,15 +39,20 @@ public record SheetDisplayMultiLineEditingContext(SheetDocument Document,
 		foreach (var lineBetween in LinesBetween)
 			Document.Lines.Remove(lineBetween);
 
-		//Kombiniere die erste und letzte Zeile, indem am Anfang der letzten Zeile rückwärts gelöscht wird
-		var combineResult = EndLine.DeleteContent(new SheetDisplayLineEditingContext(SimpleRange.CursorAtStart)
+		//Ist die letzte Zeile noch vorhanden?
+		MetalineEditResult? combineResult = null;
+		if (!lastLineExecuteResult.RemoveLine)
 		{
-			GetLineBefore = () => StartLine.Line,
-		}, DeleteDirection.Backward, DeleteType.Character, formatter);
-		combineResult.Execute(Document, EndLine.Line);
+			//Kombiniere die erste und letzte Zeile, indem am Anfang der letzten Zeile rückwärts gelöscht wird
+			combineResult = EndLine.DeleteContent(new SheetDisplayLineEditingContext(SimpleRange.CursorAtStart)
+			{
+				GetLineBefore = () => StartLine.Line,
+			}, DeleteDirection.Backward, DeleteType.Character, false, formatter);
+			combineResult.Execute(Document, EndLine.Line);
+		}
 
 		//Verwende die Selektion der Kombination der Zeilen. Sollte das nicht funktioniert haben, verwende die Selektion der ersten oder letzten Zeile
-		var selection = combineResult.NewSelection
+		var selection = combineResult?.NewSelection
 			?? firstLineExecuteResult.NewSelection ?? lastLineExecuteResult.NewSelection
 			?? new MetalineSelectionRange(StartLine, SimpleRange.CursorAt(SelectionStart));
 
@@ -67,7 +72,7 @@ public record SheetDisplayMultiLineEditingContext(SheetDocument Document,
 		{
 			GetLineAfter = () => LinesBetween.Count == 0 ? EndLine.Line : LinesBetween[1],
 		};
-		var firstLineResult = StartLine.TryInsertContent(firstLineContext, content, formatter);
+		var firstLineResult = StartLine.TryInsertContent(firstLineContext, content, true, formatter);
 		if (!firstLineResult.Success)
 			return MultilineEditResult.Fail(firstLineResult.FailReason);
 
@@ -76,7 +81,7 @@ public record SheetDisplayMultiLineEditingContext(SheetDocument Document,
 		{
 			GetLineBefore = () => LinesBetween.Count == 0 ? StartLine.Line : LinesBetween[^1],
 		};
-		var lastLineResult = EndLine.TryDeleteContent(lastLineContext, DeleteDirection.Backward, DeleteType.Character, formatter);
+		var lastLineResult = EndLine.TryDeleteContent(lastLineContext, DeleteDirection.Backward, DeleteType.Character, true, formatter);
 		if (!lastLineResult.Success)
 			return MultilineEditResult.Fail(lastLineResult.FailReason);
 
@@ -95,7 +100,7 @@ public record SheetDisplayMultiLineEditingContext(SheetDocument Document,
 		var combineResult = EndLine.DeleteContent(new SheetDisplayLineEditingContext(SimpleRange.CursorAtStart)
 		{
 			GetLineBefore = () => StartLine.Line,
-		}, DeleteDirection.Backward, DeleteType.Character, formatter);
+		}, DeleteDirection.Backward, DeleteType.Character, false, formatter);
 		combineResult.Execute(Document, EndLine.Line);
 
 		//Verwende die Selektion der Kombination der Zeilen. Sollte das nicht funktioniert haben, verwende die Selektion der ersten oder letzten Zeile

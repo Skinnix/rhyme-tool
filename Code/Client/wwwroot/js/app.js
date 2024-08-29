@@ -150,31 +150,40 @@ function registerResize(element, reference, callbackName) {
 }
 
 
+var actionAfterRender = null;
+function notifyRenderFinished(componentName) {
+	if (componentName)
+		console.log("rerender: " + componentName);
+
+	if (actionAfterRender) {
+		var action = actionAfterRender;
+		actionAfterRender = null;
+		
+		action();
+		console.log("rerender action executed");
+	}
+}
+function invokeAfterRender(action) {
+	actionAfterRender = action;
+}
+
+
 
 
 function attachmentStartDrag(event) {
 	//get the chord's position
 	var attachmentElement = event.target.parentElement;
-	var attachmentStart = getNodeAndOffset(function (node) {
-		return node && node.classList && node.classList.contains('line');
-	}, attachmentElement, 0);
+	var attachmentStart = getLineAndOffset(attachmentElement, 0);
 
 	//get chord length
 	var attachmentLength = attachmentElement.textContent.length;
-
-	//get line ID
-	var lineId = getLineId(attachmentElement);
 	
 	//store the chord's selection in the dataTransfer object
 	var selection = {
-		start: {
-			metaline: lineId.metaline,
-			line: lineId.line,
-			offset: attachmentStart.offset
-		},
+		start: attachmentStart,
 		end: {
-			metaline: lineId.metaline,
-			line: lineId.line,
+			metaline: attachmentStart.metaline,
+			line: attachmentStart.line,
 			offset: attachmentStart.offset + attachmentLength
 		}
 	};
@@ -242,40 +251,29 @@ function registerBeforeInput(wrapper, reference, callbackName) {
 	
 	function sendInputEvent(inputType, content, dragSelection) {
         var originalSelection = getSelection();
-        var originalRange = originalSelection.rangeCount == 0 ? null : originalSelection.getRangeAt(0);
+		var originalRange = originalSelection.rangeCount == 0 ? null : originalSelection.getRangeAt(0);
+
+		//mobile browsers like creating selections when deleting content
+		if (originalRange && inputType == 'deleteContent' || inputType == 'deleteContentBackward' || inputType == 'deleteContentForward') {
+			var content = originalRange.toString();
+			if (!content) {
+				//collapse the selection
+				originalRange.collapse(inputType == 'deleteContentForward');
+			}
+		}
+
         var copyRange = originalRange.cloneRange();
-        var selectionRange = getSelectionRange(originalSelection, wrapper, function(node) {
-            return node && node.classList && node.classList.contains('line');
-        });
-
-        //get selection lines
-        var selectionStartLine = getLineId(selectionRange.start.node);
-        var selectionEndLine = getLineId(selectionRange.end.node);
-
+		var selection = getSelectionRange(originalSelection, wrapper);
+		
         //collapse empty, line-spanning selections
-        if (originalRange.toString() === '' && selectionStartLine != selectionEndLine) {
+		if (originalRange.toString() === '' && selection.start.line != selection.end.line) {
             if (inputType == 'deleteContent' || inputType == 'deleteContentBackward') {
-                selectionRange.start = selectionRange.end;
-                selectionStartLine = selectionEndLine;
+				selection.start = selection.end;
             } else if (inputType == 'deleteContentForward') {
-                selectionRange.end = selectionRange.start;
-                selectionEndLine = selectionStartLine;
+				selection.end = selection.start;
             }
         }
-
-        var selection = {
-            start: {
-                metaline: selectionStartLine.metaline,
-                line: selectionStartLine.line,
-                offset: selectionRange.start.offset
-            },
-            end: {
-                metaline: selectionEndLine.metaline,
-                line: selectionEndLine.line,
-                offset: selectionRange.end.offset
-            }
-        };
-
+		
         //hide caret
         wrapper.classList.add('refreshing');
         originalRange.collapse(true);
@@ -302,8 +300,20 @@ function invokeLineEdit(reference, callbackName, inputType, content, selection, 
 	}).then(function (result) {
 		if (!ignoreSelection) {
 			if (result.selection) {
-				//set new range
-				setSelectionRange(wrapper, result.selection.metaline, result.selection.lineId, result.selection.lineIndex, result.selection.range);
+				if (supportsSynchronousInvoke) {
+					//set new range
+					setSelectionRange(wrapper, result.selection.metaline, result.selection.lineId, result.selection.lineIndex, result.selection.range);
+				} else {
+					//set new range as soon as rendering is done
+					invokeAfterRender(function () {
+						//set selection
+						setSelectionRange(wrapper, result.selection.metaline, result.selection.lineId, result.selection.lineIndex, result.selection.range);
+
+						//show caret
+						wrapper.classList.remove('refreshing');
+					});
+					return;
+				}
 			} else if (copyRange) {
 				//restore old range
 				getSelection().addRange(copyRange);
@@ -336,11 +346,43 @@ function getLineId(node) {
 	}
 }
 
-function getNodeAndOffset(elementCondition, node, offset) {
+function checkIsLine(node) {
+	if (!node || !node.classList)
+		return null;
+
+	var lineId = null;
+	if (node.classList.contains('line')) {
+		lineId = parseInt(node.getAttribute('data-line-index'));
+		node = node.parentElement.parentElement;
+	} else if (node.classList.contains('metaline-lines')) {
+		node = node.parentElement;
+	} else if (!node.classList.contains('metaline')) {
+		return null;
+	}
+
+	if (lineId === null) {
+		//take the first line ID
+		var line = node.querySelector('.line');
+		if (line) {
+			lineId = parseInt(line.getAttribute('data-line-index'));
+		} else {
+			lineId = 0;
+		}
+	}
+
+	var metalineId = node.getAttribute('data-metaline');
+	return {
+		metaline: metalineId,
+		line: lineId
+	};
+}
+
+function getLineAndOffset(node, offset) {
 	if (!offset)
 		offset = 0;
 
-	for (; !elementCondition(node); node = node.parentElement) {
+	var lineInfo = checkIsLine(node);
+	for (; !lineInfo; node = node.parentElement, lineInfo = checkIsLine(node)) {
 		for (var current = node.previousSibling; current; current = current.previousSibling) {
 			if (current.nodeType == Node.COMMENT_NODE)
 				continue;
@@ -350,25 +392,13 @@ function getNodeAndOffset(elementCondition, node, offset) {
 	}
 
 	return {
-		node: node,
+		metaline: lineInfo.metaline,
+		line: lineInfo.line,
 		offset: offset
 	};
 }
 
-function getSelectionRange(selection, wrapper, elementCondition) {
-	if (selection.anchorNode === selection.extentNode && elementCondition(selection.anchorNode)) {
-		return {
-			start: {
-				node: selection.anchorNode,
-				offset: selection.anchorOffset,
-			},
-			end: {
-				node: selection.extentNode,
-				offset: selection.extentOffset,
-			}
-		};
-	}
-
+function getSelectionRange(selection, wrapper) {
 	if (selection.rangeCount == 0)
 		return null;
 	var range = selection.getRangeAt(0);
@@ -376,8 +406,12 @@ function getSelectionRange(selection, wrapper, elementCondition) {
 	if (!wrapper.contains(range.startContainer) || !wrapper.contains(range.endContainer))
 		return null;
 
-	var start = getNodeAndOffset(elementCondition, range.startContainer, range.startOffset);
-	var end = getNodeAndOffset(elementCondition, range.endContainer, range.endOffset);
+	var start = getLineAndOffset(range.startContainer, range.startOffset);
+	var end = range.endContainer == range.startContainer ? {
+		metaline: start.metaline,
+		line: start.line,
+		offset: start.offset + Math.abs(range.endOffset - range.startOffset)
+	} : getLineAndOffset(range.endContainer, range.endOffset);
 	
 	return {
 		start: start,
@@ -421,6 +455,14 @@ function setSelectionRange(wrapper, metaline, lineId, lineIndex, selectionRange)
 		range.setEnd(end.node, end.offset);
 		document.getSelection().addRange(range);
 	}
+
+	//scroll the selection into view
+	for (var focusElement = selection.focusNode; focusElement && !focusElement.getBoundingClientRect; focusElement = focusElement.parentElement) { }
+	if (focusElement)
+		focusElement.scrollIntoView({
+			block: 'nearest',
+			inline: 'nearest'
+		});
 	return true;
 
 	//find selection anchors
