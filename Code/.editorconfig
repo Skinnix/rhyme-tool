@@ -127,12 +127,7 @@ csharp_prefer_simple_using_statement = false:suggestion
 indent_style = spaces
 indent_size = 2
 
-[*.ts]
-quote_type = single
-indent_style = spaces
-indent_size = 2
-
-[*.js]
+[*.{js,ts}]
 quote_type = single
 indent_style = tab
 

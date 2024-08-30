@@ -7,6 +7,7 @@ using Microsoft.JSInterop;
 using Skinnix.RhymeTool.Data.Notation.Display;
 using Skinnix.RhymeTool.Data;
 using System.Runtime.Serialization;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Skinnix.RhymeTool.Client.Components.Editing;
 
@@ -31,6 +32,7 @@ partial class SheetEditor
 			var selection = editResult.NewSelection is null ? null
 				: new JsMetalineSelectionRange(editResult.NewSelection.Metaline.Guid, editResult.NewSelection.LineId,
 					editResult.NewSelection.LineIndex, editResult.NewSelection.Range);
+			rerenderAnchor.TriggerRender();
 			return new JsMetalineEditResult(true, selection, null);
 		}
 		else
@@ -45,6 +47,7 @@ partial class SheetEditor
 			var selection = editResult.NewSelection is null ? null
 				: new JsMetalineSelectionRange(editResult.NewSelection.Metaline.Guid, editResult.NewSelection.LineId,
 					editResult.NewSelection.LineIndex, editResult.NewSelection.Range);
+			rerenderAnchor.TriggerRender();
 			return new JsMetalineEditResult(true, selection, null);
 		}
 	}
@@ -53,11 +56,8 @@ partial class SheetEditor
 	{
 		if (Document is null) throw new InvalidOperationException("Editor nicht initialisiert");
 
-		//Finde den Editor
-		var editor = lineEditors[data.Selection.Start.Metaline];
-
 		//Finde die Displayzeile
-		var line = editor.TryGetLine(data.Selection.Start.Line);
+		var line = FindLine(data.Selection.Start.Metaline, data.Selection.Start.Line);
 		if (line is null)
 			return MetalineEditResult.Fail(LineNotFound);
 
@@ -94,13 +94,9 @@ partial class SheetEditor
 	{
 		if (Document is null) throw new InvalidOperationException("Editor nicht initialisiert");
 
-		//Finde den Editor
-		var startEditor = lineEditors[data.Selection.Start.Metaline];
-		var endEditor = lineEditors[data.Selection.End.Metaline];
-
 		//Finde die Displayzeilen
-		var startLine = startEditor.TryGetLine(data.Selection.Start.Line);
-		var endLine = endEditor.TryGetLine(data.Selection.End.Line);
+		var startLine = FindLine(data.Selection.Start.Metaline, data.Selection.Start.Line);
+		var endLine = FindLine(data.Selection.End.Metaline, data.Selection.End.Line);
 		if (startLine is null || endLine is null)
 			return MultilineEditResult.Fail(LineNotFound);
 
@@ -139,6 +135,13 @@ partial class SheetEditor
 		"deleteWordForward" => (EditType?)EditType.DeleteWordForward,
 		_ => null,
 	};
+
+	private SheetDisplayLine? FindLine(Guid metalineId, int lineId)
+	{
+		if (!renderedLines.TryGetValue(metalineId, out var lines))
+			return null;
+		return lines.FirstOrDefault(l => l.Id == lineId);
+	}
 
 	private enum EditType
 	{

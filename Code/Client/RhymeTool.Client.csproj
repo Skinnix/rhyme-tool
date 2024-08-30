@@ -23,22 +23,14 @@
     <PackageReference Include="DartSassBuilder" Version="1.1.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="8.0.0" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.TypeScript.MSBuild" Version="5.5.3">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\RhymeTool\RhymeTool.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="wwwroot\css\chords.css" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <SassFilesToCompile Remove="shared\SideMenuLayout.razor.scss" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <SassFilesToCompile Remove="pages\Renderer.razor.scss" />
   </ItemGroup>
 
 </Project>

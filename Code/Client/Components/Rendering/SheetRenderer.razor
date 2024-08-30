@@ -74,15 +74,15 @@
         switch (display)
         {
             case SheetDisplayEmptyLine empty:
-                <div @key="display.Id" class="line line-empty@(blockIndex != 0 ? " continuation" : null)" data-block-index="@blockIndex" style="--line-indentation: @(indentation)"></div>
+                <div class="line line-empty@(blockIndex != 0 ? " continuation" : null)" data-block-index="@blockIndex" style="--line-indentation: @(indentation)"></div>
                 break;
 
             case SheetDisplayChordLine chords:
-                <div @key="display.Id" class="line line-chords@(blockIndex != 0 ? " continuation" : null)" data-block-index="@blockIndex" style="--line-indentation: @(indentation)">@{ RenderElements(line, elements); }</div>
+                <div class="line line-chords@(blockIndex != 0 ? " continuation" : null)" data-block-index="@blockIndex" style="--line-indentation: @(indentation)">@{ RenderElements(line, elements); }</div>
                 break;
 
             case SheetDisplayTextLine text:
-                <div @key="display.Id" class="line line-text@(blockIndex != 0 ? " continuation" : null)" data-block-index="@blockIndex" style="--line-indentation: @(indentation)">@{ RenderElements(line, elements); }</div>
+                <div class="line line-text@(blockIndex != 0 ? " continuation" : null)" data-block-index="@blockIndex" style="--line-indentation: @(indentation)">@{ RenderElements(line, elements); }</div>
                 break;
         }
     }

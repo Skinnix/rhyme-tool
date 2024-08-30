@@ -147,7 +147,8 @@ $separatorColor: #6c757d;
 	}
 
 	.line.line-empty::after, .line:empty::after {
-		content: '\A';
+		//content: '\A';
+		content: ' ';
 	}
 
 	.chord {

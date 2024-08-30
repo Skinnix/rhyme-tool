@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
@@ -9,7 +10,7 @@ namespace Skinnix.RhymeTool.Data;
 
 public class CharacterTree<TValue>
 {
-	private readonly Dictionary<char, CharacterTree<TValue>> children = new();
+	private readonly ConcurrentDictionary<char, CharacterTree<TValue>> children = new();
 
 	private bool hasValue;
 	private TValue? value;
@@ -37,7 +38,7 @@ public class CharacterTree<TValue>
 		if (!children.TryGetValue(c, out var child))
 		{
 			child = new();
-			children.Add(c, child);
+			children.TryAdd(c, child);
 		}
 
 		child.Set(key[1..], value, blacklistedKeys, depth + 1);

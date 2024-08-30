@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "module": "system",
+    "lib": ["ES2016", "DOM"],
+    "noImplicitAny": true,
+    "removeComments": true,
+    "preserveConstEnums": true,
+    "outFile": "wwwroot/js/app.js",
+    "sourceMap": true
+  },
+  "include": [ "wwwroot/**/*" ],
+  "exclude": [ "**/*.spec.ts" ]
+}

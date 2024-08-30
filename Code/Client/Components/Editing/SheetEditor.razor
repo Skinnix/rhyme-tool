@@ -7,18 +7,20 @@
 
 @inject IJSRuntime js
 
-<div class="chord-sheet chord-sheet-editor chord-sheet-editing" contenteditable @ref="editorWrapper"
+<div class="chord-sheet chord-sheet-editor chord-sheet-editing" contenteditable="plaintext-only" @ref="editorWrapper"
      spellcheck="false" enterkeyhint="enter">
     @if (Document != null)
     {
         <CascadingValue TValue="ISheetEditorFormatter" Value="Formatter">
             <CascadingValue TValue="SheetDocument" Value="Document">
 
-                @foreach (var line in Document.Lines){<SheetEditorLine Line="line" @key="line" @ref="lineEditorsSetter" />}
+                @foreach (var line in Document.Lines){<SheetEditorLine Line="line" @key="line" OnLinesRendered="OnLinesRendered" />}
 
             </CascadingValue>
         </CascadingValue>
     }
+
+    <RerenderAnchor @ref="rerenderAnchor" />
 </div>
 
 @code {
@@ -33,18 +35,11 @@
     private ISheetEditorFormatter? loadedFormatter;
 
     private ElementReference editorWrapper;
+    private RerenderAnchor rerenderAnchor = null!;
 
     private bool shouldRender;
 
-    private readonly WeakDictionary<Guid, SheetEditorLine> lineEditors = new();
-    private SheetEditorLine lineEditorsSetter
-    {
-        set
-        {
-            if (value.Line != null)
-                lineEditors[value.Line.Guid] = value;
-        }
-    }
+    private readonly WeakDictionary<Guid, SheetDisplayLine[]> renderedLines = new();
 
     protected override void OnParametersSet()
     {
@@ -57,7 +52,7 @@
             if (loadedDocument is not null)
                 loadedDocument.Lines.Modified -= OnLinesModified;
 
-            lineEditors.Clear();
+            renderedLines.Clear();
             loadedDocument = Document;
 
             if (loadedDocument is not null)
@@ -81,7 +76,7 @@
             await js.InvokeVoidAsync("registerBeforeInput", editorWrapper, DotNetObjectReference.Create(this), nameof(OnBeforeInput));
         }
 
-        await js.InvokeVoidAsync("notifyRenderFinished", this.GetType().Name);
+        //await js.InvokeVoidAsync("notifyRenderFinished", this.GetType().Name);
         shouldRender = false;
     }
 
@@ -101,4 +96,13 @@
 
     private void OnLinesModified(object? sender, ModifiedEventArgs args)
         => StateHasChanged();
+
+    private void OnLinesRendered(SheetDisplayLine[] lines)
+    {
+        if (lines.Length == 0)
+            return;
+
+        var lineGuid = lines[0].Editing.Line.Guid;
+        renderedLines[lineGuid] = lines;
+    }
 }

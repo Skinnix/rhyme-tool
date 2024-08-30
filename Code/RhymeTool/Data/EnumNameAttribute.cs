@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -10,7 +11,7 @@ namespace Skinnix.RhymeTool.Data;
 [AttributeUsage(AttributeTargets.Field, AllowMultiple = false, Inherited = false)]
 public class EnumNameAttribute : Attribute
 {
-	private static Dictionary<Type, CharacterTree<object>> parseCache = new();
+	private static ConcurrentDictionary<Type, CharacterTree<object>> parseCache = new();
 
 	public string Name { get; }
 	public string[] AlternativeNames { get; }
@@ -39,10 +40,10 @@ public class EnumNameAttribute : Attribute
 		where T : struct, Enum
 	{
 		var type = typeof(T);
-		if (!parseCache.TryGetValue(type, out var cache))
+		var cache = parseCache.AddOrUpdate(type, t =>
 		{
-			cache = new CharacterTree<object>();
-			foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.Static))
+			var cache = new CharacterTree<object>();
+			foreach (var field in t.GetFields(BindingFlags.Public | BindingFlags.Static))
 			{
 				var attribute = field.GetCustomAttribute<EnumNameAttribute>(false);
 				if (attribute == null)
@@ -52,8 +53,8 @@ public class EnumNameAttribute : Attribute
 				foreach (var alternativeName in attribute.AlternativeNames)
 					cache.Set(alternativeName, field.GetValue(null)!);
 			}
-			parseCache.Add(type, cache);
-		}
+			return cache;
+		}, (_, cache) => cache);
 
 		if (cache.TryGetValue(s, out var objValue))
 		{
@@ -69,10 +70,10 @@ public class EnumNameAttribute : Attribute
 		where T : struct, Enum
 	{
 		var type = typeof(T);
-		if (!parseCache.TryGetValue(type, out var cache))
+		var cache = parseCache.AddOrUpdate(type, t =>
 		{
-			cache = new CharacterTree<object>();
-			foreach (var field in type.GetFields(BindingFlags.Public | BindingFlags.Static))
+			var cache = new CharacterTree<object>();
+			foreach (var field in t.GetFields(BindingFlags.Public | BindingFlags.Static))
 			{
 				var attribute = field.GetCustomAttribute<EnumNameAttribute>(false);
 				if (attribute == null)
@@ -83,8 +84,8 @@ public class EnumNameAttribute : Attribute
 				foreach (var alternativeName in attribute.AlternativeNames)
 					cache.Set(alternativeName, fieldValue, attribute.Blacklist);
 			}
-			parseCache.Add(type, cache);
-		}
+			return cache;
+		}, (_, cache) => cache);
 
 		var length = cache.TryRead(s, out var objValue);
 		if (length == -1)
