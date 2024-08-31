@@ -8,12 +8,32 @@ declare const bootstrap: any;
 declare interface LineSelectionAnchor {
 	metaline: string,
 	line: number,
-	offset: number
+	offset: number,
 }
 
 declare interface LineSelection {
 	start: LineSelectionAnchor,
-	end: LineSelectionAnchor
+	end: LineSelectionAnchor,
+}
+
+declare interface JsMetalineEditResult {
+	success: boolean,
+	willRender: boolean,
+	selection?: JsMetalineSelectionRange,
+	failReason?: {
+		label: string,
+		code: string,
+	},
+}
+
+declare interface JsMetalineSelectionRange {
+	metaline: string,
+	lineId?: number,
+	lineIndex?: number,
+	range: {
+		start: number,
+		end: number,
+	},
 }
 
 var supportsSynchronousInvoke = false;
@@ -22,7 +42,7 @@ function enableSynchronousInvoke() {
 	supportsSynchronousInvoke = true;
 }
 
-function invokeBlazor(reference: BlazorDotNetReference, method: string, ...args: any[]): Promise<any> {
+function invokeBlazor<T extends any>(reference: BlazorDotNetReference, method: string, ...args: any[]): Promise<T> {
 	if (supportsSynchronousInvoke) {
 		return new Promise(function (resolve, reject) {
 			var result;
@@ -253,8 +273,11 @@ function registerBeforeInput(wrapper: HTMLElement, reference: BlazorDotNetRefere
 		};
 		var inputEvent: InputEvent;
 
+		var observing = 0;
 		var observer = new MutationObserver(function (mutations) {
-			observer.disconnect();
+			observing--;
+			if (!observing)
+				observer.disconnect();
 
 			var mutations = Array.from(mutations.reverse());
 			while (mutations.length != 0) {
@@ -344,7 +367,13 @@ function registerBeforeInput(wrapper: HTMLElement, reference: BlazorDotNetRefere
 			}
 
 			//start the observer
-			observer.observe(wrapper, { childList: true, subtree: true, characterData: true, characterDataOldValue: true });
+			if (observing) {
+				observing++;
+				console.log("observing: " + observing);
+			} else {
+				observing++;
+				observer.observe(wrapper, { childList: true, subtree: true, characterData: true, characterDataOldValue: true });
+			}
 		});
 	} else {
 		//add listener
@@ -408,7 +437,6 @@ function registerBeforeInput(wrapper: HTMLElement, reference: BlazorDotNetRefere
 				} else {
 					originalRange.setStart(originalRange.endContainer, originalRange.endOffset);
 				}
-				return;
 			}
 		}
 
@@ -458,43 +486,40 @@ function registerBeforeInput(wrapper: HTMLElement, reference: BlazorDotNetRefere
 function invokeLineEdit(reference: BlazorDotNetReference, callbackName: string,
 	inputType: string, content: string, selection: LineSelection,
 	wrapper: HTMLElement, copyRange: Range, ignoreSelection?: boolean) {
-    return invokeBlazor(reference, callbackName, {
+	return invokeBlazor<JsMetalineEditResult>(reference, callbackName, {
         inputType: inputType,
 		data: content,
         selection: selection,
 	}).then(function (result) {
-		if (!ignoreSelection) {
-			if (result.selection) {
-				if (supportsSynchronousInvoke) {
+		var oldRange = copyRange;
+		var afterRender = function () {
+			if (!ignoreSelection) {
+				if (result.selection) {
 					//set new range
 					setSelectionRange(wrapper, result.selection.metaline, result.selection.lineId, result.selection.lineIndex, result.selection.range);
-				} else {
-					//set new range as soon as rendering is done
-					return invokeAfterRender(function () {
-						//set selection
-						setSelectionRange(wrapper, result.selection.metaline, result.selection.lineId, result.selection.lineIndex, result.selection.range);
-
-						//show caret
-						wrapper.classList.remove('refreshing');
-					});
-					return;
+				} else if (oldRange) {
+					//restore old range
+					var selection = getSelection();
+					selection.removeAllRanges();
+					selection.addRange(oldRange);
 				}
-			} else if (copyRange) {
-				//restore old range
-				getSelection().addRange(copyRange);
+
+				//show caret
+				wrapper.classList.remove('refreshing');
 			}
-
-			//show caret
-			wrapper.classList.remove('refreshing');
 		}
-
-        //show error
-        if (result.failReason)
+		
+		//show error
+		if (result.failReason)
 			showToast(`${result.failReason.label} (${result.failReason.code})`, 'Bearbeitungsfehler', 5000);
 
-		//if there was no selection, no render is coming
-		if (!result.selection)
+		//no render coming (anymore)?
+		if (!result.willRender || supportsSynchronousInvoke) {
+			afterRender();
 			notifyRenderFinished();
+		} else {
+			return invokeAfterRender(afterRender);
+		}
     });
 }
 

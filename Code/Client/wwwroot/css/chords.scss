@@ -146,10 +146,14 @@ $separatorColor: #6c757d;
 		}
 	}
 
-	.line.line-empty::after, .line:empty::after {
+	.line.line-empty {
+		display: inline-block;
+	}
+
+	/*.line.line-empty::after, .line:empty::after {
 		//content: '\A';
 		content: ' ';
-	}
+	}*/
 
 	.chord {
 		color: $chordColor;

@@ -92,12 +92,17 @@
             RenderElement(element);
     }
 
+    void RenderEmptyLine()
+    {
+        <br />
+    }
+
     void RenderLine(SheetDisplayLine line)
     {
         switch (line)
         {
             case SheetDisplayEmptyLine empty:
-                <div @key="GetKey(line)" class="line line-empty" data-line-index="@line.Id"></div>
+                <div @key="GetKey(line)" class="line line-empty" data-line-index="@line.Id">@{RenderEmptyLine();}</div>
                 break;
 
             case SheetDisplayChordLine chords:

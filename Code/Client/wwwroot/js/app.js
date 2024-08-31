@@ -173,8 +173,11 @@ function registerBeforeInput(wrapper, reference, callbackName) {
     if (navigator.userAgent.includes('Chrome')) {
         var selectionRange;
         var inputEvent;
+        var observing = 0;
         var observer = new MutationObserver(function (mutations) {
-            observer.disconnect();
+            observing--;
+            if (!observing)
+                observer.disconnect();
             var mutations = Array.from(mutations.reverse());
             while (mutations.length != 0) {
                 for (var m = 0; m < mutations.length; m++) {
@@ -253,7 +256,14 @@ function registerBeforeInput(wrapper, reference, callbackName) {
                     }
                 };
             }
-            observer.observe(wrapper, { childList: true, subtree: true, characterData: true, characterDataOldValue: true });
+            if (observing) {
+                observing++;
+                console.log("observing: " + observing);
+            }
+            else {
+                observing++;
+                observer.observe(wrapper, { childList: true, subtree: true, characterData: true, characterDataOldValue: true });
+            }
         });
     }
     else {
@@ -302,7 +312,6 @@ function registerBeforeInput(wrapper, reference, callbackName) {
                 else {
                     originalRange.setStart(originalRange.endContainer, originalRange.endOffset);
                 }
-                return;
             }
         }
         var copyRange = originalRange.cloneRange();
@@ -339,28 +348,29 @@ function invokeLineEdit(reference, callbackName, inputType, content, selection, 
         data: content,
         selection: selection,
     }).then(function (result) {
-        if (!ignoreSelection) {
-            if (result.selection) {
-                if (supportsSynchronousInvoke) {
+        var oldRange = copyRange;
+        var afterRender = function () {
+            if (!ignoreSelection) {
+                if (result.selection) {
                     setSelectionRange(wrapper, result.selection.metaline, result.selection.lineId, result.selection.lineIndex, result.selection.range);
                 }
-                else {
-                    return invokeAfterRender(function () {
-                        setSelectionRange(wrapper, result.selection.metaline, result.selection.lineId, result.selection.lineIndex, result.selection.range);
-                        wrapper.classList.remove('refreshing');
-                    });
-                    return;
+                else if (oldRange) {
+                    var selection = getSelection();
+                    selection.removeAllRanges();
+                    selection.addRange(oldRange);
                 }
+                wrapper.classList.remove('refreshing');
             }
-            else if (copyRange) {
-                getSelection().addRange(copyRange);
-            }
-            wrapper.classList.remove('refreshing');
-        }
+        };
         if (result.failReason)
             showToast("".concat(result.failReason.label, " (").concat(result.failReason.code, ")"), 'Bearbeitungsfehler', 5000);
-        if (!result.selection)
+        if (!result.willRender || supportsSynchronousInvoke) {
+            afterRender();
             notifyRenderFinished();
+        }
+        else {
+            return invokeAfterRender(afterRender);
+        }
     });
 }
 function getLineId(node) {

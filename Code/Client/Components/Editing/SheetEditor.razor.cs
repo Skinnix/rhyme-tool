@@ -26,14 +26,14 @@ partial class SheetEditor
 			var editResult = EditMultiLine(data);
 
 			if (!editResult.Success)
-				return new JsMetalineEditResult(false, null, editResult.FailReason);
+				return new JsMetalineEditResult(false, false, null, editResult.FailReason);
 
 			//Erzeuge Ergebnis
 			var selection = editResult.NewSelection is null ? null
 				: new JsMetalineSelectionRange(editResult.NewSelection.Metaline.Guid, editResult.NewSelection.LineId,
 					editResult.NewSelection.LineIndex, editResult.NewSelection.Range);
 			rerenderAnchor.TriggerRender();
-			return new JsMetalineEditResult(true, selection, null);
+			return new JsMetalineEditResult(true, true, selection, null);
 		}
 		else
 		{
@@ -41,14 +41,14 @@ partial class SheetEditor
 			var editResult = EditLine(data);
 
 			if (!editResult.Success)
-				return new JsMetalineEditResult(false, null, editResult.FailReason);
+				return new JsMetalineEditResult(false, false, null, editResult.FailReason);
 
 			//Erzeuge Ergebnis
 			var selection = editResult.NewSelection is null ? null
 				: new JsMetalineSelectionRange(editResult.NewSelection.Metaline.Guid, editResult.NewSelection.LineId,
 					editResult.NewSelection.LineIndex, editResult.NewSelection.Range);
 			rerenderAnchor.TriggerRender();
-			return new JsMetalineEditResult(true, selection, null);
+			return new JsMetalineEditResult(true, true, selection, null);
 		}
 	}
 
@@ -153,6 +153,6 @@ partial class SheetEditor
 		DeleteWordBackward,
 	}
 
-	public record JsMetalineEditResult(bool Success, JsMetalineSelectionRange? Selection, ReasonBase? FailReason);
+	public record JsMetalineEditResult(bool Success, bool WillRender, JsMetalineSelectionRange? Selection, ReasonBase? FailReason);
 	public record JsMetalineSelectionRange(Guid Metaline, int? LineId, int? LineIndex, SimpleRange Range);
 }
