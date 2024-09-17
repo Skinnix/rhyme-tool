@@ -105,9 +105,11 @@ public record MetalineEditResult
 
 public record MetalineSelectionRange
 {
+	public const int FIRST_LINE = -1;
+	public const int LAST_LINE = -2;
+
 	public SheetLine Metaline { get; init; }
-	public int? LineId { get; init; }
-	public int? LineIndex { get; init; }
+	public int LineId { get; init; }
 	public SimpleRange Range { get; init; }
 
 	public MetalineSelectionRange(ISheetDisplayLineEditing editing, SimpleRange range)
@@ -117,11 +119,11 @@ public record MetalineSelectionRange
 		Range = range;
 	}
 
-	public MetalineSelectionRange(SheetLine metaline, SimpleRange range, int lineIndex)
+	public MetalineSelectionRange(SheetLine metaline, SimpleRange range, int lineId)
 	{
 		Metaline = metaline;
 		Range = range;
-		LineIndex = lineIndex;
+		LineId = lineId;
 	}
 }
 

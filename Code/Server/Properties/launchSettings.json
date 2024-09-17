@@ -3,7 +3,7 @@
     "http": {
       "commandName": "Project",
       "launchBrowser": true,
-      "launchUrl": "http://localhost:5276/chords/renderer",
+      "launchUrl": "http://localhost:5276/chords/editor-test",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },
@@ -14,7 +14,7 @@
     "https": {
       "commandName": "Project",
       "launchBrowser": true,
-      "launchUrl": "https://localhost:7105/chords/renderer",
+      "launchUrl": "https://localhost:7105/chords/editor-test",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       },

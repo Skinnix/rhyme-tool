@@ -197,7 +197,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 	public static readonly Reason NoMoveNeeded = new("Kein Verschieben notwendig");
 	public static readonly Reason AlreadyAttachmentAtTargetOffset = new("An der Zielposition ist bereits ein Akkord");
 
-	private SpecialContentType GetAllowedTypes(Component component)
+	private SpecialContentType GetAllowedTypes(Component? component)
 	{
 		//Hat eine der Komponenten Attachments?
 		if (components.OfType<VarietyComponent>().Any(c => c.Attachments.Count > 0))
@@ -1103,14 +1103,14 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			KeepRight,
 		}
 
-		private static List<VarietyComponent> CreateComponentsForContent(string content, ISheetEditorFormatter? formatter)
+		private List<VarietyComponent> CreateComponentsForContent(string content, ISheetEditorFormatter? formatter)
 		{
 			if (string.IsNullOrEmpty(content))
 				throw new InvalidOperationException("Tried to insert empty content");
 
 			//Trenne Wörter
 			var result = content.SplitAlternating(char.IsWhiteSpace)
-				.Select(w => VarietyComponent.FromString(w, formatter))
+				.Select(w => VarietyComponent.FromString(w, formatter, Line.GetAllowedTypes(null)))
 				.ToList();
 
 			return result;
@@ -2682,16 +2682,35 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			return true;
 		}
 
-		private static bool CanAppendTo(ComponentContent left, ComponentContent right, ComponentContent total) => left switch
+		private static bool CanAppendTo(ComponentContent left, ComponentContent right, ComponentContent total)
 		{
-			{ Type: ContentType.Word } when total is { Type: ContentType.Fingering } => true,
-			{ Type: ContentType.Word } => right is { Type: ContentType.Word or ContentType.Chord },
-			{ Type: ContentType.Chord } => right is { Type: ContentType.Word or ContentType.Chord },
-			{ Type: ContentType.Space } => right is { Type: ContentType.Space },
-			{ Type: ContentType.Punctuation } => right is { Type: ContentType.Punctuation },
-			{ Type: ContentType.Fingering } => right is { Type: ContentType.Word or ContentType.Chord or ContentType.Punctuation or ContentType.Fingering },
-			_ => false,
-		};
+			//Zwei Akkorde oder ein Akkord und ein Fingering können nicht kombiniert werden
+			if ((left.Type, right.Type) is (ContentType.Chord, ContentType.Fingering) or (ContentType.Fingering, ContentType.Chord) or (ContentType.Chord, ContentType.Chord))
+				return false;
+
+			//Fingerings können mit Punctionations kombiniert werden, wenn dabei Fingerings herauskommen
+			if ((left.Type, right.Type) is (ContentType.Fingering, ContentType.Punctuation) or (ContentType.Punctuation, ContentType.Fingering))
+				return total.Type == ContentType.Fingering;
+
+			//Spaces oder Punctuations können nur untereinander kombiniert werden
+			if (left.Type is ContentType.Space or ContentType.Punctuation)
+				return right.Type == left.Type;
+			if (right.Type is ContentType.Space or ContentType.Punctuation)
+				return right.Type == left.Type;
+
+			return true;
+		}
+
+		//=> left switch
+		//{
+		//	{ Type: ContentType.Word } when total is { Type: ContentType.Fingering } => true,
+		//	{ Type: ContentType.Word } => right is { Type: ContentType.Word or ContentType.Chord },
+		//	{ Type: ContentType.Chord } => right is { Type: ContentType.Word or ContentType.Chord },
+		//	{ Type: ContentType.Space } => right is { Type: ContentType.Space },
+		//	{ Type: ContentType.Punctuation } => right is { Type: ContentType.Punctuation },
+		//	{ Type: ContentType.Fingering } => right is { Type: ContentType.Word or ContentType.Chord or ContentType.Punctuation or ContentType.Fingering },
+		//	_ => false,
+		//};
 		#endregion
 
 		#region Operators

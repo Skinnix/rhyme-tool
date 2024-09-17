@@ -7,7 +7,6 @@ using Microsoft.JSInterop;
 using Skinnix.RhymeTool.Data.Notation.Display;
 using Skinnix.RhymeTool.Data;
 using System.Runtime.Serialization;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Skinnix.RhymeTool.Client.Components.Editing;
 
@@ -29,9 +28,7 @@ partial class SheetEditor
 				return new JsMetalineEditResult(false, false, null, editResult.FailReason);
 
 			//Erzeuge Ergebnis
-			var selection = editResult.NewSelection is null ? null
-				: new JsMetalineSelectionRange(editResult.NewSelection.Metaline.Guid, editResult.NewSelection.LineId,
-					editResult.NewSelection.LineIndex, editResult.NewSelection.Range);
+			var selection = LineSelection.FromRange(editResult.NewSelection);
 			rerenderAnchor.TriggerRender();
 			return new JsMetalineEditResult(true, true, selection, null);
 		}
@@ -44,9 +41,7 @@ partial class SheetEditor
 				return new JsMetalineEditResult(false, false, null, editResult.FailReason);
 
 			//Erzeuge Ergebnis
-			var selection = editResult.NewSelection is null ? null
-				: new JsMetalineSelectionRange(editResult.NewSelection.Metaline.Guid, editResult.NewSelection.LineId,
-					editResult.NewSelection.LineIndex, editResult.NewSelection.Range);
+			var selection = LineSelection.FromRange(editResult.NewSelection);
 			rerenderAnchor.TriggerRender();
 			return new JsMetalineEditResult(true, true, selection, null);
 		}
@@ -153,6 +148,5 @@ partial class SheetEditor
 		DeleteWordBackward,
 	}
 
-	public record JsMetalineEditResult(bool Success, bool WillRender, JsMetalineSelectionRange? Selection, ReasonBase? FailReason);
-	public record JsMetalineSelectionRange(Guid Metaline, int? LineId, int? LineIndex, SimpleRange Range);
+	public record JsMetalineEditResult(bool Success, bool WillRender, LineSelection? Selection, ReasonBase? FailReason);
 }

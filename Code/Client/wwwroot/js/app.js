@@ -1,3 +1,14 @@
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
 var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
         if (ar || !(i in from)) {
@@ -139,6 +150,66 @@ function invokeAfterRender(action) {
 function isWaitingForRender() {
     return resolveAfterRender != null;
 }
+function registerChordEditor(wrapper, reference, callbackName) {
+    var existingReference = wrapper['data-reference'];
+    if (existingReference === reference) {
+        return;
+    }
+    else if (existingReference) {
+        var existingListener = wrapper['data-listener'];
+        if (existingListener) {
+            wrapper.removeEventListener('beforeinput', existingListener);
+        }
+    }
+    var actionQueue = new ActionQueue();
+    var editor;
+    var callback = function (editor, data, selectionRange) {
+        var result;
+        actionQueue.then(function () {
+            console.log("invoke Blazor");
+            var selection = editor.getCurrentSelection();
+            var eventData = __assign({ selection: selection, editRange: data.editRange }, data);
+            actionQueue.prepareForNextRender();
+            wrapper.classList.add('refreshing');
+            selectionRange.collapse(true);
+            return invokeBlazor(reference, callbackName, eventData);
+        }).then(function (r) {
+            console.log("check result");
+            result = r;
+            if (result.failReason)
+                showToast("".concat(result.failReason.label, " (").concat(result.failReason.code, ")"), 'Bearbeitungsfehler', 5000);
+            if (!result.willRender) {
+                actionQueue.notifyRender();
+            }
+            else {
+                return actionQueue.awaitRender();
+            }
+        }).then(function () {
+            console.log("after render");
+            if (result.selection) {
+                editor.setCurrentSelection(result.selection);
+            }
+            else if (selectionRange) {
+                var selection = getSelection();
+                if (selection.rangeCount == 1) {
+                    var currentSelectionRange = selection.getRangeAt(0);
+                    currentSelectionRange.setStart(selectionRange.startContainer, selectionRange.startOffset);
+                    currentSelectionRange.setEnd(selectionRange.endContainer, selectionRange.endOffset);
+                }
+                else {
+                    selection.removeAllRanges();
+                    selection.addRange(selectionRange);
+                }
+            }
+            wrapper.classList.remove('refreshing');
+        });
+    };
+    editor = new ModificationEditor(wrapper, callback);
+    return {
+        notifyBeforeRender: editor.stopRevertingModifications.bind(editor),
+        notifyAfterRender: actionQueue.notifyRender.bind(actionQueue),
+    };
+}
 function attachmentStartDrag(event) {
     var attachmentElement = event.target.parentElement;
     var attachmentStart = getLineAndOffset(attachmentElement, 0);
@@ -169,109 +240,133 @@ function registerBeforeInput(wrapper, reference, callbackName) {
     }
     var currentRequest = null;
     wrapper['data-reference'] = reference;
-    wrapper['data-listener'] = handleBeforeInput;
-    if (navigator.userAgent.includes('Chrome')) {
-        var selectionRange;
-        var inputEvent;
-        var observing = 0;
-        var observer = new MutationObserver(function (mutations) {
-            observing--;
-            if (!observing)
-                observer.disconnect();
-            var mutations = Array.from(mutations.reverse());
-            while (mutations.length != 0) {
-                for (var m = 0; m < mutations.length; m++) {
-                    var mutation = mutations[m];
-                    if (mutation.type == 'childList') {
-                        if (mutation.removedNodes.length > 0) {
-                            if (mutation.nextSibling) {
-                                if (!mutation.target.contains(mutation.nextSibling))
-                                    continue;
-                                for (var i = 0; i < mutation.removedNodes.length; i++) {
-                                    var node = mutation.removedNodes[i];
-                                    mutation.target.insertBefore(node, mutation.nextSibling);
-                                }
-                            }
-                            else {
-                                for (var i = 0; i < mutation.removedNodes.length; i++) {
-                                    var node = mutation.removedNodes[i];
-                                    mutation.target.appendChild(node);
-                                }
-                            }
-                        }
-                        if (mutation.addedNodes.length > 0) {
-                            var found = true;
-                            for (var j = 0; j < mutation.addedNodes.length; j++) {
-                                var node = mutation.addedNodes[j];
-                                if (!node.parentElement) {
-                                    found = false;
-                                    break;
-                                }
-                            }
-                            if (!found)
+    wrapper['data-listener'] = prepareBeforeInput;
+    var reverseAllEvents = true;
+    if (navigator.userAgent.includes('Chrome') && navigator.userAgent.includes('Mobile')) {
+        reverseAllEvents = true;
+    }
+    wrapper.addEventListener('beforeinput', prepareBeforeInput);
+    wrapper.addEventListener('beforeinput', function (event) {
+        console.log(event);
+    });
+    wrapper.addEventListener('compositionstart', function (event) {
+        wrapper.setAttribute('readonly', 'true');
+    });
+    wrapper.addEventListener('compositionupdate', function (event) {
+        setTimeout(function () {
+            wrapper.removeAttribute('readonly');
+        }, 10);
+    });
+    wrapper.addEventListener('compositionend', function (event) {
+        console.log(event);
+    });
+    var observations = [];
+    var observer = new MutationObserver(function (mutations) {
+        var observation = observations.shift();
+        if (!observations.length)
+            observer.disconnect();
+        var mutations = Array.from(mutations.reverse());
+        while (mutations.length != 0) {
+            for (var m = 0; m < mutations.length; m++) {
+                var mutation = mutations[m];
+                if (mutation.type == 'childList') {
+                    if (mutation.removedNodes.length > 0) {
+                        if (mutation.nextSibling) {
+                            if (!mutation.target.contains(mutation.nextSibling))
                                 continue;
-                            for (var j = 0; j < mutation.addedNodes.length; j++) {
-                                var node = mutation.addedNodes[j];
-                                node.parentElement.removeChild(node);
+                            for (var i = 0; i < mutation.removedNodes.length; i++) {
+                                var node = mutation.removedNodes[i];
+                                mutation.target.insertBefore(node, mutation.nextSibling);
+                            }
+                        }
+                        else {
+                            for (var i = 0; i < mutation.removedNodes.length; i++) {
+                                var node = mutation.removedNodes[i];
+                                mutation.target.appendChild(node);
                             }
                         }
                     }
-                    else if (mutation.type == 'characterData') {
-                        mutation.target.nodeValue = mutation.oldValue;
+                    if (mutation.addedNodes.length > 0) {
+                        var found = true;
+                        for (var j = 0; j < mutation.addedNodes.length; j++) {
+                            var node = mutation.addedNodes[j];
+                            if (!node.parentElement) {
+                                found = false;
+                                break;
+                            }
+                        }
+                        if (!found)
+                            continue;
+                        for (var j = 0; j < mutation.addedNodes.length; j++) {
+                            var node = mutation.addedNodes[j];
+                            node.parentElement.removeChild(node);
+                        }
                     }
-                    mutations.splice(m, 1);
-                    m--;
                 }
+                else if (mutation.type == 'characterData') {
+                    mutation.target.nodeValue = mutation.oldValue;
+                }
+                mutations.splice(m, 1);
+                m--;
             }
-            var selection = getSelection();
-            selection.removeAllRanges();
-            if (selectionRange) {
-                var range = document.createRange();
-                range.setStart(selectionRange.start.node, selectionRange.start.offset);
-                range.setEnd(selectionRange.end.node, selectionRange.end.offset);
-                selection.addRange(range);
-            }
-            if (inputEvent) {
-                var event = inputEvent;
-                inputEvent = null;
-                handleBeforeInput(event);
-            }
+        }
+        var selection = getSelection();
+        selection.removeAllRanges();
+        if (observation === null || observation === void 0 ? void 0 : observation.selection) {
+            var range = document.createRange();
+            range.setStart(observation.selection.start.node, observation.selection.start.offset);
+            range.setEnd(observation.selection.end.node, observation.selection.end.offset);
+            selection.addRange(range);
+        }
+        if (observation === null || observation === void 0 ? void 0 : observation.inputEvent) {
+            handleBeforeInput(observation.inputEvent, true);
+        }
+    });
+    function observeAndReverseInput(event) {
+        var inputEvent = event;
+        var currentSelection = getSelection();
+        var selection;
+        if (currentSelection.rangeCount == 0) {
+            selection = null;
+        }
+        else {
+            var range = currentSelection.getRangeAt(0);
+            selection = {
+                start: {
+                    node: range.startContainer,
+                    offset: range.startOffset
+                },
+                end: {
+                    node: range.endContainer,
+                    offset: range.endOffset
+                }
+            };
+        }
+        var wasObserving = observations.length;
+        observations.push({
+            inputEvent: inputEvent,
+            selection: selection,
         });
-        wrapper.addEventListener('beforeinput', function (event) {
-            inputEvent = event;
-            var selection = getSelection();
-            if (selection.rangeCount == 0) {
-                selectionRange = null;
-            }
-            else {
-                var range = getSelection().getRangeAt(0);
-                selectionRange = {
-                    start: {
-                        node: range.startContainer,
-                        offset: range.startOffset
-                    },
-                    end: {
-                        node: range.endContainer,
-                        offset: range.endOffset
-                    }
-                };
-            }
-            if (observing) {
-                observing++;
-                console.log("observing: " + observing);
-            }
-            else {
-                observing++;
-                observer.observe(wrapper, { childList: true, subtree: true, characterData: true, characterDataOldValue: true });
-            }
-        });
+        if (wasObserving) {
+            console.log("observing: " + observations.length);
+        }
+        else {
+            console.log("start observing");
+            observer.observe(wrapper, { childList: true, subtree: true, characterData: true, characterDataOldValue: true });
+        }
     }
-    else {
-        wrapper.addEventListener('beforeinput', handleBeforeInput);
-    }
-    function handleBeforeInput(event) {
+    function prepareBeforeInput(event) {
+        console.log("input event: ".concat(event.inputType, ", data: ").concat(event.data));
+        if (reverseAllEvents || !event.cancelable) {
+            observeAndReverseInput(event);
+            return true;
+        }
         event.preventDefault();
         event.stopPropagation();
+        handleBeforeInput(event, false);
+    }
+    function handleBeforeInput(event, isReversed) {
+        console.log("input event: ".concat(event.inputType, ", data: ").concat(event.data));
         var content = event.data;
         var dragSelection = null;
         if (content === null && event.dataTransfer) {
@@ -326,6 +421,14 @@ function registerBeforeInput(wrapper, reference, callbackName) {
         }
         if (inputType == 'insertText' && content == '') {
             inputType = 'deleteContent';
+        }
+        if (inputType == 'insertCompositionText') {
+            var currentContent = originalRange.toString();
+            if (content.startsWith(currentContent)) {
+                inputType = 'insertText';
+                originalRange.collapse(false);
+                selection.start = selection.end;
+            }
         }
         wrapper.classList.add('refreshing');
         originalRange.collapse(true);
@@ -558,4 +661,386 @@ window.addEventListener('load', function () {
         document.documentElement.classList.remove('dragover');
     });
 });
+function registerModificationEditor(editor, reference, callbackName) {
+    var callback = function (editor, data) {
+        var selection = editor.getCurrentSelection();
+        var eventData = __assign({ selection: selection, editRange: data.editRange }, data);
+        setTimeout(function () {
+            reference.invokeMethodAsync(callbackName, eventData).then(function (result) {
+                editor.setCurrentSelection(result.selection);
+            });
+        }, 0);
+    };
+    return new ModificationEditor(editor, callback);
+}
+var ModificationEditor = (function () {
+    function ModificationEditor(editor, callback) {
+        var _this = this;
+        this.editor = editor;
+        this.callback = callback;
+        this.observerRunning = false;
+        this.modificationHandlers = [];
+        this.observedModification = null;
+        this.selectionBeforeInput = null;
+        this.actualCompositionUpdate = false;
+        editor.addEventListener('beforeinput', this.handleBeforeInput.bind(this));
+        editor.addEventListener('input', this.handleInput.bind(this));
+        editor.addEventListener('compositionstart', function (event) {
+            console.log('compositionstart', event);
+        });
+        editor.addEventListener('compositionupdate', function (event) {
+            _this.actualCompositionUpdate = true;
+            console.log('compositionupdate', event);
+        });
+        editor.addEventListener('compositionend', function (event) {
+            console.log('compositionend', event);
+        });
+        var self = this;
+        this.observer = new MutationObserver(function (mutations) {
+            self.observedModification = {
+                mutations: mutations
+            };
+            return;
+            var handler = self.modificationHandlers.shift();
+            if (!handler)
+                return;
+            handler({
+                mutations: mutations,
+            });
+        });
+    }
+    ModificationEditor.prototype.stopRevertingModifications = function () {
+        this.stopModificationObserver();
+    };
+    ModificationEditor.prototype.handleBeforeInput = function (event) {
+        var _a;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        console.log(event);
+        this.selectionBeforeInput = (_a = getSelection().getRangeAt(0)) === null || _a === void 0 ? void 0 : _a.cloneRange();
+        this.observedModification = null;
+        this.startModificationObserver(function (modification) { });
+        var editRange = null;
+        if (event.inputType == 'insertCompositionText') {
+            if (!this.actualCompositionUpdate) {
+                return;
+            }
+            this.actualCompositionUpdate = false;
+            var targetRange = event.getTargetRanges()[0];
+            if (targetRange) {
+                editRange = this.getLineSelection(targetRange);
+            }
+        }
+        this.callback(this, {
+            inputType: event.inputType,
+            editRange: editRange,
+            data: event.data
+        }, this.selectionBeforeInput);
+    };
+    ModificationEditor.prototype.handleInput = function (event) {
+        if (this.observedModification) {
+            this.revertModification(this.observedModification);
+            this.observedModification = null;
+        }
+        if (this.selectionBeforeInput) {
+            var selection = getSelection();
+            if (this.selectionBeforeInput) {
+                if (selection.rangeCount == 1) {
+                    var currentRange = selection.getRangeAt(0);
+                    currentRange.setStart(this.selectionBeforeInput.startContainer, this.selectionBeforeInput.startOffset);
+                    currentRange.setEnd(this.selectionBeforeInput.endContainer, this.selectionBeforeInput.endOffset);
+                }
+                else {
+                    selection.removeAllRanges();
+                    selection.addRange(this.selectionBeforeInput);
+                }
+            }
+            else {
+                selection.removeAllRanges();
+            }
+            this.selectionBeforeInput = null;
+        }
+    };
+    ModificationEditor.prototype.startModificationObserver = function (handler) {
+        this.modificationHandlers.push(handler);
+        if (!this.observerRunning) {
+            this.observer.observe(this.editor, {
+                childList: true,
+                subtree: true,
+                characterData: true,
+                characterDataOldValue: true
+            });
+            this.observerRunning = true;
+        }
+    };
+    ModificationEditor.prototype.stopModificationObserver = function () {
+        this.modificationHandlers = [];
+    };
+    ModificationEditor.prototype.revertModification = function (modification) {
+        var mutations = Array.from(modification.mutations.reverse());
+        while (mutations.length != 0) {
+            for (var m = 0; m < mutations.length; m++) {
+                var mutation = mutations[m];
+                if (mutation.type == 'childList') {
+                    if (mutation.removedNodes.length > 0) {
+                        if (mutation.nextSibling) {
+                            if (!mutation.target.contains(mutation.nextSibling))
+                                continue;
+                            for (var i = 0; i < mutation.removedNodes.length; i++) {
+                                var node = mutation.removedNodes[i];
+                                mutation.target.insertBefore(node, mutation.nextSibling);
+                            }
+                        }
+                        else {
+                            for (var i = 0; i < mutation.removedNodes.length; i++) {
+                                var node = mutation.removedNodes[i];
+                                mutation.target.appendChild(node);
+                            }
+                        }
+                    }
+                    if (mutation.addedNodes.length > 0) {
+                        var found = true;
+                        for (var j = 0; j < mutation.addedNodes.length; j++) {
+                            var node = mutation.addedNodes[j];
+                            if (!node.parentElement) {
+                                found = false;
+                                break;
+                            }
+                        }
+                        if (!found)
+                            continue;
+                        for (var j = 0; j < mutation.addedNodes.length; j++) {
+                            var node = mutation.addedNodes[j];
+                            node.parentElement.removeChild(node);
+                        }
+                    }
+                }
+                else if (mutation.type == 'characterData') {
+                    mutation.target.nodeValue = mutation.oldValue;
+                }
+                mutations.splice(m, 1);
+                m--;
+            }
+        }
+    };
+    ModificationEditor.prototype.getCurrentSelection = function () {
+        var _a;
+        var range = (_a = getSelection()) === null || _a === void 0 ? void 0 : _a.getRangeAt(0);
+        if (!range)
+            return null;
+        return this.getLineSelection(range);
+    };
+    ModificationEditor.prototype.setCurrentSelection = function (selection) {
+        var documentSelection = getSelection();
+        if (!selection) {
+            if (documentSelection.rangeCount != 0)
+                documentSelection.removeAllRanges();
+            return;
+        }
+        var range = documentSelection.getRangeAt(0);
+        if (!range) {
+            range = document.createRange();
+            documentSelection.addRange(range);
+        }
+        var startMetaline = this.editor.querySelector(".metaline[data-metaline=\"".concat(selection.start.metaline, "\"]"));
+        var endMetaline = selection.end.metaline == selection.start.metaline ? startMetaline
+            : this.editor.querySelector(".metaline[data-metaline=\"".concat(selection.end.metaline, "\"]"));
+        var startLine = findLine(startMetaline, selection.start.line);
+        var endLine = selection.end.metaline == selection.start.metaline && selection.end.line == selection.start.line ? startMetaline
+            : findLine(endMetaline, selection.end.line);
+        var start = this.getNode(startLine, selection.start.offset);
+        var end = selection.end.metaline == selection.start.metaline && selection.end.line == selection.start.line && selection.end.offset == selection.start.offset ? start
+            : this.getNode(endLine, selection.end.offset);
+        range.setStart(start.node, start.offset);
+        range.setEnd(end.node, end.offset);
+        function findLine(metaline, line) {
+            if (line === ModificationEditor.FIRST_LINE_ID) {
+                return metaline.querySelector('.line[data-line]');
+            }
+            else if (line === ModificationEditor.LAST_LINE_ID) {
+                var lines = metaline.querySelectorAll('.line[data-line]');
+                return lines[lines.length - 1];
+            }
+            return metaline.querySelector(".line[data-line=\"".concat(selection.start.line, "\"]"));
+        }
+    };
+    ModificationEditor.prototype.getLineSelection = function (range) {
+        var start = this.getTextIndex(range.startContainer, this.getLineInfo, range.startOffset);
+        var end = range.endContainer !== range.startContainer ? this.getTextIndex(range.endContainer, this.getLineInfo, range.endOffset) : {
+            offset: start.offset + range.endOffset - range.startOffset,
+            data: start.data,
+        };
+        return {
+            start: {
+                metaline: start.data.metaline,
+                line: start.data.line,
+                offset: start.offset
+            },
+            end: {
+                metaline: end.data.metaline,
+                line: end.data.line,
+                offset: end.offset
+            }
+        };
+    };
+    ModificationEditor.prototype.getTextIndex = function (node, stopCondition, offset) {
+        var _a;
+        if (!offset)
+            offset = 0;
+        var data = stopCondition(node);
+        for (var current = node; !data; current = current.parentElement, data = stopCondition(current)) {
+            for (var sibling = current.previousSibling; sibling; sibling = sibling.previousSibling) {
+                if (sibling.nodeType == Node.COMMENT_NODE)
+                    continue;
+                offset += ((_a = sibling.textContent) === null || _a === void 0 ? void 0 : _a.length) || 0;
+            }
+        }
+        return {
+            offset: offset,
+            data: data
+        };
+    };
+    ModificationEditor.prototype.getNode = function (node, offset) {
+        if (offset < 0)
+            return getFromEnd(node, -offset - 1);
+        else
+            return getFromStart(node, offset);
+        function getFromStart(node, offset) {
+            if (!(node instanceof HTMLElement))
+                return {
+                    node: node,
+                    offset: offset,
+                };
+            var currentOffset = 0;
+            for (var i = 0; i < node.childNodes.length; i++) {
+                var child = node.childNodes[i];
+                if (child.nodeType == Node.COMMENT_NODE)
+                    continue;
+                var offsetAfter = currentOffset + child.textContent.length;
+                if (offset < offsetAfter || (offsetAfter == offset && i == node.childNodes.length - 1))
+                    return getFromStart(child, offset - currentOffset);
+                currentOffset = offsetAfter;
+            }
+            return {
+                node: node,
+                offset: offset,
+            };
+        }
+        function getFromEnd(node, offset) {
+            if (!(node instanceof HTMLElement))
+                return {
+                    node: node,
+                    offset: node.textContent.length - offset,
+                };
+            var currentEndOffset = 0;
+            for (var i = node.childNodes.length - 1; i >= 0; i--) {
+                var child = node.childNodes[i];
+                if (child.nodeType == Node.COMMENT_NODE)
+                    continue;
+                var offsetBefore = currentEndOffset + child.textContent.length;
+                if (offset < offsetBefore || (offsetBefore == offset && i == 0))
+                    return getFromEnd(child, offset - currentEndOffset);
+                currentEndOffset = offsetBefore;
+            }
+            return {
+                node: node,
+                offset: offset,
+            };
+        }
+    };
+    ModificationEditor.prototype.getLineInfo = function (node) {
+        if (!(node instanceof HTMLElement))
+            return null;
+        var nodeElement = node;
+        var lineId = null;
+        if (nodeElement.classList.contains('line')) {
+            lineId = parseInt(nodeElement.getAttribute('data-line'));
+            nodeElement = nodeElement.parentElement.parentElement;
+        }
+        else if (nodeElement.classList.contains('metaline-lines')) {
+            nodeElement = nodeElement.parentElement;
+        }
+        else if (!nodeElement.classList.contains('metaline')) {
+            return null;
+        }
+        var metalineId = nodeElement.getAttribute('data-metaline');
+        return {
+            metaline: metalineId,
+            line: lineId
+        };
+    };
+    ModificationEditor.FIRST_LINE_ID = -1;
+    ModificationEditor.LAST_LINE_ID = -2;
+    return ModificationEditor;
+}());
+var ActionQueue = (function () {
+    function ActionQueue() {
+        this.queue = null;
+        this.resolveRender = null;
+        this.awaitRenderPromise = null;
+    }
+    Object.defineProperty(ActionQueue.prototype, "isBusy", {
+        get: function () {
+            return !!this.queue;
+        },
+        enumerable: false,
+        configurable: true
+    });
+    ActionQueue.prototype.then = function (onfulfilled, onrejected) {
+        var self = this;
+        var promise = null;
+        function checkRemove(next) {
+            if (next && next.then) {
+                return next.then(function (afterNext) {
+                    return checkRemove(afterNext);
+                });
+            }
+            if (self.queue === promise) {
+                self.queue = null;
+                console.log("Queue is empty");
+            }
+            else {
+                console.log("Queue continues");
+            }
+            return next;
+        }
+        ;
+        var handler = function (value) { return checkRemove(onfulfilled(value)); };
+        if (this.queue) {
+            this.queue = promise = this.queue.then(handler);
+        }
+        else {
+            this.queue = promise = new Promise(function (resolve, reject) {
+                resolve(handler(undefined));
+            });
+        }
+        return this;
+    };
+    ActionQueue.prototype.prepareForNextRender = function () {
+        if (this.resolveRender)
+            return;
+        var self = this;
+        this.awaitRenderPromise = new Promise(function (resolve, reject) {
+            self.resolveRender = function () {
+                resolve();
+                self.resolveRender = null;
+                self.awaitRenderPromise = null;
+            };
+        });
+    };
+    ActionQueue.prototype.awaitRender = function () {
+        if (!this.awaitRenderPromise)
+            return;
+        console.log("Awaiting next render");
+        var promise = this.awaitRenderPromise;
+        return promise;
+    };
+    ActionQueue.prototype.notifyRender = function () {
+        console.log("Render called");
+        if (!this.resolveRender)
+            return;
+        this.resolveRender();
+    };
+    return ActionQueue;
+}());
 //# sourceMappingURL=app.js.map

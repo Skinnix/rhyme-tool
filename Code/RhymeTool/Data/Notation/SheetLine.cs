@@ -77,7 +77,7 @@ public class SheetEmptyLine : SheetLine, ISheetDisplayLineEditing
 			//Lösche diese Zeile
 			return new DelayedMetalineEditResult(() =>
 			{
-				return new MetalineEditResult(new MetalineSelectionRange(lineAfter, SimpleRange.CursorAtStart, 0))
+				return new MetalineEditResult(new MetalineSelectionRange(lineAfter, SimpleRange.CursorAtStart, MetalineSelectionRange.FIRST_LINE))
 				{
 					RemoveLine = true,
 				};
@@ -93,7 +93,7 @@ public class SheetEmptyLine : SheetLine, ISheetDisplayLineEditing
 			//Lösche diese Zeile
 			return new DelayedMetalineEditResult(() =>
 			{
-				return new MetalineEditResult(new MetalineSelectionRange(lineBefore, SimpleRange.CursorAtEnd, -1))
+				return new MetalineEditResult(new MetalineSelectionRange(lineBefore, SimpleRange.CursorAtEnd, MetalineSelectionRange.LAST_LINE))
 				{
 					RemoveLine = true,
 				};

@@ -1,0 +1,123 @@
+﻿@page "/editor-test"
+@page "/chords/editor-test"
+
+@using Microsoft.JSInterop
+@using Skinnix.RhymeTool.Client.Components.Editing
+@using Skinnix.RhymeTool.Client.Services
+@using Skinnix.RhymeTool.Data
+
+@inject IJSRuntime js
+@inject IDocumentService documentService
+
+@{
+    void DisplayLines()
+    {
+        var metalineId = -1;
+        @foreach (var metaline in content)
+        {
+            metalineId++;
+            <div class="metaline" data-metaline="@metaline.Id">
+                <div class="metaline-lines">
+                    @{
+                        var lineIndex = 0;
+                    }
+                    @foreach (var line in metaline.Content)
+                    {
+                        <div class="line" data-line="@(lineIndex++)">@line</div>
+                    }
+                </div>
+            </div>
+        }
+    }
+}
+
+<div class="chord-sheet-wrapper d-flex flex-fill flex-row">
+    <div @ref="editorWrapper" class="chord-sheet chord-sheet-editor flex-fill border border-info" contenteditable="true">
+        @{ DisplayLines(); }
+    </div>
+
+    <div class="chord-sheet chord-sheet-editor flex-fill border border-success">
+        @{ DisplayLines(); }
+    </div>
+</div>
+
+@code {
+    private ElementReference editorWrapper;
+    private IJSObjectReference? jsEditor;
+
+    private List<LineContent> content = new();
+
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await base.OnParametersSetAsync();
+
+        var documentSource = await documentService.TryGetDocument(null);
+        if (documentSource is not null)
+        {
+            var document = await documentSource.LoadAsync();
+            if (document is not null)
+            {
+                content = document.Lines.Select(l => new LineContent()
+                {
+                    Content = l.CreateDisplayLines().Select(d => string.Join("", d.GetElements().Select(e => e.ToString()))).ToList()
+                }).ToList();
+            }
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+
+        if (firstRender)
+        {
+            jsEditor = await js.InvokeAsync<IJSObjectReference>("registerModificationEditor", editorWrapper, DotNetObjectReference.Create(this), nameof(OnModify));
+        }
+        else if (jsEditor is not null)
+        {
+            await jsEditor.InvokeVoidAsync("notifyRender");
+        }
+    }
+
+
+    [JSInvokable]
+    public JsMetalineEditResult OnModify(InputEventData data)
+    {
+        var range = data.EditRange ?? data.Selection;
+        if (data.InputType == "deleteContent" || data.InputType == "deleteContentBackward")
+        {
+            range = data.Selection with
+            {
+                Start = range.Start with
+                {
+                    Offset = range.Start.Offset - 1
+                }
+            };
+        }
+
+        var metaline = content.First(m => m.Id == range.Start.Metaline);
+        var currentContent = metaline.Content[range.Start.Line];
+        currentContent = currentContent[0..(range.Start.Offset)]
+            + data.Data
+            + currentContent[(range.End.Offset)..];
+        metaline.Content[range.Start.Line] = currentContent;
+
+        StateHasChanged();
+
+        var cursorPosition = data.Selection.Start.Offset + (data.Data?.Length ?? 0);
+        return new JsMetalineEditResult(true, true, new(
+            new JsMetalineSelectionAnchor(data.Selection.Start.Metaline, data.Selection.Start.Line, cursorPosition),
+            new JsMetalineSelectionAnchor(data.Selection.Start.Metaline, data.Selection.Start.Line, cursorPosition)));
+    }
+
+    private class LineContent
+    {
+        public Guid Id { get; } = Guid.NewGuid();
+        public List<string> Content { get; init; } = new();
+    }
+
+    public record JsMetalineEditResult(bool Success, bool WillRender, JsMetalineSelection? Selection);
+    public record JsMetalineSelection(JsMetalineSelectionAnchor Start, JsMetalineSelectionAnchor End);
+    public record JsMetalineSelectionAnchor(Guid Metaline, int? Line, int Offset);
+}

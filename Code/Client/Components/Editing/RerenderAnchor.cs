@@ -12,14 +12,22 @@ public class RerenderAnchor : ComponentBase
 {
 	[Inject] public IJSRuntime js { get; set; } = null!;
 
+	public Action? BeforeRender { get; set; }
+	public Func<ValueTask>? AfterRender { get; set; }
+
 	protected override bool ShouldRender() => true;
 
 	protected override async Task OnAfterRenderAsync(bool firstRender)
 	{
 		await base.OnAfterRenderAsync(firstRender);
 
-		await js.InvokeVoidAsync("notifyRenderFinished");
+		if (AfterRender is not null)
+			await AfterRender();
 	}
 
-	public void TriggerRender() => StateHasChanged();
+	public void TriggerRender()
+	{
+		BeforeRender?.Invoke();
+		StateHasChanged();
+	}
 }

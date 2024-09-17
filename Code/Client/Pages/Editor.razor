@@ -66,7 +66,7 @@
 @code {
     private static readonly bool IsDebug =
 #if DEBUG
-        true;
+    true;
 #else
         false;
 #endif
@@ -109,6 +109,13 @@
                 document.Lines.Modified += OnDocumentLinesModified;
                 document.TitlesChanged += OnDocumentTitlesChanged;
             }
+        }
+
+        if (document is null)
+        {
+            document = new SheetDocument(new SheetEmptyLine());
+            document.Lines.Modified += OnDocumentLinesModified;
+            document.TitlesChanged += OnDocumentTitlesChanged;
         }
     }
 

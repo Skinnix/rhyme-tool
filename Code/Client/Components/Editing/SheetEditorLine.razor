@@ -102,15 +102,15 @@
         switch (line)
         {
             case SheetDisplayEmptyLine empty:
-                <div @key="GetKey(line)" class="line line-empty" data-line-index="@line.Id">@{RenderEmptyLine();}</div>
+                <div @key="GetKey(line)" class="line line-empty" data-line="@line.Id">@{RenderEmptyLine();}</div>
                 break;
 
             case SheetDisplayChordLine chords:
-                <div @key="GetKey(line)" class="line line-chords" data-line-index="@line.Id">@{RenderElements(line.GetElements());}</div>
+                <div @key="GetKey(line)" class="line line-chords" data-line="@line.Id">@{RenderElements(line.GetElements());}</div>
                 break;
 
             case SheetDisplayTextLine text:
-                <div @key="GetKey(line)" class="line line-text" data-line-index="@line.Id">@{RenderElements(line.GetElements());}</div>
+                <div @key="GetKey(line)" class="line line-text" data-line="@line.Id">@{RenderElements(line.GetElements());}</div>
                 break;
         }
     }

@@ -1,19 +1,38 @@
 ﻿declare class BlazorDotNetReference {
-	invokeMethod(method: string, ...args: any[]): any;
-	invokeMethodAsync: (method: string, ...args: any[]) => any;
+	invokeMethod<T = any>(method: string, ...args: any[]): T;
+	invokeMethodAsync<T = any>(method: string, ...args: any[]): Promise<T>;
 }
 
 declare const bootstrap: any;
 
-declare interface LineSelectionAnchor {
+declare interface NodeSelectionAnchor {
+	node: Node,
+	offset: number,
+}
+
+declare interface NodeSelection {
+	start: NodeSelectionAnchor,
+	end: NodeSelectionAnchor,
+}
+
+declare interface LineIdentifier {
 	metaline: string,
 	line: number,
+}
+
+declare interface LineSelectionAnchor extends LineIdentifier {
 	offset: number,
 }
 
 declare interface LineSelection {
 	start: LineSelectionAnchor,
 	end: LineSelectionAnchor,
+}
+
+declare interface SimpleInputEvent {
+	inputType: string,
+	data: string,
+	dataTransfer: DataTransfer,
 }
 
 declare interface JsMetalineEditResult {
@@ -185,6 +204,9 @@ function registerResize(element: HTMLElement, reference: BlazorDotNetReference, 
 }
 
 
+
+
+
 var promiseAfterRender: Promise<any> = null;
 var resolveAfterRender: (arg?: any) => void = null;
 function notifyRenderFinished(componentName?: string) {
@@ -209,6 +231,96 @@ function invokeAfterRender(action: () => any) {
 }
 function isWaitingForRender() {
 	return resolveAfterRender != null;
+}
+
+
+
+
+function registerChordEditor(wrapper: HTMLElement, reference: BlazorDotNetReference, callbackName: string) {
+	//prevent double registration
+	var existingReference = (wrapper as any)['data-reference'];
+	if (existingReference === reference) {
+		return;
+	} else if (existingReference) {
+		var existingListener = (wrapper as any)['data-listener'];
+		if (existingListener) {
+			wrapper.removeEventListener('beforeinput', existingListener);
+		}
+	}
+
+	//create action queue
+	let actionQueue = new ActionQueue();
+	
+	//create editor wrapper
+	let editor: ModificationEditor;
+	let callback: EditorCallback = (editor, data, selectionRange) => {
+		let result: MetalineEditResult;
+		actionQueue.then(() => {
+			console.log("invoke Blazor");
+
+			//prepare event data
+			var selection = editor.getCurrentSelection();
+			var eventData = {
+				selection: selection,
+				editRange: data.editRange,
+				...data
+			};
+
+			//a new render is coming
+			actionQueue.prepareForNextRender();
+			
+			//hide caret
+			wrapper.classList.add('refreshing');
+			selectionRange.collapse(true);
+
+			//invoke the callback
+			return invokeBlazor<MetalineEditResult>(reference, callbackName, eventData);
+		}).then(r => {
+			console.log("check result");
+
+			//store result
+			result = r;
+			
+			//show error
+			if (result.failReason)
+				showToast(`${result.failReason.label} (${result.failReason.code})`, 'Bearbeitungsfehler', 5000);
+
+			//no render coming (anymore)?
+			if (!result.willRender) {
+				//trigger render
+				actionQueue.notifyRender();
+			} else {
+				//await render
+				return actionQueue.awaitRender();
+			}
+		}).then(() => {
+			console.log("after render");
+
+			if (result.selection) {
+				//set new selection range
+				editor.setCurrentSelection(result.selection);
+			} else if (selectionRange) {
+				//restore old range
+				var selection = getSelection();
+				if (selection.rangeCount == 1) {
+					var currentSelectionRange = selection.getRangeAt(0);
+					currentSelectionRange.setStart(selectionRange.startContainer, selectionRange.startOffset);
+					currentSelectionRange.setEnd(selectionRange.endContainer, selectionRange.endOffset);
+				} else {
+					selection.removeAllRanges();
+					selection.addRange(selectionRange);
+				}
+			}
+
+			//show caret
+			wrapper.classList.remove('refreshing');
+		});
+	};
+	editor = new ModificationEditor(wrapper, callback);
+	return {
+		notifyBeforeRender: editor.stopRevertingModifications.bind(editor),
+		notifyAfterRender: actionQueue.notifyRender.bind(actionQueue),
+	};
 }
 
 
@@ -257,134 +369,165 @@ function registerBeforeInput(wrapper: HTMLElement, reference: BlazorDotNetRefere
 	
 	//store listener data
 	(wrapper as any)['data-reference'] = reference;
-	(wrapper as any)['data-listener'] = handleBeforeInput;
-
+	(wrapper as any)['data-listener'] = prepareBeforeInput;
+	
 	//on chrome mobile the beforeinput event is not cancelable for deletion events
-	if (navigator.userAgent.includes('Chrome')) { // && navigator.userAgent.includes('Mobile')) {
-		var selectionRange: {
-			start: {
-				node: Node,
-				offset: number
-			},
-			end: {
-				node: Node,
-				offset: number
-			}
-		};
-		var inputEvent: InputEvent;
+	let reverseAllEvents = true;
+	if (navigator.userAgent.includes('Chrome') && navigator.userAgent.includes('Mobile')) {
+		reverseAllEvents = true;
+	}
 
-		var observing = 0;
-		var observer = new MutationObserver(function (mutations) {
-			observing--;
-			if (!observing)
-				observer.disconnect();
+	//add listener
+	wrapper.addEventListener('beforeinput', prepareBeforeInput);
+	wrapper.addEventListener('beforeinput', function (event) {
+		console.log(event);
+	});
+	wrapper.addEventListener('compositionstart', function (event) {
+		wrapper.setAttribute('readonly', 'true');
+	});
+	wrapper.addEventListener('compositionupdate', function (event) {
+		setTimeout(function () {
+			wrapper.removeAttribute('readonly');
+		}, 10);
+	});
+	wrapper.addEventListener('compositionend', function (event) {
+		console.log(event);
+	});
+	
+	type InputEventInfo = {
+		selection?: NodeSelection,
+		inputEvent: SimpleInputEvent,
+	};
+	var observations: InputEventInfo[] = [];
+	var observer = new MutationObserver(function (mutations) {
+		var observation = observations.shift();
+		if (!observations.length)
+			observer.disconnect();
 
-			var mutations = Array.from(mutations.reverse());
-			while (mutations.length != 0) {
-				for (var m = 0; m < mutations.length; m++) {
-					var mutation = mutations[m];
-					if (mutation.type == 'childList') {
-						if (mutation.removedNodes.length > 0) {
-							if (mutation.nextSibling) {
-								if (!mutation.target.contains(mutation.nextSibling))
-									continue;
-
-								for (var i = 0; i < mutation.removedNodes.length; i++) {
-									var node = mutation.removedNodes[i];
-									mutation.target.insertBefore(node, mutation.nextSibling);
-								}
-							} else {
-								for (var i = 0; i < mutation.removedNodes.length; i++) {
-									var node = mutation.removedNodes[i];
-									mutation.target.appendChild(node);
-								}
-							}
-						}
-
-						if (mutation.addedNodes.length > 0) {
-							var found = true;
-							for (var j = 0; j < mutation.addedNodes.length; j++) {
-								var node = mutation.addedNodes[j];
-								if (!node.parentElement) {
-									found = false;
-									break;
-								}
-							}
-							if (!found)
+		var mutations = Array.from(mutations.reverse());
+		while (mutations.length != 0) {
+			for (var m = 0; m < mutations.length; m++) {
+				var mutation = mutations[m];
+				if (mutation.type == 'childList') {
+					if (mutation.removedNodes.length > 0) {
+						if (mutation.nextSibling) {
+							if (!mutation.target.contains(mutation.nextSibling))
 								continue;
 
-							for (var j = 0; j < mutation.addedNodes.length; j++) {
-								var node = mutation.addedNodes[j];
-								node.parentElement.removeChild(node);
+							for (var i = 0; i < mutation.removedNodes.length; i++) {
+								var node = mutation.removedNodes[i];
+								mutation.target.insertBefore(node, mutation.nextSibling);
+							}
+						} else {
+							for (var i = 0; i < mutation.removedNodes.length; i++) {
+								var node = mutation.removedNodes[i];
+								mutation.target.appendChild(node);
 							}
 						}
-					} else if (mutation.type == 'characterData') {
-						mutation.target.nodeValue = mutation.oldValue;
 					}
 
-					mutations.splice(m, 1);
-					m--;
+					if (mutation.addedNodes.length > 0) {
+						var found = true;
+						for (var j = 0; j < mutation.addedNodes.length; j++) {
+							var node = mutation.addedNodes[j];
+							if (!node.parentElement) {
+								found = false;
+								break;
+							}
+						}
+						if (!found)
+							continue;
+
+						for (var j = 0; j < mutation.addedNodes.length; j++) {
+							var node = mutation.addedNodes[j];
+							node.parentElement.removeChild(node);
+						}
+					}
+				} else if (mutation.type == 'characterData') {
+					mutation.target.nodeValue = mutation.oldValue;
 				}
-			}
 
-			var selection = getSelection();
-			selection.removeAllRanges();
-			if (selectionRange) {
-				let range = document.createRange();
-				range.setStart(selectionRange.start.node, selectionRange.start.offset);
-				range.setEnd(selectionRange.end.node, selectionRange.end.offset);
-				selection.addRange(range);
+				mutations.splice(m, 1);
+				m--;
 			}
+		}
 
-			if (inputEvent) {
-				var event = inputEvent;
-				inputEvent = null;
-				handleBeforeInput(event);
-			}
+		//restore selection
+		var selection = getSelection();
+		selection.removeAllRanges();
+		if (observation?.selection) {
+			let range = document.createRange();
+			range.setStart(observation.selection.start.node, observation.selection.start.offset);
+			range.setEnd(observation.selection.end.node, observation.selection.end.offset);
+			selection.addRange(range);
+		}
+
+		//handle event
+		if (observation?.inputEvent) {
+			handleBeforeInput(observation.inputEvent, true);
+		}
+	});
+
+	function observeAndReverseInput(event: SimpleInputEvent) {
+		//store event data in order to process the event after the mutation observer has finished
+		let inputEvent = event;
+
+		//store selection so it can be restored after the mutation observer has finished
+		let currentSelection = getSelection();
+		let selection: NodeSelection;
+		if (currentSelection.rangeCount == 0) {
+			selection = null;
+		} else {
+			let range = currentSelection.getRangeAt(0);
+			selection = {
+				start: {
+					node: range.startContainer,
+					offset: range.startOffset
+				},
+				end: {
+					node: range.endContainer,
+					offset: range.endOffset
+				}
+			};
+		}
+
+		//store the observation
+		let wasObserving = observations.length;
+		observations.push({
+			inputEvent: inputEvent,
+			selection: selection,
 		});
 
-		//add listener
-		wrapper.addEventListener('beforeinput', function (event) {
-			//store event data in order to process the event after the mutation observer has finished
-			inputEvent = event;
-
-			//store selection so it can be restored after the mutation observer has finished
-			let selection = getSelection();
-			if (selection.rangeCount == 0) {
-				selectionRange = null;
-			} else {
-				let range = getSelection().getRangeAt(0);
-				selectionRange = {
-					start: {
-						node: range.startContainer,
-						offset: range.startOffset
-					},
-					end: {
-						node: range.endContainer,
-						offset: range.endOffset
-					}
-				};
-			}
-
-			//start the observer
-			if (observing) {
-				observing++;
-				console.log("observing: " + observing);
-			} else {
-				observing++;
-				observer.observe(wrapper, { childList: true, subtree: true, characterData: true, characterDataOldValue: true });
-			}
-		});
-	} else {
-		//add listener
-		wrapper.addEventListener('beforeinput', handleBeforeInput);
+		//start the observer
+		if (wasObserving) {
+			console.log("observing: " + observations.length);
+		} else {
+			console.log("start observing");
+			observer.observe(wrapper, { childList: true, subtree: true, characterData: true, characterDataOldValue: true });
+		}
 	}
-	
-	function handleBeforeInput(event: InputEvent) {
+
+	function prepareBeforeInput(event: InputEvent) {
+		console.log(`input event: ${event.inputType}, data: ${event.data}`);
+		//return;
+		//does the event need to be reversed?
+		if (reverseAllEvents || !event.cancelable) {
+			observeAndReverseInput(event);
+			return true;
+		}
+
 		//stop normal event
 		event.preventDefault();
 		event.stopPropagation();
-		
+
+		//handle event
+		handleBeforeInput(event, false);
+	}
+
+	function handleBeforeInput(event: SimpleInputEvent, isReversed: boolean) {
+		//log event info
+		console.log(`input event: ${event.inputType}, data: ${event.data}`);
+
 		//get content and additional data
 		var content = event.data;
 		var dragSelection: LineSelection = null;
@@ -420,9 +563,7 @@ function registerBeforeInput(wrapper: HTMLElement, reference: BlazorDotNetRefere
 		return false;
 	}
 
-	function sendInputEvent(inputType: string, content: string, dragSelection: LineSelection) {
-		//console.log("processing input event: " + inputType + " (" + content + ")");
-
+	function sendInputEvent(inputType: string, content: string, dragSelection: LineSelection): Promise<any> {
 		var originalSelection = getSelection();
 		var originalRange = originalSelection.rangeCount == 0 ? null : originalSelection.getRangeAt(0);
 
@@ -431,7 +572,6 @@ function registerBeforeInput(wrapper: HTMLElement, reference: BlazorDotNetRefere
 			var content = originalRange.toString();
 			if (!content || content == "\n") {
 				//collapse the selection
-				//alert(inputType);
 				if (inputType == 'deleteContentForward') {
 					originalRange.setEnd(originalRange.startContainer, originalRange.startOffset);
 				} else {
@@ -455,6 +595,16 @@ function registerBeforeInput(wrapper: HTMLElement, reference: BlazorDotNetRefere
 		//if no content is being added and the selection it non-empty, it is actually a deletion
 		if (inputType == 'insertText' && content == '') {
 			inputType = 'deleteContent';
+		}
+
+		//unwrap compositions
+		if (inputType == 'insertCompositionText') {
+			var currentContent = originalRange.toString();
+			if (content.startsWith(currentContent)) {
+				inputType = 'insertText';
+				originalRange.collapse(false);
+				selection.start = selection.end;
+			}
 		}
 
 		//console.log("selection is at:");
@@ -485,7 +635,7 @@ function registerBeforeInput(wrapper: HTMLElement, reference: BlazorDotNetRefere
 
 function invokeLineEdit(reference: BlazorDotNetReference, callbackName: string,
 	inputType: string, content: string, selection: LineSelection,
-	wrapper: HTMLElement, copyRange: Range, ignoreSelection?: boolean) {
+	wrapper: HTMLElement, copyRange: Range, ignoreSelection?: boolean): Promise<any> {
 	return invokeBlazor<JsMetalineEditResult>(reference, callbackName, {
         inputType: inputType,
 		data: content,
@@ -523,7 +673,7 @@ function invokeLineEdit(reference: BlazorDotNetReference, callbackName: string,
     });
 }
 
-function getLineId(node: Node) {
+function getLineId(node: Node): LineIdentifier {
 	var metalineId;
 	var lineId;
 	for (; node; node = node.parentElement) {
@@ -543,7 +693,7 @@ function getLineId(node: Node) {
 	}
 }
 
-function checkIsLine(node: Node) {
+function checkIsLine(node: Node): LineIdentifier {
 	if (!node || !('classList' in node))
 		return null;
 
@@ -576,7 +726,7 @@ function checkIsLine(node: Node) {
 	};
 }
 
-function getLineAndOffset(node: Node, offset: number) {
+function getLineAndOffset(node: Node, offset: number): LineSelectionAnchor {
 	if (!offset)
 		offset = 0;
 
@@ -597,7 +747,7 @@ function getLineAndOffset(node: Node, offset: number) {
 	};
 }
 
-function getSelectionRange(selection: Selection, wrapper: HTMLElement) {
+function getSelectionRange(selection: Selection, wrapper: HTMLElement): LineSelection {
 	if (selection.rangeCount == 0)
 		return null;
 	var range = selection.getRangeAt(0);
@@ -618,7 +768,7 @@ function getSelectionRange(selection: Selection, wrapper: HTMLElement) {
 	};
 }
 
-function setSelectionRange(wrapper: HTMLElement, metaline: string, lineId: number, lineIndex: number, selectionRange: {start: number, end: number}) {
+function setSelectionRange(wrapper: HTMLElement, metaline: string, lineId: number | null, lineIndex: number, selectionRange: {start: number, end: number}) {
 	//find metaline
 	var metalineElement = wrapper.querySelector('.metaline[data-metaline="' + metaline + '"]');
 

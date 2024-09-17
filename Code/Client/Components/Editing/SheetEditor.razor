@@ -73,7 +73,9 @@
 
         if (firstRender)
         {
-            await js.InvokeVoidAsync("registerBeforeInput", editorWrapper, DotNetObjectReference.Create(this), nameof(OnBeforeInput));
+            var reference = await js.InvokeAsync<IJSObjectReference>("registerChordEditor", editorWrapper, DotNetObjectReference.Create(this), nameof(OnBeforeInput));
+            //rerenderAnchor.BeforeRender = () => reference.InvokeVoidAsync("notifyBeforeRender");
+            rerenderAnchor.AfterRender = () => reference.InvokeVoidAsync("notifyAfterRender");
         }
 
         //await js.InvokeVoidAsync("notifyRenderFinished", this.GetType().Name);
