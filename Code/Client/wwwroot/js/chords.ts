@@ -253,11 +253,10 @@ function registerChordEditor(wrapper: HTMLElement, reference: BlazorDotNetRefere
 	
 	//create editor wrapper
 	let editor: ModificationEditor;
-	let callback: EditorCallback = (editor, data, selectionRange) => {
+	let afterRender: () => void;
+	let callback: EditorCallback = (editor, data, selectionRange, expectRender) => {
 		let result: MetalineEditResult;
 		actionQueue.then(() => {
-			console.log("invoke Blazor");
-
 			//prepare event data
 			var selection = editor.getCurrentSelection();
 			var eventData = {
@@ -265,15 +264,17 @@ function registerChordEditor(wrapper: HTMLElement, reference: BlazorDotNetRefere
 				editRange: data.editRange,
 				...data
 			};
-
-			//a new render is coming
-			actionQueue.prepareForNextRender();
 			
 			//hide caret
 			wrapper.classList.add('refreshing');
-			selectionRange.collapse(true);
+			selectionRange.collapse(false);
 
+			//a new render is coming
+			actionQueue.prepareForNextRender();
+			afterRender = expectRender();
+			
 			//invoke the callback
+			console.log("invoke Blazor");
 			return invokeBlazor<MetalineEditResult>(reference, callbackName, eventData);
 		}).then(r => {
 			console.log("check result");
@@ -295,6 +296,9 @@ function registerChordEditor(wrapper: HTMLElement, reference: BlazorDotNetRefere
 			}
 		}).then(() => {
 			console.log("after render");
+
+			//rendered
+			afterRender();
 
 			if (result.selection) {
 				//set new selection range
@@ -318,7 +322,7 @@ function registerChordEditor(wrapper: HTMLElement, reference: BlazorDotNetRefere
 	};
 	editor = new ModificationEditor(wrapper, callback);
 	return {
-		notifyBeforeRender: editor.stopRevertingModifications.bind(editor),
+		//notifyBeforeRender: editor.stopRevertingModifications.bind(editor),
 		notifyAfterRender: actionQueue.notifyRender.bind(actionQueue),
 	};
 }

@@ -51,14 +51,17 @@ partial class SheetEditor
 	{
 		if (Document is null) throw new InvalidOperationException("Editor nicht initialisiert");
 
+		//Wo findet die Bearbeitung statt?
+		var range = data.EditRange ?? data.Selection;
+
 		//Finde die Displayzeile
-		var line = FindLine(data.Selection.Start.Metaline, data.Selection.Start.Line);
+		var line = FindLine(range.Start.Metaline, range.Start.Line);
 		if (line is null)
 			return MetalineEditResult.Fail(LineNotFound);
 
 		//Auswahl
-		var selectionRange = new SimpleRange(data.Selection.Start.Offset, data.Selection.End.Offset);
-		var context = new SheetDisplayLineEditingContext(selectionRange)
+		var editRange = new SimpleRange(range.Start.Offset, range.End.Offset);
+		var context = new SheetDisplayLineEditingContext(editRange)
 		{
 			GetLineBefore = () => Document.Lines.GetLineBefore(line.Editing.Line),
 			GetLineAfter = () => Document.Lines.GetLineAfter(line.Editing.Line),
@@ -67,7 +70,7 @@ partial class SheetEditor
 		//Bearbeitungstyp
 		var editResult = GetEditType(data) switch
 		{
-			EditType.InsertContent => line.Editing.InsertContent(context, data.Data, false, Formatter),
+			EditType.InsertContent or EditType.InsertCompositionContent => line.Editing.InsertContent(context, data.Data, false, Formatter),
 			EditType.InsertLine => line.Editing.InsertContent(context, "\n", false, Formatter),
 			EditType.DeleteBackward => line.Editing.DeleteContent(context, DeleteDirection.Backward, DeleteType.Character, false, Formatter),
 			EditType.DeleteForward => line.Editing.DeleteContent(context, DeleteDirection.Forward, DeleteType.Character, false, Formatter),
@@ -110,7 +113,7 @@ partial class SheetEditor
 		//Bearbeitungstyp
 		var editResult = GetEditType(data) switch
 		{
-			EditType.InsertContent => context.InsertContent(data.Data, Formatter),
+			EditType.InsertContent or EditType.InsertCompositionContent => context.InsertContent(data.Data, Formatter),
 			EditType.InsertLine => context.InsertContent("\n", Formatter),
 			EditType.DeleteBackward or EditType.DeleteWordBackward => context.DeleteContent(DeleteDirection.Backward, Formatter),
 			EditType.DeleteForward or EditType.DeleteWordForward => context.DeleteContent(DeleteDirection.Forward, Formatter),
@@ -122,12 +125,13 @@ partial class SheetEditor
 
 	private static EditType? GetEditType(InputEventData data) => data.InputType switch
 	{
-		"insertFromDrop" or "insertFromPaste" or "insertFromPasteAsQuotation" or "insertLink" or "insertText" => (EditType?)EditType.InsertContent,
-		"insertLineBreak" or "insertParagraph" => (EditType?)EditType.InsertLine,
-		"deleteByCut" or "deleteByDrag" or "deleteContentBackward" or "deleteContent" => (EditType?)EditType.DeleteBackward,
-		"deleteContentForward" => (EditType?)EditType.DeleteForward,
-		"deleteWord" or "deleteWordBackward" => (EditType?)EditType.DeleteWordBackward,
-		"deleteWordForward" => (EditType?)EditType.DeleteWordForward,
+		"insertFromDrop" or "insertFromPaste" or "insertFromPasteAsQuotation" or "insertLink" or "insertText" => EditType.InsertContent,
+		"insertCompositionText" => EditType.InsertCompositionContent,
+		"insertLineBreak" or "insertParagraph" => EditType.InsertLine,
+		"deleteByCut" or "deleteByDrag" or "deleteContentBackward" or "deleteContent" => EditType.DeleteBackward,
+		"deleteContentForward" => EditType.DeleteForward,
+		"deleteWord" or "deleteWordBackward" => EditType.DeleteWordBackward,
+		"deleteWordForward" => EditType.DeleteWordForward,
 		_ => null,
 	};
 
@@ -141,6 +145,7 @@ partial class SheetEditor
 	private enum EditType
 	{
 		InsertContent,
+		InsertCompositionContent,
 		InsertLine,
 		DeleteBackward,
 		DeleteForward,

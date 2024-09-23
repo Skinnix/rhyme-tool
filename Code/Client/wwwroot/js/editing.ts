@@ -51,7 +51,8 @@ declare interface MetalineEditResult {
 	},
 }
 
-declare type EditorCallback = (editor: ModificationEditor, data: ModificationData, selectionRange: Range | null) => void;
+declare type EditorCallback = (editor: ModificationEditor, data: ModificationData, selectionRange: Range | null, pauseRender: () => (() => void)) => void;
+declare type ModificationHandler = (modification: ObservedModification) => void;
 
 function registerModificationEditor(editor: HTMLElement, reference: BlazorDotNetReference, callbackName: string): ModificationEditor {
 	let callback: EditorCallback = (editor, data) => {
@@ -70,81 +71,125 @@ function registerModificationEditor(editor: HTMLElement, reference: BlazorDotNet
 	return new ModificationEditor(editor, callback);
 }
 
+class Debouncer {
+	private interval: ReturnType<typeof setInterval> | null;
+	private handler: TimerHandler | null;
+
+	constructor(private timeout: number) {
+
+	}
+	
+	public debounce(handler: () => void, debounce: boolean) {
+		if (this.interval) {
+			console.log("debounce: bounced");
+			clearInterval(this.interval);
+			this.interval = setInterval(this.handler, this.timeout);
+			return;
+		}
+
+		if (!debounce) {
+			console.log("debounce: immediate");
+			handler();
+			return;
+		}
+		
+		this.handler = () => {
+			console.log("debounce: invoke");
+			this.interval = null;
+			this.handler = null;
+			handler();
+		};
+		setTimeout(this.handler, this.timeout);
+		console.log("debounce: started");
+	}
+}
+
 class ModificationEditor {
 	static FIRST_LINE_ID = -1;
 	static LAST_LINE_ID = -2;
 
 	private observer: MutationObserver;
-	private observerRunning = false;
-	private modificationHandlers: ((modification: ObservedModification) => void)[] = [];
-	private observedModification: ObservedModification | null = null;
-	private selectionBeforeInput: Range | null = null;
+	private debouncer = new Debouncer(2);
 	private actualCompositionUpdate = false;
+	private afterModification: ModificationHandler | null;
 
+	private revertModifications = true;
+	private revertSelection: StaticRange | null | undefined;
+	
 	constructor(private editor: HTMLElement, private callback: EditorCallback) {
-		editor.addEventListener('beforeinput', this.handleBeforeInput.bind(this));
-		editor.addEventListener('input', this.handleInput.bind(this));
-		editor.addEventListener('compositionstart', event => {
-			console.log('compositionstart', event);
-		});
-		editor.addEventListener('compositionupdate', event => {
-			this.actualCompositionUpdate = true;
-			console.log('compositionupdate', event);
-		});
-		editor.addEventListener('compositionend', event => {
-			console.log('compositionend', event);
-		});
+		this.editor.addEventListener('beforeinput', this.handleBeforeInput.bind(this));
+		this.editor.addEventListener('input', this.handleInput.bind(this));
+		this.editor.addEventListener('compositionstart', this.handleCompositionStart.bind(this));
+		this.editor.addEventListener('compositionupdate', this.handleCompositionUpdate.bind(this));
+		this.editor.addEventListener('compositionend', this.handleCompositionEnd.bind(this));
 
 		let self = this;
 		this.observer = new MutationObserver(function (mutations) {
-			self.observedModification = {
-				mutations: mutations
-			};
-			return;
+			if (self.revertModifications) {
+				self.revertModificationAndRestoreSelection({
+					mutations: mutations
+				}, self.revertSelection);
+			} else {
+				//Render fertig?
+				if (self.isRenderDone(mutations)) {
+					console.log("render done");
+					if (self.revertModifications) {
+						console.error('revert conflict');
+					}
+					self.revertModifications = true;
+				}
+			}
 
-			//Wird gerade nicht beobachtet?
-			let handler = self.modificationHandlers.shift();
-			if (!handler)
-				return;
+			if (self.afterModification) {
+				let handler = self.afterModification;
+				self.afterModification = null;
+				handler({
+					mutations: mutations
+				});
+			} else if (!self.revertModifications) {
+				console.log("allowed modification (render?)", mutations);
+			}
+		});
+		this.startObserver();
+	}
 
-			handler({
-				mutations: mutations,
-			});
+	public destroy() {
+		this.observer.disconnect();
+		this.editor.removeEventListener('beforeinput', this.handleBeforeInput.bind(this));
+		this.editor.removeEventListener('input', this.handleInput.bind(this));
+		this.editor.removeEventListener('compositionstart', this.handleCompositionStart.bind(this));
+		this.editor.removeEventListener('compositionupdate', this.handleCompositionUpdate.bind(this));
+		this.editor.removeEventListener('compositionend', this.handleCompositionEnd.bind(this));
+	}
+
+	private startObserver() {
+		this.observer.observe(this.editor, {
+			childList: true,
+			subtree: true,
+			characterData: true,
+			characterDataOldValue: true,
+			attributes: true,
+			attributeFilter: ['data-render-key', 'data-render-key-done']
 		});
 	}
 
-	public stopRevertingModifications() {
-		this.stopModificationObserver();
+	private isRenderDone(mutations: MutationRecord[]): boolean {
+		for (let i = 0; i < mutations.length; i++) {
+			let mutation = mutations[i];
+			for (var j = 0; j < mutation.addedNodes.length; j++) {
+				let node = mutation.addedNodes[j];
+				if (node instanceof HTMLElement) {
+					if (node.getAttribute('data-render-key-done'))
+						return true;
+				}
+			}
+		}
+
+		return false;
 	}
 
 	private handleBeforeInput(event: InputEvent) {
-		event.preventDefault();
 		event.stopImmediatePropagation();
-
-		console.log(event);
-
-		this.selectionBeforeInput = getSelection().getRangeAt(0)?.cloneRange();
-		this.observedModification = null;
-		this.startModificationObserver(modification => { });
-		/*this.startModificationObserver(modification => {
-			//Mache die Änderung rückgängig
-			this.revertModification(modification);
-
-			//Wiederherstellen der Auswahl
-			let selection = getSelection();
-			if (selectionRange) {
-				if (selection.rangeCount == 1) {
-					let currentRange = selection.getRangeAt(0);
-					currentRange.setStart(selectionRange.startContainer, selectionRange.startOffset);
-					currentRange.setEnd(selectionRange.endContainer, selectionRange.endOffset);
-				} else {
-					selection.removeAllRanges();
-					selection.addRange(selectionRange);
-				}
-			} else {
-				selection.removeAllRanges();
-			}
-		});*/
 
 		let editRange: LineSelection | null = null;
 		if (event.inputType == 'insertCompositionText') {
@@ -162,60 +207,92 @@ class ModificationEditor {
 			}
 		}
 
-		this.callback(this, {
-			inputType: event.inputType,
-			editRange: editRange,
-			data: event.data
-		}, this.selectionBeforeInput);
+		console.log(event);
+
+		//Kann das Event verhindert werden?
+		let currentRange = getSelection().getRangeAt(0);
+		this.revertSelection = new StaticRange(currentRange);
+		if (event.cancelable) {
+			//Das Event wurde verhindert und die Bearbeitung kann durchgeführt werden
+			event.preventDefault();
+			this.callback(this, {
+				inputType: event.inputType,
+				editRange: editRange,
+				data: event.data
+			}, currentRange, this.pauseRender.bind(this));
+		} else {
+			//Das Event wurde nicht verhindert und muss zunächst rückgängig gemacht werden
+			this.afterModification = (modification) => {
+				//Die Änderung wurde rückgängig gemacht
+
+				//Debounce bei Composition-Events
+				let debounce = event.inputType == 'insertCompositionText';
+				this.debouncer.debounce(() => {
+					console.log("callback");
+
+					//Lese aktuelle Selection
+					let currentRange = getSelection().getRangeAt(0);
+
+					this.callback(this, {
+						inputType: event.inputType,
+						editRange: editRange,
+						data: event.data
+					}, currentRange, this.pauseRender.bind(this));
+				}, debounce);
+			};
+		}
 	}
 
 	private handleInput(event: InputEvent) {
-		if (this.observedModification) {
-			this.revertModification(this.observedModification);
-			this.observedModification = null;
-		}
-
-		//Wiederherstellen der Auswahl
-		if (this.selectionBeforeInput) {
-			let selection = getSelection();
-			if (this.selectionBeforeInput) {
-				if (selection.rangeCount == 1) {
-					let currentRange = selection.getRangeAt(0);
-					currentRange.setStart(this.selectionBeforeInput.startContainer, this.selectionBeforeInput.startOffset);
-					currentRange.setEnd(this.selectionBeforeInput.endContainer, this.selectionBeforeInput.endOffset);
-				} else {
-					selection.removeAllRanges();
-					selection.addRange(this.selectionBeforeInput);
-				}
-			} else {
-				selection.removeAllRanges();
+		//Findet gerade gar keine Komposition statt?
+		if (event.inputType == 'insertCompositionText') {
+			if (!this.actualCompositionUpdate) {
+				//Ungültiges Event
+				return;
 			}
+		}
 
-			this.selectionBeforeInput = null;
+		if (!this.afterModification) {
+			console.error("Unhandled input event!", event);
 		}
 	}
 
-	private startModificationObserver(handler: (modification: ObservedModification) => void) {
-		this.modificationHandlers.push(handler);
-		if (!this.observerRunning) {
-			this.observer.observe(this.editor, {
-				childList: true,
-				subtree: true,
-				characterData: true,
-				characterDataOldValue: true
-			});
-			this.observerRunning = true;
-		}
+	private handleCompositionStart(event: CompositionEvent) {
+		console.log('compositionstart', event);
 	}
 
-	private stopModificationObserver() {
-		//this.awaitingModification = null;
-		//this.observer.disconnect();
-		//this.observerRunning = false;
-		this.modificationHandlers = [];
+	private handleCompositionUpdate(event: CompositionEvent) {
+		this.actualCompositionUpdate = true;
+		console.log('compositionupdate', event);
 	}
+
+	private handleCompositionEnd(event: CompositionEvent) {
+		console.log('compositionend', event);
+	}
+
+	private pauseRender(): (() => void) {
+		this.revertModifications = false;
+		return () => {
+			this.revertModifications = true;
+		};
+	}
+
+	private revertModificationAndRestoreSelection(modification: ObservedModification | null, selection: AbstractRange | null | undefined) {
+		//Rückgängigmachen der Änderung
+		if (modification) {
+			this.observer.disconnect();
+			this.revertModification(modification);
+			this.startObserver();
+		}
+		
+		//Wiederherstellen der Auswahl
+		if (selection !== undefined) {
+			this.restoreSelection(selection);
+		}
+	};
 
 	private revertModification(modification: ObservedModification) {
+		console.log("Revert modification", modification);
 		var mutations = Array.from(modification.mutations.reverse());
 		while (mutations.length != 0) {
 			for (var m = 0; m < mutations.length; m++) {
@@ -265,6 +342,26 @@ class ModificationEditor {
 		}
 	}
 
+	private restoreSelection(selection: AbstractRange | null) {
+		console.log("Restore selection", selection);
+		let currentSelection = getSelection();
+		if (selection) {
+			if (currentSelection.rangeCount == 1) {
+				let currentRange = currentSelection.getRangeAt(0);
+				currentRange.setStart(selection.startContainer, selection.startOffset);
+				currentRange.setEnd(selection.endContainer, selection.endOffset);
+			} else {
+				currentSelection.removeAllRanges();
+				let currentRange = document.createRange();
+				currentRange.setStart(selection.startContainer, selection.startOffset);
+				currentRange.setEnd(selection.endContainer, selection.endOffset);
+				currentSelection.addRange(currentRange);
+			}
+		} else {
+			currentSelection.removeAllRanges();
+		}
+	}
+
 	public getCurrentSelection(): LineSelection | null {
 		let range = getSelection()?.getRangeAt(0);
 		if (!range)
@@ -282,12 +379,6 @@ class ModificationEditor {
 			return;
 		}
 
-		let range = documentSelection.getRangeAt(0);
-		if (!range) {
-			range = document.createRange();
-			documentSelection.addRange(range);
-		}
-
 		let startMetaline = this.editor.querySelector(`.metaline[data-metaline="${selection.start.metaline}"]`);
 		let endMetaline = selection.end.metaline == selection.start.metaline ? startMetaline
 			: this.editor.querySelector(`.metaline[data-metaline="${selection.end.metaline}"]`);
@@ -298,8 +389,20 @@ class ModificationEditor {
 		let start = this.getNode(startLine, selection.start.offset);
 		let end = selection.end.metaline == selection.start.metaline && selection.end.line == selection.start.line && selection.end.offset == selection.start.offset ? start
 			: this.getNode(endLine, selection.end.offset);
-		range.setStart(start.node, start.offset);
-		range.setEnd(end.node, end.offset);
+
+		let range: Range;
+		if (documentSelection.rangeCount) {
+			range = documentSelection.getRangeAt(0);
+			range.setStart(start.node, start.offset);
+			range.setEnd(end.node, end.offset);
+		} else {
+			range = document.createRange();
+			range.setStart(start.node, start.offset);
+			range.setEnd(end.node, end.offset);
+			documentSelection.addRange(range);
+		}
+
+		this.revertSelection = new StaticRange(range);
 
 		function findLine(metaline: Element, line: number): Element {
 			if (line === ModificationEditor.FIRST_LINE_ID) {

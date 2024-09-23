@@ -23,7 +23,7 @@ class ActionQueue<T = void> implements PromiseLike<T> {
 				self.queue = null;
 				console.log("Queue is empty");
 			} else {
-				console.log("Queue continues");
+				//console.log("Queue continues");
 			}
 
 			return next;

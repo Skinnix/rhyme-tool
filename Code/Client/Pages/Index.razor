@@ -110,13 +110,31 @@ else if (shouldSelectWorkingDirectory)
             </button>
         </div>
     </div>
-    }
+}
+
+@if (isDebug) 
+{
+    <div class="row mb-3">
+        <div class="col">
+            <a class="btn btn-primary d-block w-100" href="/chords/renderer">
+                Testdokument
+            </a>
+        </div>
+    </div>
+}
 
 @code {
     private IFileList? fileList;
 
     private bool waitingForDirectoryPermission;
     private bool shouldSelectWorkingDirectory;
+
+    private bool isDebug = 
+#if DEBUG
+        true;
+#else
+        false;
+#endif
 
     protected override async Task OnParametersSetAsync()
     {

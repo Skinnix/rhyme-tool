@@ -5,6 +5,8 @@
 @using Skinnix.RhymeTool.Data.Notation
 @using Skinnix.RhymeTool.Data.Notation.Display
 
+@implements IAsyncDisposable
+
 @inject IJSRuntime js
 
 <div class="chord-sheet chord-sheet-editor chord-sheet-editing" contenteditable="true" @ref="editorWrapper"
@@ -36,6 +38,7 @@
 
     private ElementReference editorWrapper;
     private RerenderAnchor rerenderAnchor = null!;
+    private IJSObjectReference? jsEditor = null;
 
     private bool shouldRender;
 
@@ -73,13 +76,23 @@
 
         if (firstRender)
         {
-            var reference = await js.InvokeAsync<IJSObjectReference>("registerChordEditor", editorWrapper, DotNetObjectReference.Create(this), nameof(OnBeforeInput));
+            jsEditor = await js.InvokeAsync<IJSObjectReference>("registerChordEditor", editorWrapper, DotNetObjectReference.Create(this), nameof(OnBeforeInput));
             //rerenderAnchor.BeforeRender = () => reference.InvokeVoidAsync("notifyBeforeRender");
-            rerenderAnchor.AfterRender = () => reference.InvokeVoidAsync("notifyAfterRender");
+            rerenderAnchor.AfterRender = () => jsEditor.InvokeVoidAsync("notifyAfterRender");
         }
 
         //await js.InvokeVoidAsync("notifyRenderFinished", this.GetType().Name);
         shouldRender = false;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (jsEditor is not null)
+        {
+            await jsEditor.InvokeVoidAsync("destroy");
+            await jsEditor.DisposeAsync();
+            jsEditor = null;
+        }
     }
 
     protected override bool ShouldRender()

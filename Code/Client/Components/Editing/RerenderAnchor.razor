@@ -1,19 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Components;
-using Microsoft.JSInterop;
+﻿<span class="d-none"><span @key="renderKey" data-render-key-done="@renderKey"></span></span>
 
-namespace Skinnix.RhymeTool.Client.Components.Editing;
-
-public class RerenderAnchor : ComponentBase
-{
-	[Inject] public IJSRuntime js { get; set; } = null!;
-
+@code {
 	public Action? BeforeRender { get; set; }
 	public Func<ValueTask>? AfterRender { get; set; }
+
+	private int renderKey = 1;
 
 	protected override bool ShouldRender() => true;
 
@@ -27,6 +18,8 @@ public class RerenderAnchor : ComponentBase
 
 	public void TriggerRender()
 	{
+		renderKey++;
+
 		BeforeRender?.Invoke();
 		StateHasChanged();
 	}
