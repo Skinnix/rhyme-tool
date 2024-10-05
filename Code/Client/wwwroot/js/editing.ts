@@ -207,11 +207,24 @@ class ModificationEditor {
 			}
 		}
 
+		//Hole Auswahl
 		console.log(event);
+		let currentRange = getSelection().getRangeAt(0);
+
+		//Wird ein Zeilenumbruch gelöscht?
+		if (event.inputType == 'deleteContent' || event.inputType == 'deleteContentBackward' || event.inputType == 'deleteContentForward') {
+			if (currentRange.endOffset == 0 && currentRange.startContainer !== currentRange.endContainer) {
+				let rangeString = currentRange.toString();
+				if (rangeString === '' || rangeString === "\n") {
+					currentRange.collapse(event.inputType == 'deleteContentForward');
+				}
+			}
+		}
+
+		//Speichere die aktuelle Auswahl, um sie später wiederherstellen zu können
+		this.revertSelection = new StaticRange(currentRange);
 
 		//Kann das Event verhindert werden?
-		let currentRange = getSelection().getRangeAt(0);
-		this.revertSelection = new StaticRange(currentRange);
 		if (event.cancelable) {
 			//Das Event wurde verhindert und die Bearbeitung kann durchgeführt werden
 			event.preventDefault();
@@ -280,9 +293,8 @@ class ModificationEditor {
 	private revertModificationAndRestoreSelection(modification: ObservedModification | null, selection: AbstractRange | null | undefined) {
 		//Rückgängigmachen der Änderung
 		if (modification) {
-			this.observer.disconnect();
 			this.revertModification(modification);
-			this.startObserver();
+			this.observer.takeRecords();
 		}
 		
 		//Wiederherstellen der Auswahl

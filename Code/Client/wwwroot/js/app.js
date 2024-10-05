@@ -791,6 +791,14 @@ var ModificationEditor = (function () {
         }
         console.log(event);
         var currentRange = getSelection().getRangeAt(0);
+        if (event.inputType == 'deleteContent' || event.inputType == 'deleteContentBackward' || event.inputType == 'deleteContentForward') {
+            if (currentRange.endOffset == 0 && currentRange.startContainer !== currentRange.endContainer) {
+                var rangeString = currentRange.toString();
+                if (rangeString === '' || rangeString === "\n") {
+                    currentRange.collapse(event.inputType == 'deleteContentForward');
+                }
+            }
+        }
         this.revertSelection = new StaticRange(currentRange);
         if (event.cancelable) {
             event.preventDefault();
@@ -844,9 +852,8 @@ var ModificationEditor = (function () {
     };
     ModificationEditor.prototype.revertModificationAndRestoreSelection = function (modification, selection) {
         if (modification) {
-            this.observer.disconnect();
             this.revertModification(modification);
-            this.startObserver();
+            this.observer.takeRecords();
         }
         if (selection !== undefined) {
             this.restoreSelection(selection);
