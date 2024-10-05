@@ -141,6 +141,10 @@ class ModificationEditor implements Destructible {
 
 		let self = this;
 		this.observer = new MutationObserver(function (mutations) {
+			//Element ignorieren?
+			if (self.ignoreMutation(mutations, editor))
+				return;
+
 			if (self.revertModifications) {
 				self.revertModificationAndRestoreSelection({
 					mutations: mutations
@@ -197,6 +201,21 @@ class ModificationEditor implements Destructible {
 				if (node instanceof HTMLElement) {
 					if (node.getAttribute('data-render-key-done'))
 						return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	private ignoreMutation(mutations: MutationRecord[], editor: HTMLElement) {
+		for (let i = 0; i < mutations.length; i++) {
+			let mutation = mutations[i];
+			for (var current = mutation.target; current != editor; current = current.parentElement) {
+				if (current instanceof HTMLElement) {
+					if (current.classList.contains('metaline-controls') || current.classList.contains('line-controls')) {
+						return true;
+					}
 				}
 			}
 		}

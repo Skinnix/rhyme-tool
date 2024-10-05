@@ -15,6 +15,15 @@ $separatorColor: #6c757d;
 	border-width: 0 0 0 3px;
 }
 
+@mixin controls {
+	background-color: var(--bs-body-bg);
+	z-index: 10;
+
+	&:has(.dropdown-menu.show) {
+		z-index: 20;
+	}
+}
+
 @font-face {
 	font-family: 'Fira Code';
 	src: url('fonts/FiraCode-Regular.woff2') format('woff'), url('fonts/FiraCode-Regular.ttf') format('truetype');
@@ -91,12 +100,11 @@ $separatorColor: #6c757d;
 		overflow: visible;
 
 		.metaline-controls {
+			@include controls;
 			grid-column: 1;
 			align-self: stretch;
 			position: sticky;
 			left: 0;
-			background-color: var(--bs-body-bg);
-			z-index: 10;
 
 			.metaline-bracket {
 				@include bracket;
@@ -123,11 +131,10 @@ $separatorColor: #6c757d;
 			overflow: visible;
 
 			.line-controls {
+				@include controls;
 				grid-column: 1;
 				position: sticky;
 				left: 3px;
-				background-color: var(--bs-body-bg);
-				z-index: 10;
 
 				.line-type {
 					.btn {

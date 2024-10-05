@@ -751,6 +751,8 @@ var ModificationEditor = (function () {
         }
         var self = this;
         this.observer = new MutationObserver(function (mutations) {
+            if (self.ignoreMutation(mutations, editor))
+                return;
             if (self.revertModifications) {
                 self.revertModificationAndRestoreSelection({
                     mutations: mutations
@@ -804,6 +806,19 @@ var ModificationEditor = (function () {
                 if (node instanceof HTMLElement) {
                     if (node.getAttribute('data-render-key-done'))
                         return true;
+                }
+            }
+        }
+        return false;
+    };
+    ModificationEditor.prototype.ignoreMutation = function (mutations, editor) {
+        for (var i = 0; i < mutations.length; i++) {
+            var mutation = mutations[i];
+            for (var current = mutation.target; current != editor; current = current.parentElement) {
+                if (current instanceof HTMLElement) {
+                    if (current.classList.contains('metaline-controls') || current.classList.contains('line-controls')) {
+                        return true;
+                    }
                 }
             }
         }
