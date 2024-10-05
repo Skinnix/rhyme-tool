@@ -3,6 +3,18 @@ $fingeringColor : var(--bs-primary);
 $anchorTextColor: var(--bs-info-text-emphasis);
 $separatorColor: #6c757d;
 
+@mixin bracket {
+	//bracket
+	//$bracket-color: #8080808f;
+	$bracket-color: #B8B8B8;
+	background-image: linear-gradient($bracket-color, $bracket-color), linear-gradient($bracket-color, $bracket-color);
+	background-repeat: no-repeat;
+	background-size: 0.4em 3px;
+	background-position: top left, bottom left;
+	border: solid $bracket-color;
+	border-width: 0 0 0 3px;
+}
+
 @font-face {
 	font-family: 'Fira Code';
 	src: url('fonts/FiraCode-Regular.woff2') format('woff'), url('fonts/FiraCode-Regular.ttf') format('truetype');
@@ -16,6 +28,7 @@ $separatorColor: #6c757d;
 	line-height: 1.1em;
 	padding-bottom: 8em;
 	font-size: calc(0.01rem * var(--font-percent));
+	scroll-padding: 0 3em;
 
 	.calculator {
 		position: absolute;
@@ -79,7 +92,18 @@ $separatorColor: #6c757d;
 
 		.metaline-controls {
 			grid-column: 1;
-			align-self: center;
+			align-self: stretch;
+			position: sticky;
+			left: 0;
+			background-color: var(--bs-body-bg);
+			z-index: 10;
+
+			.metaline-bracket {
+				@include bracket;
+				height: 100%;
+				width: 6px;
+				margin-right: -9px;
+			}
 
 			.line-type {
 
@@ -94,23 +118,16 @@ $separatorColor: #6c757d;
 			display: grid;
 			grid-template-columns: min-content auto;
 			grid-gap: 0 0.2em;
+			padding: 0.3em 0.3em 0.3em 0;
 			align-items: baseline;
 			overflow: visible;
 
-			& {
-				//bracket
-				$bracket-color: #8080808f;
-				background-image: linear-gradient($bracket-color, $bracket-color), linear-gradient($bracket-color, $bracket-color);
-				background-repeat: no-repeat;
-				background-size: 0.4em 3px;
-				background-position: top left, bottom left;
-				border: solid $bracket-color;
-				border-width: 0 0 0 3px;
-				padding: 0.3em 0.3em 0.3em 0;
-			}
-
 			.line-controls {
 				grid-column: 1;
+				position: sticky;
+				left: 3px;
+				background-color: var(--bs-body-bg);
+				z-index: 10;
 
 				.line-type {
 					.btn {
@@ -149,7 +166,6 @@ $separatorColor: #6c757d;
 	.line.line-empty {
 		display: inline-block;
 	}
-
 	/*.line.line-empty::after, .line:empty::after {
 		//content: '\A';
 		content: ' ';

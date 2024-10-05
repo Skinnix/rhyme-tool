@@ -160,7 +160,7 @@ function showToast(message: string, title: string, delay: number): void {
 
 
 
-function registerResize(element: HTMLElement, reference: BlazorDotNetReference, callbackName: string): void {
+function registerResize(element: HTMLElement, reference: BlazorDotNetReference, callbackName: string): Destructible {
 	var timeout: number;
 	
 	var handler = function () {
@@ -199,8 +199,14 @@ function registerResize(element: HTMLElement, reference: BlazorDotNetReference, 
 		}, 20);
 	};
 
-	new ResizeObserver(handler).observe(element);
+	let observer = new ResizeObserver(handler);
+	observer.observe(element);
 	handler();
+	return {
+		destroy: () => {
+			observer.disconnect();
+		},
+	};
 }
 
 
@@ -253,6 +259,7 @@ function registerChordEditor(wrapper: HTMLElement, reference: BlazorDotNetRefere
 	
 	//create editor wrapper (delayed)
 	let handler: (event: Event) => void;
+	let editor: ModificationEditor = null;
 	handler = (event) => {
 		wrapper.removeEventListener('focus', handler);
 		createEditor();
@@ -263,10 +270,12 @@ function registerChordEditor(wrapper: HTMLElement, reference: BlazorDotNetRefere
 	return {
 		//notifyBeforeRender: editor.stopRevertingModifications.bind(editor),
 		notifyAfterRender: actionQueue.notifyRender.bind(actionQueue),
+		destroy: () => {
+			editor?.destroy();
+		}
 	};
 
     function createEditor() {
-        let editor: ModificationEditor;
         let afterRender: () => void;
         let callback: EditorCallback = (editor, data, selectionRange, expectRender) => {
             let result: MetalineEditResult;

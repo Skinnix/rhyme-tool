@@ -1,3 +1,7 @@
+declare interface Destructible {
+	destroy(): void;
+}
+
 declare interface AwaitingModification {
 
 }
@@ -104,7 +108,7 @@ class Debouncer {
 	}
 }
 
-class ModificationEditor {
+class ModificationEditor implements Destructible {
 	static FIRST_LINE_ID = -1;
 	static LAST_LINE_ID = -2;
 

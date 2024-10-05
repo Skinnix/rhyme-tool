@@ -124,8 +124,14 @@ function registerResize(element, reference, callbackName) {
             invokeBlazor(reference, callbackName, characters);
         }, 20);
     };
-    new ResizeObserver(handler).observe(element);
+    var observer = new ResizeObserver(handler);
+    observer.observe(element);
     handler();
+    return {
+        destroy: function () {
+            observer.disconnect();
+        },
+    };
 }
 var promiseAfterRender = null;
 var resolveAfterRender = null;
@@ -163,6 +169,7 @@ function registerChordEditor(wrapper, reference, callbackName) {
     }
     var actionQueue = new ActionQueue();
     var handler;
+    var editor = null;
     handler = function (event) {
         wrapper.removeEventListener('focus', handler);
         createEditor();
@@ -170,9 +177,11 @@ function registerChordEditor(wrapper, reference, callbackName) {
     wrapper.addEventListener('focus', handler);
     return {
         notifyAfterRender: actionQueue.notifyRender.bind(actionQueue),
+        destroy: function () {
+            editor === null || editor === void 0 ? void 0 : editor.destroy();
+        }
     };
     function createEditor() {
-        var editor;
         var afterRender;
         var callback = function (editor, data, selectionRange, expectRender) {
             var result;

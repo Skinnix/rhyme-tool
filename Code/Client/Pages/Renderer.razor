@@ -13,6 +13,8 @@
 
 @layout RendererLayout
 
+@implements IAsyncDisposable
+
 @inject IJSRuntime js
 @inject IDocumentFileService fileService
 @inject IDocumentService documentService
@@ -149,6 +151,7 @@
 
     private ElementReference wrapper;
     private int? maxCharacters = null;
+    private IJSObjectReference? resizer;
 
     private Guid inputFileId = Guid.NewGuid();
 
@@ -184,9 +187,19 @@
 
         if (firstRender)
         {
-            await js.InvokeVoidAsync("registerResize", wrapper, DotNetObjectReference.Create(this), nameof(OnResize));
+            resizer = await js.InvokeAsync<IJSObjectReference>("registerResize", wrapper, DotNetObjectReference.Create(this), nameof(OnResize));
 
             //await js.InvokeVoidAsync("startScrollSpy", "pageNavigation");
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (resizer is not null)
+        {
+            await resizer.InvokeVoidAsync("destroy");
+            await resizer.DisposeAsync();
+            resizer = null;
         }
     }
 
