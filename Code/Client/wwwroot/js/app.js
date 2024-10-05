@@ -162,55 +162,71 @@ function registerChordEditor(wrapper, reference, callbackName) {
         }
     }
     var actionQueue = new ActionQueue();
-    var editor;
-    var afterRender;
-    var callback = function (editor, data, selectionRange, expectRender) {
-        var result;
-        actionQueue.then(function () {
-            var selection = editor.getCurrentSelection();
-            var eventData = __assign({ selection: selection, editRange: data.editRange }, data);
-            wrapper.classList.add('refreshing');
-            selectionRange.collapse(false);
-            actionQueue.prepareForNextRender();
-            afterRender = expectRender();
-            console.log("invoke Blazor");
-            return invokeBlazor(reference, callbackName, eventData);
-        }).then(function (r) {
-            console.log("check result");
-            result = r;
-            if (result.failReason)
-                showToast("".concat(result.failReason.label, " (").concat(result.failReason.code, ")"), 'Bearbeitungsfehler', 5000);
-            if (!result.willRender) {
-                actionQueue.notifyRender();
-            }
-            else {
-                return actionQueue.awaitRender();
-            }
-        }).then(function () {
-            console.log("after render");
-            afterRender();
-            if (result.selection) {
-                editor.setCurrentSelection(result.selection);
-            }
-            else if (selectionRange) {
-                var selection = getSelection();
-                if (selection.rangeCount == 1) {
-                    var currentSelectionRange = selection.getRangeAt(0);
-                    currentSelectionRange.setStart(selectionRange.startContainer, selectionRange.startOffset);
-                    currentSelectionRange.setEnd(selectionRange.endContainer, selectionRange.endOffset);
-                }
-                else {
-                    selection.removeAllRanges();
-                    selection.addRange(selectionRange);
-                }
-            }
-            wrapper.classList.remove('refreshing');
-        });
+    var handler;
+    handler = function (event) {
+        wrapper.removeEventListener('focus', handler);
+        createEditor();
     };
-    editor = new ModificationEditor(wrapper, callback);
+    wrapper.addEventListener('focus', handler);
     return {
         notifyAfterRender: actionQueue.notifyRender.bind(actionQueue),
     };
+    function createEditor() {
+        var editor;
+        var afterRender;
+        var callback = function (editor, data, selectionRange, expectRender) {
+            var result;
+            actionQueue.then(function () {
+                var selection = editor.getCurrentSelection();
+                var eventData = __assign({ selection: selection, editRange: data.editRange }, data);
+                wrapper.classList.add('refreshing');
+                selectionRange.collapse(false);
+                actionQueue.prepareForNextRender();
+                afterRender = expectRender();
+                console.log("invoke Blazor");
+                return invokeBlazor(reference, callbackName, eventData);
+            }).then(function (r) {
+                console.log("check result");
+                result = r;
+                if (result.failReason)
+                    showToast("".concat(result.failReason.label, " (").concat(result.failReason.code, ")"), 'Bearbeitungsfehler', 5000);
+                if (!result.willRender) {
+                    actionQueue.notifyRender();
+                }
+                else {
+                    return actionQueue.awaitRender();
+                }
+            }).then(function () {
+                console.log("after render");
+                afterRender();
+                var selection;
+                if (result.selection) {
+                    selection = editor.setCurrentSelection(result.selection);
+                }
+                else if (selectionRange) {
+                    selection = getSelection();
+                    if (selection.rangeCount == 1) {
+                        var currentSelectionRange = selection.getRangeAt(0);
+                        currentSelectionRange.setStart(selectionRange.startContainer, selectionRange.startOffset);
+                        currentSelectionRange.setEnd(selectionRange.endContainer, selectionRange.endOffset);
+                    }
+                    else {
+                        selection.removeAllRanges();
+                        selection.addRange(selectionRange);
+                    }
+                }
+                for (var focusElement = selection.focusNode; focusElement && !('scrollIntoView' in focusElement); focusElement = focusElement.parentElement) { }
+                if (focusElement) {
+                    focusElement.scrollIntoView({
+                        block: 'nearest',
+                        inline: 'nearest'
+                    });
+                }
+                wrapper.classList.remove('refreshing');
+            });
+        };
+        editor = new ModificationEditor(wrapper, callback);
+    }
 }
 function attachmentStartDrag(event) {
     var attachmentElement = event.target.parentElement;
@@ -710,11 +726,20 @@ var ModificationEditor = (function () {
         this.debouncer = new Debouncer(2);
         this.actualCompositionUpdate = false;
         this.revertModifications = true;
+        this.isUncancelable = function (event) { return false; };
         this.editor.addEventListener('beforeinput', this.handleBeforeInput.bind(this));
         this.editor.addEventListener('input', this.handleInput.bind(this));
         this.editor.addEventListener('compositionstart', this.handleCompositionStart.bind(this));
         this.editor.addEventListener('compositionupdate', this.handleCompositionUpdate.bind(this));
         this.editor.addEventListener('compositionend', this.handleCompositionEnd.bind(this));
+        if (/Chrome.*Mobile/.test(navigator.userAgent)) {
+            this.isUncancelable = function (event) {
+                if (event.inputType == 'deleteContent' || event.inputType == 'deleteContentBackward' || event.inputType == 'deleteContentForward') {
+                    return true;
+                }
+                return false;
+            };
+        }
         var self = this;
         this.observer = new MutationObserver(function (mutations) {
             if (self.revertModifications) {
@@ -800,7 +825,7 @@ var ModificationEditor = (function () {
             }
         }
         this.revertSelection = new StaticRange(currentRange);
-        if (event.cancelable) {
+        if (event.cancelable && !this.isUncancelable(event)) {
             event.preventDefault();
             this.callback(this, {
                 inputType: event.inputType,
@@ -862,6 +887,7 @@ var ModificationEditor = (function () {
     ;
     ModificationEditor.prototype.revertModification = function (modification) {
         console.log("Revert modification", modification);
+        console.log(JSON.stringify(modification, null, 2));
         var mutations = Array.from(modification.mutations.reverse());
         while (mutations.length != 0) {
             for (var m = 0; m < mutations.length; m++) {
@@ -941,7 +967,7 @@ var ModificationEditor = (function () {
         if (!selection) {
             if (documentSelection.rangeCount != 0)
                 documentSelection.removeAllRanges();
-            return;
+            return documentSelection;
         }
         var startMetaline = this.editor.querySelector(".metaline[data-metaline=\"".concat(selection.start.metaline, "\"]"));
         var endMetaline = selection.end.metaline == selection.start.metaline ? startMetaline
@@ -965,6 +991,7 @@ var ModificationEditor = (function () {
             documentSelection.addRange(range);
         }
         this.revertSelection = new StaticRange(range);
+        return documentSelection;
         function findLine(metaline, line) {
             if (line === ModificationEditor.FIRST_LINE_ID) {
                 return metaline.querySelector('.line[data-line]');

@@ -251,80 +251,101 @@ function registerChordEditor(wrapper: HTMLElement, reference: BlazorDotNetRefere
 	//create action queue
 	let actionQueue = new ActionQueue();
 	
-	//create editor wrapper
-	let editor: ModificationEditor;
-	let afterRender: () => void;
-	let callback: EditorCallback = (editor, data, selectionRange, expectRender) => {
-		let result: MetalineEditResult;
-		actionQueue.then(() => {
-			//prepare event data
-			var selection = editor.getCurrentSelection();
-			var eventData = {
-				selection: selection,
-				editRange: data.editRange,
-				...data
-			};
-			
-			//hide caret
-			wrapper.classList.add('refreshing');
-			selectionRange.collapse(false);
-
-			//a new render is coming
-			actionQueue.prepareForNextRender();
-			afterRender = expectRender();
-			
-			//invoke the callback
-			console.log("invoke Blazor");
-			return invokeBlazor<MetalineEditResult>(reference, callbackName, eventData);
-		}).then(r => {
-			console.log("check result");
-
-			//store result
-			result = r;
-			
-			//show error
-			if (result.failReason)
-				showToast(`${result.failReason.label} (${result.failReason.code})`, 'Bearbeitungsfehler', 5000);
-
-			//no render coming (anymore)?
-			if (!result.willRender) {
-				//trigger render
-				actionQueue.notifyRender();
-			} else {
-				//await render
-				return actionQueue.awaitRender();
-			}
-		}).then(() => {
-			console.log("after render");
-
-			//rendered
-			afterRender();
-
-			if (result.selection) {
-				//set new selection range
-				editor.setCurrentSelection(result.selection);
-			} else if (selectionRange) {
-				//restore old range
-				var selection = getSelection();
-				if (selection.rangeCount == 1) {
-					var currentSelectionRange = selection.getRangeAt(0);
-					currentSelectionRange.setStart(selectionRange.startContainer, selectionRange.startOffset);
-					currentSelectionRange.setEnd(selectionRange.endContainer, selectionRange.endOffset);
-				} else {
-					selection.removeAllRanges();
-					selection.addRange(selectionRange);
-				}
-			}
-
-			//show caret
-			wrapper.classList.remove('refreshing');
-		});
+	//create editor wrapper (delayed)
+	let handler: (event: Event) => void;
+	handler = (event) => {
+		wrapper.removeEventListener('focus', handler);
+		createEditor();
 	};
-	editor = new ModificationEditor(wrapper, callback);
+	wrapper.addEventListener('focus', handler);
+
+	//create return object
 	return {
 		//notifyBeforeRender: editor.stopRevertingModifications.bind(editor),
 		notifyAfterRender: actionQueue.notifyRender.bind(actionQueue),
 	};
+
+    function createEditor() {
+        let editor: ModificationEditor;
+        let afterRender: () => void;
+        let callback: EditorCallback = (editor, data, selectionRange, expectRender) => {
+            let result: MetalineEditResult;
+            actionQueue.then(() => {
+                //prepare event data
+                var selection = editor.getCurrentSelection();
+                var eventData = {
+                    selection: selection,
+                    editRange: data.editRange,
+                    ...data
+                };
+
+                //hide caret
+                wrapper.classList.add('refreshing');
+                selectionRange.collapse(false);
+
+                //a new render is coming
+                actionQueue.prepareForNextRender();
+                afterRender = expectRender();
+
+                //invoke the callback
+                console.log("invoke Blazor");
+                return invokeBlazor<MetalineEditResult>(reference, callbackName, eventData);
+            }).then(r => {
+                console.log("check result");
+
+                //store result
+                result = r;
+
+                //show error
+                if (result.failReason)
+                    showToast(`${result.failReason.label} (${result.failReason.code})`, 'Bearbeitungsfehler', 5000);
+
+                //no render coming (anymore)?
+                if (!result.willRender) {
+                    //trigger render
+                    actionQueue.notifyRender();
+                } else {
+                    //await render
+                    return actionQueue.awaitRender();
+                }
+            }).then(() => {
+                console.log("after render");
+
+                //rendered
+                afterRender();
+
+				let selection: Selection;
+                if (result.selection) {
+                    //set new selection range
+                    selection = editor.setCurrentSelection(result.selection);
+                } else if (selectionRange) {
+                    //restore old range
+                    selection = getSelection();
+                    if (selection.rangeCount == 1) {
+                        var currentSelectionRange = selection.getRangeAt(0);
+                        currentSelectionRange.setStart(selectionRange.startContainer, selectionRange.startOffset);
+						currentSelectionRange.setEnd(selectionRange.endContainer, selectionRange.endOffset);
+                    } else {
+                        selection.removeAllRanges();
+                        selection.addRange(selectionRange);
+                    }
+				}
+
+				//scroll the selection into view
+				for (var focusElement = selection.focusNode; focusElement && !('scrollIntoView' in focusElement); focusElement = focusElement.parentElement) { }
+				if (focusElement) {
+					(focusElement as HTMLElement).scrollIntoView({
+						block: 'nearest',
+						inline: 'nearest'
+					});
+				}
+
+                //show caret
+                wrapper.classList.remove('refreshing');
+            });
+        };
+        editor = new ModificationEditor(wrapper, callback);
+    }
 }
 
 

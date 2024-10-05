@@ -115,6 +115,8 @@ class ModificationEditor {
 
 	private revertModifications = true;
 	private revertSelection: StaticRange | null | undefined;
+
+	private isUncancelable = (event: InputEvent) => false;
 	
 	constructor(private editor: HTMLElement, private callback: EditorCallback) {
 		this.editor.addEventListener('beforeinput', this.handleBeforeInput.bind(this));
@@ -122,6 +124,16 @@ class ModificationEditor {
 		this.editor.addEventListener('compositionstart', this.handleCompositionStart.bind(this));
 		this.editor.addEventListener('compositionupdate', this.handleCompositionUpdate.bind(this));
 		this.editor.addEventListener('compositionend', this.handleCompositionEnd.bind(this));
+
+		if (/Chrome.*Mobile/.test(navigator.userAgent)) {
+			this.isUncancelable = (event: InputEvent) => {
+				if (event.inputType == 'deleteContent' || event.inputType == 'deleteContentBackward' || event.inputType == 'deleteContentForward') {
+					return true;
+				}
+
+				return false;
+			};
+		}
 
 		let self = this;
 		this.observer = new MutationObserver(function (mutations) {
@@ -225,7 +237,7 @@ class ModificationEditor {
 		this.revertSelection = new StaticRange(currentRange);
 
 		//Kann das Event verhindert werden?
-		if (event.cancelable) {
+		if (event.cancelable && !this.isUncancelable(event)) {
 			//Das Event wurde verhindert und die Bearbeitung kann durchgeführt werden
 			event.preventDefault();
 			this.callback(this, {
@@ -305,6 +317,7 @@ class ModificationEditor {
 
 	private revertModification(modification: ObservedModification) {
 		console.log("Revert modification", modification);
+		console.log(JSON.stringify(modification, null, 2))
 		var mutations = Array.from(modification.mutations.reverse());
 		while (mutations.length != 0) {
 			for (var m = 0; m < mutations.length; m++) {
@@ -382,13 +395,13 @@ class ModificationEditor {
 		return this.getLineSelection(range);
 	}
 
-	public setCurrentSelection(selection: LineSelection | null) {
+	public setCurrentSelection(selection: LineSelection | null): Selection {
 		let documentSelection = getSelection();
 		if (!selection) {
 			if (documentSelection.rangeCount != 0)
 				documentSelection.removeAllRanges();
 
-			return;
+			return documentSelection;
 		}
 
 		let startMetaline = this.editor.querySelector(`.metaline[data-metaline="${selection.start.metaline}"]`);
@@ -415,6 +428,7 @@ class ModificationEditor {
 		}
 
 		this.revertSelection = new StaticRange(range);
+		return documentSelection;
 
 		function findLine(metaline: Element, line: number): Element {
 			if (line === ModificationEditor.FIRST_LINE_ID) {

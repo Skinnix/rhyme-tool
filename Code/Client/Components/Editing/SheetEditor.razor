@@ -74,6 +74,8 @@
     {
         await base.OnAfterRenderAsync(firstRender);
 
+        Console.WriteLine("render");
+
         if (firstRender)
         {
             jsEditor = await js.InvokeAsync<IJSObjectReference>("registerChordEditor", editorWrapper, DotNetObjectReference.Create(this), nameof(OnBeforeInput));
