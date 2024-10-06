@@ -1183,7 +1183,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 						if (direction == DeleteDirection.Forward)
 							return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAt(attachment.Attachment.RenderBounds.StartOffset)));
 						else
-							return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAt(attachment.Attachment.RenderBounds.EndOffset)));
+							return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAt(attachment.Attachment.RenderBounds.AfterOffset)));
 					});
 				}
 
@@ -1208,7 +1208,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			if (attachments.Count > 1)
 			{
 				//Liegen sie nicht alle komplett im Bereich?
-				if (!attachments.All(a => a.Attachment.RenderBounds.StartOffset >= context.SelectionRange.Start && a.Attachment.RenderBounds.EndOffset <= context.SelectionRange.End))
+				if (!attachments.All(a => a.Attachment.RenderBounds.StartOffset >= context.SelectionRange.Start && a.Attachment.RenderBounds.AfterOffset <= context.SelectionRange.End))
 					return DelayedMetalineEditResult.Fail(CannotPartiallyEditAttachments);
 
 				//Bearbeitung wird funktionieren
@@ -1265,7 +1265,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				return DelayedMetalineEditResult.Fail(NoComponentFoundHere);
 
 			//Liegt ein Attachment direkt vor oder hinter der Position?
-			var before = component.Attachments.OfType<VarietyComponent.VarietyAttachment>().LastOrDefault(a => a.RenderBounds.EndOffset == context.SelectionRange.Start - 1);
+			var before = component.Attachments.OfType<VarietyComponent.VarietyAttachment>().LastOrDefault(a => a.RenderBounds.AfterOffset == context.SelectionRange.Start - 1);
 			var after = component.Attachments.OfType<VarietyComponent.VarietyAttachment>().FirstOrDefault(a => a.RenderBounds.StartOffset == context.SelectionRange.End);
 			if (before is not null)
 			{
@@ -1280,7 +1280,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 					Line.CreateDisplayLines(formatter);
 
 					//Setze den Cursor hinter das Attachment
-					var cursorPosition = before.RenderBounds.EndOffset;
+					var cursorPosition = before.RenderBounds.AfterOffset;
 					return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAt(cursorPosition)));
 				});
 			}
@@ -1316,7 +1316,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 					Line.CreateDisplayLines(formatter);
 
 					//Setze den Cursor hinter das eingefügte Attachment
-					var cursorPosition = newAttachment.RenderBounds.EndOffset;
+					var cursorPosition = newAttachment.RenderBounds.AfterOffset;
 					return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAt(cursorPosition)));
 				});
 			}
@@ -1328,7 +1328,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			foreach (var component in Line.components)
 			{
 				//Liegt die Komponente vor dem Bereich?
-				if (component.TotalRenderBounds.EndOffset < range.Start)
+				if (component.TotalRenderBounds.AfterOffset < range.Start)
 					continue;
 
 				//Liegt die Komponente hinter dem Bereich?
@@ -1343,7 +1343,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				foreach (var attachment in varietyComponent.Attachments)
 				{
 					//Liegt das Attachment vor dem Bereich?
-					if (attachment.RenderBounds.EndOffset < range.Start)
+					if (attachment.RenderBounds.AfterOffset < range.Start)
 						continue;
 
 					//Liegt das Attachment hinter dem Bereich?
@@ -1370,7 +1370,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			}
 
 			//Werden Whitespaces am Ende des Attachments eingefügt oder gelöscht?
-			if (string.IsNullOrWhiteSpace(content) && selectionRange.Start >= attachment.RenderBounds.EndOffset)
+			if (string.IsNullOrWhiteSpace(content) && selectionRange.Start >= attachment.RenderBounds.AfterOffset)
 			{
 				//Verschiebe das nächste Attachment
 				return TryFindAndMoveNextAttachment(selectionRange, content?.Length ?? 0, formatter);
@@ -1442,7 +1442,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 			//Finde die Zielkomponente
 			var targetGenericComponent = contentMove > 0
-				? Line.components.Select((c, i) => (Component: c, Index: i)).FirstOrDefault(c => c.Component.TotalRenderBounds.EndOffset > editSelection.Start + contentMove)
+				? Line.components.Select((c, i) => (Component: c, Index: i)).FirstOrDefault(c => c.Component.TotalRenderBounds.AfterOffset > editSelection.Start + contentMove)
 				: Line.components.Select((c, i) => (Component: c, Index: i)).LastOrDefault(c => c.Component.TotalRenderBounds.StartOffset <= editSelection.Start);
 			if (targetGenericComponent.Component is not VarietyComponent targetComponent)
 				return DelayedMetalineEditResult.Fail(NoComponentFoundHere);
@@ -2023,16 +2023,6 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 	#endregion
 
 	#region Components
-	internal readonly record struct RenderBounds(int StartOffset, int EndOffset)
-	{
-		public static readonly RenderBounds Empty = new(0, 0);
-
-		public int Length => EndOffset - StartOffset;
-
-		public ContentOffset GetContentOffset(int displayOffset)
-			=> new(displayOffset - StartOffset);
-	}
-
 	internal record DisplayRenderBounds(int StartOffset, int EndOffset, IReadOnlyList<SheetDisplayLineElement> DisplayElements)
 	{
 		public static readonly DisplayRenderBounds Empty = new(0, 0, []);
@@ -2132,7 +2122,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			public SheetDisplayTextLine.Builder TextLine { get; }
 			public SheetDisplayChordLine.Builder ChordLine { get; }
 
-			public IEnumerable<SheetDisplayLineBuilder> AllLines => [TextLine, ChordLine];
+			public IEnumerable<SheetDisplayLineBuilderBase> AllLines => [TextLine, ChordLine];
 
 			public bool IsTitleLine { get; init; }
 			public bool IsRenderingTitle { get; set; }

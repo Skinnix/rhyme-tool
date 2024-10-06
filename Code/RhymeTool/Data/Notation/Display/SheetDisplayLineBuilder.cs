@@ -2,56 +2,69 @@
 
 namespace Skinnix.RhymeTool.Data.Notation.Display;
 
-public abstract class SheetDisplayLineBuilder : IComparable<SheetDisplayLineBuilder>
+public abstract class SheetDisplayLineBuilderBase : IComparable<SheetDisplayLineBuilderBase>
 {
 	public abstract Type LineType { get; }
 
     public abstract int CurrentLength { get; }
 	public abstract int CurrentNonSpaceLength { get; }
 
-    public abstract int CompareTo(SheetDisplayLineBuilder? other);
+    public abstract int CompareTo(SheetDisplayLineBuilderBase? other);
     public abstract SheetDisplayLine CreateDisplayLine(int id, ISheetDisplayLineEditing editing);
-
-    public abstract void Append(SheetDisplayLineElement element, ISheetFormatter? formatter = null);
-	public abstract void EnsureSpaceBefore(int spaceBefore, ISheetFormatter? formatter = null);
-    public abstract void ExtendLength(int totalLength, int minExtension, ISheetFormatter? formatter = null);
 }
 
-public abstract class SheetDisplayLineBuilder<TLine> : SheetDisplayLineBuilder
+public abstract class SheetDisplayLineBuilder<TElement, TLine> : SheetDisplayLineBuilderBase
+	where TElement : SheetDisplayLineElement
     where TLine : SheetDisplayLine
 {
-	public override Type LineType => typeof(TLine);
+	private readonly List<TElement> elements = new();
+	protected IReadOnlyList<TElement> Elements => elements;
 
-	public abstract override TLine CreateDisplayLine(int id, ISheetDisplayLineEditing editing);
-}
-
-public abstract class SheetDisplayTextLineBuilder<TLine> : SheetDisplayLineBuilder<TLine>
-    where TLine : SheetDisplayLine
-{
-	private readonly List<SheetDisplayLineElement> elements = new();
-	protected IReadOnlyList<SheetDisplayLineElement> Elements => elements;
-
-    private int currentLength;
-    public override int CurrentLength => currentLength;
+	private int currentLength;
+	public override int CurrentLength => currentLength;
 
 	private int currentNonSpaceLength;
 	public override int CurrentNonSpaceLength => currentNonSpaceLength;
 
-    public override void Append(SheetDisplayLineElement element, ISheetFormatter? formatter = null)
-    {
-        var length = element.GetLength(formatter);
-        elements.Add(element);
+	public override Type LineType => typeof(TLine);
+
+	public abstract override TLine CreateDisplayLine(int id, ISheetDisplayLineEditing editing);
+
+	public virtual void Append(TElement element, ISheetFormatter? formatter = null)
+	{
+		var length = element.GetLength(formatter);
+		elements.Add(element);
 		element.DisplayOffset = currentLength;
 		element.DisplayLength = length;
 
-        currentLength += length;
+		currentLength += length;
 		if (!element.IsSpace)
 			currentNonSpaceLength = currentLength;
-    }
+	}
+}
+
+public abstract class SpacedSheetDisplayLineBuilder<TElement, TLine> : SheetDisplayLineBuilder<TElement, TLine>
+	where TElement : SheetDisplayLineElement
+	where TLine : SheetDisplayLine
+{
+	public abstract void EnsureSpaceBefore(int spaceBefore, ISheetFormatter? formatter = null);
+	public abstract void ExtendLength(int totalLength, int minExtension, ISheetFormatter? formatter = null);
+}
+
+public abstract class SheetDisplayTextLineBuilder<TElement, TLine> : SpacedSheetDisplayLineBuilder<TElement, TLine>
+	where TElement : SheetDisplayLineElement
+	where TLine : SheetDisplayLine
+{
+	private readonly Func<SheetDisplayLineFormatSpace, TElement> createSpace;
+
+	protected SheetDisplayTextLineBuilder(Func<SheetDisplayLineFormatSpace, TElement> createSpace)
+	{
+		this.createSpace = createSpace;
+	}
 
 	public override void EnsureSpaceBefore(int spaceBefore, ISheetFormatter? formatter = null)
 	{
-		var currentSpace = currentLength - currentNonSpaceLength;
+		var currentSpace = CurrentLength - CurrentNonSpaceLength;
 		var extraSpace = spaceBefore - currentSpace;
 		if (extraSpace <= 0)
 			return;
@@ -62,21 +75,20 @@ public abstract class SheetDisplayTextLineBuilder<TLine> : SheetDisplayLineBuild
 	public override void ExtendLength(int totalLength, int minExtension, ISheetFormatter? formatter = null)
     {
 		if (minExtension < 0) minExtension = 0;
-		if (totalLength < currentLength) totalLength = currentLength;
+		if (totalLength < CurrentLength) totalLength = CurrentLength;
 
-        if (currentLength + minExtension > totalLength)
-            totalLength = currentLength + minExtension;
+        if (CurrentLength + minExtension > totalLength)
+            totalLength = CurrentLength + minExtension;
 
-        if (currentLength >= totalLength)
+        if (CurrentLength >= totalLength)
             return;
 
-		var length = totalLength - currentLength;
+		var length = totalLength - CurrentLength;
         var space = new SheetDisplayLineFormatSpace(length)
 		{
-			DisplayOffset = currentLength,
+			DisplayOffset = CurrentLength,
 			DisplayLength = length,
 		};
-        elements.Add(space);
-        currentLength = totalLength;
+		Append(createSpace(space), formatter);
     }
 }

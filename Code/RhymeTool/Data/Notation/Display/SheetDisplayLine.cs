@@ -93,14 +93,14 @@ public sealed record SheetDisplayTextLine : SheetDisplayLine
 			Editing = Editing,
 		};
 
-	public class Builder : SheetDisplayTextLineBuilder<SheetDisplayTextLine>
+	public class Builder() : SheetDisplayTextLineBuilder<SheetDisplayLineElement, SheetDisplayTextLine>(space => space)
     {
         public override SheetDisplayTextLine CreateDisplayLine(int id, ISheetDisplayLineEditing editing) => new(id, Elements)
 		{
 			Editing = editing
 		};
 
-        public override int CompareTo(SheetDisplayLineBuilder? other)
+        public override int CompareTo(SheetDisplayLineBuilderBase? other)
         {
             if (other is Builder)
                 return 0;
@@ -129,14 +129,14 @@ public sealed record SheetDisplayChordLine : SheetDisplayLine
 			Editing = Editing,
 		};
 
-	public class Builder : SheetDisplayTextLineBuilder<SheetDisplayChordLine>
+	public class Builder() : SheetDisplayTextLineBuilder<SheetDisplayLineElement, SheetDisplayChordLine>(space => space)
     {
         public override SheetDisplayChordLine CreateDisplayLine(int id, ISheetDisplayLineEditing editing) => new(id, Elements)
 		{
 			Editing = editing
 		};
 
-        public override int CompareTo(SheetDisplayLineBuilder? other)
+        public override int CompareTo(SheetDisplayLineBuilderBase? other)
         {
             if (other is SheetDisplayTextLine.Builder)
                 return -1;
@@ -147,4 +147,43 @@ public sealed record SheetDisplayChordLine : SheetDisplayLine
             return 1;
         }
     }
+}
+
+public sealed record SheetDisplayTabLine : SheetDisplayLine
+{
+	private readonly SheetDisplayLineTabElement[] elements;
+
+	public SheetDisplayTabLine(int id, params SheetDisplayLineTabElement[] elements) : this(id, (IEnumerable<SheetDisplayLineTabElement>)elements) { }
+	public SheetDisplayTabLine(int id, IEnumerable<SheetDisplayLineTabElement> elements)
+		: base(id)
+	{
+		this.elements = elements.ToArray();
+	}
+
+	public override IEnumerable<SheetDisplayLineElement> GetElements() => elements;
+
+	public override SheetDisplayLine WithElements(IEnumerable<SheetDisplayLineElement> elements)
+		=> new SheetDisplayTabLine(Id, elements.Cast<SheetDisplayLineTabElement>())
+		{
+			Editing = Editing,
+		};
+
+	public class Builder : SheetDisplayLineBuilder<SheetDisplayLineTabElement, SheetDisplayTabLine>
+	{
+		public override SheetDisplayTabLine CreateDisplayLine(int id, ISheetDisplayLineEditing editing) => new(id, Elements)
+		{
+			Editing = editing
+		};
+
+		public override int CompareTo(SheetDisplayLineBuilderBase? other)
+		{
+			if (other is SheetDisplayTextLine.Builder)
+				return -1;
+
+			if (other is Builder)
+				return 0;
+
+			return 1;
+		}
+	}
 }

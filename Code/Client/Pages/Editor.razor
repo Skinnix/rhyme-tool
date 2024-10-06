@@ -117,6 +117,8 @@
             document.Lines.Modified += OnDocumentLinesModified;
             document.TitlesChanged += OnDocumentTitlesChanged;
         }
+
+        document.Lines.Add(new SheetTabLine());
     }
 
     private void OnDocumentTitlesChanged(object? sender, EventArgs e)

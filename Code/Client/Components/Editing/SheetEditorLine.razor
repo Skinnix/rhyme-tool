@@ -112,6 +112,10 @@
             case SheetDisplayTextLine text:
                 <div @key="GetKey(line)" class="line line-text" data-line="@line.Id">@{RenderElements(line.GetElements());}</div>
                 break;
+
+            case SheetDisplayTabLine tab:
+                <div @key="GetKey(line)" class="line line-tab" data-line="@line.Id">@{RenderElements(line.GetElements());}</div>
+                break;
         }
     }
 }

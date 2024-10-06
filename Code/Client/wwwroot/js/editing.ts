@@ -437,18 +437,28 @@ class ModificationEditor implements Destructible {
 		let start = this.getNode(startLine, selection.start.offset);
 		let end = selection.end.metaline == selection.start.metaline && selection.end.line == selection.start.line && selection.end.offset == selection.start.offset ? start
 			: this.getNode(endLine, selection.end.offset);
-
+			
 		let range: Range;
 		if (documentSelection.rangeCount) {
 			range = documentSelection.getRangeAt(0);
-			range.setStart(start.node, start.offset);
-			range.setEnd(end.node, end.offset);
 		} else {
 			range = document.createRange();
-			range.setStart(start.node, start.offset);
-			range.setEnd(end.node, end.offset);
 			documentSelection.addRange(range);
 		}
+
+		if (start.node instanceof Text && start.offset > start.node.length)
+			range.setStart(start.node, start.node.length);
+		else if(start.node instanceof HTMLElement && start.offset > start.node.childElementCount)
+			range.setStart(start.node, start.node.childElementCount);
+		else
+			range.setStart(start.node, start.offset);
+
+		if (end.node instanceof Text && end.offset > end.node.length)
+			range.setEnd(end.node, end.node.length);
+		else if (end.node instanceof HTMLElement && end.offset > end.node.childElementCount)
+			range.setEnd(end.node, end.node.childElementCount);
+		else
+			range.setEnd(end.node, end.offset);
 
 		this.revertSelection = new StaticRange(range);
 		return documentSelection;

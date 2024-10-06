@@ -179,6 +179,13 @@
         {
             document = await documentSource.LoadAsync();
         }
+
+#if DEBUG
+        if (document is not null)
+        {
+            document.Lines.Add(new SheetTabLine());
+        }
+#endif
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)

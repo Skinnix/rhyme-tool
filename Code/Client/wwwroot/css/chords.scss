@@ -1,5 +1,6 @@
 ﻿$chordColor: var(--bs-primary);
 $fingeringColor : var(--bs-primary);
+$tabLineNoteColor: var(--bs-primary);
 $anchorTextColor: var(--bs-info-text-emphasis);
 $separatorColor: #6c757d;
 
@@ -205,6 +206,11 @@ $separatorColor: #6c757d;
 		position: relative;
 	}
 
+	.tab-line-note {
+		color: $tabLineNoteColor;
+		font-weight: bold;
+	}
+
 	.anchor-text {
 		text-decoration: underline;
 	}
@@ -279,6 +285,10 @@ $separatorColor: #6c757d;
 					margin-right: -1px;
 				}
 			}
+		}
+
+		.line.line-tab {
+			caret-shape: block;
 		}
 
 		.breakpoint {

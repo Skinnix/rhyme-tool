@@ -1005,15 +1005,23 @@ var ModificationEditor = (function () {
         var range;
         if (documentSelection.rangeCount) {
             range = documentSelection.getRangeAt(0);
-            range.setStart(start.node, start.offset);
-            range.setEnd(end.node, end.offset);
         }
         else {
             range = document.createRange();
-            range.setStart(start.node, start.offset);
-            range.setEnd(end.node, end.offset);
             documentSelection.addRange(range);
         }
+        if (start.node instanceof Text && start.offset > start.node.length)
+            range.setStart(start.node, start.node.length);
+        else if (start.node instanceof HTMLElement && start.offset > start.node.childElementCount)
+            range.setStart(start.node, start.node.childElementCount);
+        else
+            range.setStart(start.node, start.offset);
+        if (end.node instanceof Text && end.offset > end.node.length)
+            range.setEnd(end.node, end.node.length);
+        else if (end.node instanceof HTMLElement && end.offset > end.node.childElementCount)
+            range.setEnd(end.node, end.node.childElementCount);
+        else
+            range.setEnd(end.node, end.offset);
         this.revertSelection = new StaticRange(range);
         return documentSelection;
         function findLine(metaline, line) {

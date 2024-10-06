@@ -65,6 +65,21 @@ public record DelayedMetalineEditResult
 
 	public static DelayedMetalineEditResult Fail(ReasonBase reason)
 		=> new(reason);
+
+	public DelayedMetalineEditResult TransformSuccess(Func<MetalineEditResult, MetalineEditResult> transform)
+	{
+		if (!Success)
+			return this;
+
+		return new DelayedMetalineEditResult(() =>
+		{
+			var result = Execute!();
+			if (!result.Success)
+				return result;
+
+			return transform(result);
+		});
+	}
 }
 
 public record MetalineEditResult

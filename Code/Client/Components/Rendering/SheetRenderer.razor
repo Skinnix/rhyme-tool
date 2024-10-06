@@ -84,6 +84,10 @@
             case SheetDisplayTextLine text:
                 <div class="line line-text@(blockIndex != 0 ? " continuation" : null)" data-block-index="@blockIndex" style="--line-indentation: @(indentation)">@{ RenderElements(line, elements); }</div>
                 break;
+
+            case SheetDisplayTabLine tab:
+                <div class="line line-tab@(blockIndex != 0 ? " continuation" : null)" data-block-index="@blockIndex" style="--line-indentation: @(indentation)">@{ RenderElements(line, elements); }</div>
+                break;
         }
     }
 }
@@ -194,8 +198,9 @@
     public static string? GetElementBaseClass(SheetDisplayLineElement element)
         => element switch
     {
-        SheetDisplayLineFormatSpace => "format-space",
+        SheetDisplayLineFormatSpace or SheetDisplayTabLineFormatSpace => "format-space",
         SheetDisplayLineSpace => "space",
+        SheetDisplayLineTabLineNote => "tab-line-note",
         SheetDisplayLineChord => "chord",
         SheetDisplayLineFingering => "fingering",
         SheetDisplayLineText => "text",

@@ -105,3 +105,4 @@ public record SheetDisplayLineHyphen(int Length) : SheetDisplayLineElement
 	public override int GetLength(ISheetFormatter? formatter) => Length;
 	public override string ToString(ISheetFormatter? formatter = null) => "-".PadRight(Length);
 }
+

@@ -38,9 +38,9 @@ public interface ISheetBuilderFormatter : ISheetFormatter
 {
 	IEnumerable<int> GetLineIndentations();
 
-	int SpaceBefore(SheetLine line, SheetDisplayLineBuilder lineBuilder, SheetDisplayLineElement element);
-	bool ShowLine(SheetLine line, SheetDisplayLineBuilder lineBuilder);
-	void AfterPopulateLine(SheetLine line, SheetDisplayLineBuilder lineBuilder, IEnumerable<SheetDisplayLineBuilder> allLines);
+	int SpaceBefore(SheetLine line, SheetDisplayLineBuilderBase lineBuilder, SheetDisplayLineElement element);
+	bool ShowLine(SheetLine line, SheetDisplayLineBuilderBase lineBuilder);
+	void AfterPopulateLine(SheetLine line, SheetDisplayLineBuilderBase lineBuilder, IEnumerable<SheetDisplayLineBuilderBase> allLines);
 }
 
 public interface ISheetEditorFormatter : ISheetBuilderFormatter
@@ -225,7 +225,7 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 
 	public IEnumerable<int> GetLineIndentations() => LineIndentations;
 
-	public int SpaceBefore(SheetLine line, SheetDisplayLineBuilder lineBuilder, SheetDisplayLineElement element)
+	public int SpaceBefore(SheetLine line, SheetDisplayLineBuilderBase lineBuilder, SheetDisplayLineElement element)
 	{
 		if (lineBuilder.CurrentLength > 0 && element is SheetDisplayLineChord)
 			if (lineBuilder.LineType == typeof(SheetDisplayTextLine))
@@ -238,17 +238,17 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 		return 0;
 	}
 
-	public void AfterPopulateLine(SheetLine line, SheetDisplayLineBuilder lineBuilder, IEnumerable<SheetDisplayLineBuilder> allLines)
+	public void AfterPopulateLine(SheetLine line, SheetDisplayLineBuilderBase lineBuilder, IEnumerable<SheetDisplayLineBuilderBase> allLines)
 	{
-		if (ExtendAttachmentLines && lineBuilder is SheetDisplayChordLine.Builder)
+		if (ExtendAttachmentLines && lineBuilder is SheetDisplayChordLine.Builder chordBuilder)
 		{
 			//Verlängere die Zeile auf die länge der längsten Zeile - 1
 			var length = allLines.Max(l => l.CurrentLength) - 1;
-			lineBuilder.ExtendLength(length, 0, this);
+			chordBuilder.ExtendLength(length, 0, this);
 		}
 	}
 
-	public bool ShowLine(SheetLine line, SheetDisplayLineBuilder lineBuilder)
+	public bool ShowLine(SheetLine line, SheetDisplayLineBuilderBase lineBuilder)
 	{
 		if (!ShowEmptyAttachmentLines && lineBuilder.CurrentNonSpaceLength == 0 && lineBuilder is SheetDisplayChordLine.Builder)
 			return false;
