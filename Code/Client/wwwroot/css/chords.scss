@@ -187,7 +187,6 @@ $separatorColor: #6c757d;
 		.accidental:not(:empty) {
 			display: inline-block;
 			width: 1ch;
-
 			/*&[data-accidental='#'] {
 				.accidental-content {
 					display: none;
@@ -229,11 +228,11 @@ $separatorColor: #6c757d;
 
 		.chord-alteration {
 			.alteration-modifier:not(:empty) {
-				display: inline-block;
-				width: 1ch;
+				&[data-modifier='#'] {
+					display: inline-block;
+					width: 1ch;
 
-				/*&[data-modifier='#'] {
-					.alteration-modifier-content {
+					/*.alteration-modifier-content {
 						display: none;
 					}
 
@@ -241,11 +240,14 @@ $separatorColor: #6c757d;
 						content: '♯';
 						display: inline-block;
 						width: 1ch;
-					}
+					}*/
 				}
 
 				&[data-modifier='b'] {
-					.alteration-modifier-content {
+					display: inline-block;
+					width: 1ch;
+
+					/*.alteration-modifier-content {
 						display: none;
 					}
 
@@ -253,8 +255,8 @@ $separatorColor: #6c757d;
 						content: '♭';
 						display: inline-block;
 						width: 1ch;
-					}
-				}*/
+					}*/
+				}
 			}
 		}
 
@@ -350,6 +352,13 @@ $separatorColor: #6c757d;
 			}
 
 			.chord {
+				border-left: 1px dotted red;
+				border-right: 1px dotted green;
+				margin-left: -1px;
+				margin-right: -1px;
+			}
+
+			.fingering {
 				border-left: 1px dotted red;
 				border-right: 1px dotted green;
 				margin-left: -1px;

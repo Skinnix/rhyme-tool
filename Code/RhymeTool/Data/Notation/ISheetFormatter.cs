@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -164,7 +165,7 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 		if (degree.Modifier == ChordDegreeModifier.None)
 			return degree.Value.ToString();
 
-		if (alterationIndex == 0)
+		if (alterationIndex == 0 && alteration.Degree.Modifier is ChordDegreeModifier.Sharp or ChordDegreeModifier.Flat)
 			return degree.Value + ToString(degree.Modifier, false, transform);
 		else
 			return ToString(degree.Modifier, false, transform) + degree.Value;
@@ -193,7 +194,9 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 		}
 
 		var type = ToString(alteration.Type, transform);
-		return new(ToString(alteration.Type, transform), alteration.Degree.Value.ToString(), ToString(alteration.Degree.Modifier, true, transform), index == 0);
+		var modifierAfter = index == 0
+			&& alteration.Degree.Modifier is ChordDegreeModifier.Sharp or ChordDegreeModifier.Flat;
+		return new(ToString(alteration.Type, transform), alteration.Degree.Value.ToString(), ToString(alteration.Degree.Modifier, true, transform), modifierAfter);
 	}
 
 	private string ToString(AccidentalType accidental, bool inDocument, bool transform) => accidental switch

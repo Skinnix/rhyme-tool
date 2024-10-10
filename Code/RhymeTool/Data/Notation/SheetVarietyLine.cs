@@ -805,8 +805,11 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 								//Wurde die Cursorposition noch nicht gesetzt?
 								if (specialCursorPosition is null)
 								{
+									//Um wie viel hat sich der Inhalt verschoben?
+									var contentAdjust = mergeResult.NewContent.GetLength(formatter) - mergeResult.LengthBefore;
+
 									//Setze den Cursor an das Ende des eingefügten Inhalts im linken Rand
-									var cursorOffset = leftEdgeOverlapOffset.ContentOffset + firstNewComponent.Content.GetLength(formatter);
+									var cursorOffset = leftEdgeOverlapOffset.ContentOffset + contentAdjust;
 									if (leftEdge is VarietyComponent varietyEdge)
 									{
 										var length = varietyEdge.Content.GetLength(formatter);
@@ -1780,6 +1783,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 		{
 			//Textinhalt
 			var textContent = ToString(formatter);
+			var lengthBefore = textContent.Length;
 			var afterTextContent = content.ToString(formatter);
 			var stringOffset = Math.Min(offset.Value, textContent.Length);
 
@@ -1797,7 +1801,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 				newContent += textContent[stringOffset..];
 
 			//Ergebnis
-			return new(FromString(newContent, formatter, allowedTypes), new ContentOffset(textContent.Length))
+			return new(FromString(newContent, formatter, allowedTypes), new ContentOffset(lengthBefore))
 			{
 				MergeLengthBefore = new ContentOffset(afterTextContent?.Length ?? 0)
 			};
