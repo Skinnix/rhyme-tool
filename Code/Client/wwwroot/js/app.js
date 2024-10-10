@@ -170,6 +170,7 @@ function registerChordEditor(wrapper, reference, callbackName) {
     var actionQueue = new ActionQueue();
     var handler;
     var editor = null;
+    var selectionObserver = null;
     handler = function (event) {
         wrapper.removeEventListener('focus', handler);
         createEditor();
@@ -179,6 +180,7 @@ function registerChordEditor(wrapper, reference, callbackName) {
         notifyAfterRender: actionQueue.notifyRender.bind(actionQueue),
         destroy: function () {
             editor === null || editor === void 0 ? void 0 : editor.destroy();
+            selectionObserver === null || selectionObserver === void 0 ? void 0 : selectionObserver.destroy();
         }
     };
     function createEditor() {
@@ -209,7 +211,7 @@ function registerChordEditor(wrapper, reference, callbackName) {
                 console.log("after render");
                 afterRender();
                 var selection;
-                if (result.selection) {
+                if (result.selection && data.inputType != 'deleteByDrag') {
                     selection = editor.setCurrentSelection(result.selection);
                 }
                 else if (selectionRange) {
@@ -235,6 +237,7 @@ function registerChordEditor(wrapper, reference, callbackName) {
             });
         };
         editor = new ModificationEditor(wrapper, callback);
+        selectionObserver = new SelectionObserver(editor);
     }
 }
 function attachmentStartDrag(event) {
@@ -253,272 +256,6 @@ function attachmentStartDrag(event) {
         drag: selection
     }));
     event.dataTransfer.setData('text', attachmentElement.textContent);
-}
-function registerBeforeInput(wrapper, reference, callbackName) {
-    var existingReference = wrapper['data-reference'];
-    if (existingReference === reference) {
-        return;
-    }
-    else if (existingReference) {
-        var existingListener = wrapper['data-listener'];
-        if (existingListener) {
-            wrapper.removeEventListener('beforeinput', existingListener);
-        }
-    }
-    var currentRequest = null;
-    wrapper['data-reference'] = reference;
-    wrapper['data-listener'] = prepareBeforeInput;
-    var reverseAllEvents = true;
-    if (navigator.userAgent.includes('Chrome') && navigator.userAgent.includes('Mobile')) {
-        reverseAllEvents = true;
-    }
-    wrapper.addEventListener('beforeinput', prepareBeforeInput);
-    wrapper.addEventListener('beforeinput', function (event) {
-        console.log(event);
-    });
-    wrapper.addEventListener('compositionstart', function (event) {
-        wrapper.setAttribute('readonly', 'true');
-    });
-    wrapper.addEventListener('compositionupdate', function (event) {
-        setTimeout(function () {
-            wrapper.removeAttribute('readonly');
-        }, 10);
-    });
-    wrapper.addEventListener('compositionend', function (event) {
-        console.log(event);
-    });
-    var observations = [];
-    var observer = new MutationObserver(function (mutations) {
-        var observation = observations.shift();
-        if (!observations.length)
-            observer.disconnect();
-        var mutations = Array.from(mutations.reverse());
-        while (mutations.length != 0) {
-            for (var m = 0; m < mutations.length; m++) {
-                var mutation = mutations[m];
-                if (mutation.type == 'childList') {
-                    if (mutation.removedNodes.length > 0) {
-                        if (mutation.nextSibling) {
-                            if (!mutation.target.contains(mutation.nextSibling))
-                                continue;
-                            for (var i = 0; i < mutation.removedNodes.length; i++) {
-                                var node = mutation.removedNodes[i];
-                                mutation.target.insertBefore(node, mutation.nextSibling);
-                            }
-                        }
-                        else {
-                            for (var i = 0; i < mutation.removedNodes.length; i++) {
-                                var node = mutation.removedNodes[i];
-                                mutation.target.appendChild(node);
-                            }
-                        }
-                    }
-                    if (mutation.addedNodes.length > 0) {
-                        var found = true;
-                        for (var j = 0; j < mutation.addedNodes.length; j++) {
-                            var node = mutation.addedNodes[j];
-                            if (!node.parentElement) {
-                                found = false;
-                                break;
-                            }
-                        }
-                        if (!found)
-                            continue;
-                        for (var j = 0; j < mutation.addedNodes.length; j++) {
-                            var node = mutation.addedNodes[j];
-                            node.parentElement.removeChild(node);
-                        }
-                    }
-                }
-                else if (mutation.type == 'characterData') {
-                    mutation.target.nodeValue = mutation.oldValue;
-                }
-                mutations.splice(m, 1);
-                m--;
-            }
-        }
-        var selection = getSelection();
-        selection.removeAllRanges();
-        if (observation === null || observation === void 0 ? void 0 : observation.selection) {
-            var range = document.createRange();
-            range.setStart(observation.selection.start.node, observation.selection.start.offset);
-            range.setEnd(observation.selection.end.node, observation.selection.end.offset);
-            selection.addRange(range);
-        }
-        if (observation === null || observation === void 0 ? void 0 : observation.inputEvent) {
-            handleBeforeInput(observation.inputEvent, true);
-        }
-    });
-    function observeAndReverseInput(event) {
-        var inputEvent = event;
-        var currentSelection = getSelection();
-        var selection;
-        if (currentSelection.rangeCount == 0) {
-            selection = null;
-        }
-        else {
-            var range = currentSelection.getRangeAt(0);
-            selection = {
-                start: {
-                    node: range.startContainer,
-                    offset: range.startOffset
-                },
-                end: {
-                    node: range.endContainer,
-                    offset: range.endOffset
-                }
-            };
-        }
-        var wasObserving = observations.length;
-        observations.push({
-            inputEvent: inputEvent,
-            selection: selection,
-        });
-        if (wasObserving) {
-            console.log("observing: " + observations.length);
-        }
-        else {
-            console.log("start observing");
-            observer.observe(wrapper, { childList: true, subtree: true, characterData: true, characterDataOldValue: true });
-        }
-    }
-    function prepareBeforeInput(event) {
-        console.log("input event: ".concat(event.inputType, ", data: ").concat(event.data));
-        if (reverseAllEvents || !event.cancelable) {
-            observeAndReverseInput(event);
-            return true;
-        }
-        event.preventDefault();
-        event.stopPropagation();
-        handleBeforeInput(event, false);
-    }
-    function handleBeforeInput(event, isReversed) {
-        console.log("input event: ".concat(event.inputType, ", data: ").concat(event.data));
-        var content = event.data;
-        var dragSelection = null;
-        if (content === null && event.dataTransfer) {
-            content = event.dataTransfer.getData('text');
-            var json = event.dataTransfer.getData('text/json');
-            if (json) {
-                var jsonData = JSON.parse(json);
-                dragSelection = jsonData.drag;
-            }
-        }
-        var inputType = event.inputType;
-        if (currentRequest) {
-            currentRequest = currentRequest.then(function () {
-                if (isWaitingForRender()) {
-                    return invokeAfterRender(function () {
-                        sendInputEvent(inputType, content, dragSelection);
-                    });
-                }
-                else {
-                    return sendInputEvent(inputType, content, dragSelection);
-                }
-            });
-        }
-        else {
-            currentRequest = sendInputEvent(inputType, content, dragSelection);
-        }
-        return false;
-    }
-    function sendInputEvent(inputType, content, dragSelection) {
-        var originalSelection = getSelection();
-        var originalRange = originalSelection.rangeCount == 0 ? null : originalSelection.getRangeAt(0);
-        if (originalRange && inputType == 'deleteContent' || inputType == 'deleteContentBackward' || inputType == 'deleteContentForward') {
-            var content = originalRange.toString();
-            if (!content || content == "\n") {
-                if (inputType == 'deleteContentForward') {
-                    originalRange.setEnd(originalRange.startContainer, originalRange.startOffset);
-                }
-                else {
-                    originalRange.setStart(originalRange.endContainer, originalRange.endOffset);
-                }
-            }
-        }
-        var copyRange = originalRange.cloneRange();
-        var selection = getSelectionRange(originalSelection, wrapper);
-        if (selection.start.line != selection.end.line && originalRange.toString() === '') {
-            if (inputType == 'deleteContent' || inputType == 'deleteContentBackward') {
-                selection.start = selection.end;
-            }
-            else if (inputType == 'deleteContentForward') {
-                selection.end = selection.start;
-            }
-        }
-        if (inputType == 'insertText' && content == '') {
-            inputType = 'deleteContent';
-        }
-        if (inputType == 'insertCompositionText') {
-            var currentContent = originalRange.toString();
-            if (content.startsWith(currentContent)) {
-                inputType = 'insertText';
-                originalRange.collapse(false);
-                selection.start = selection.end;
-            }
-        }
-        wrapper.classList.add('refreshing');
-        originalRange.collapse(true);
-        if (!isWaitingForRender()) {
-            invokeAfterRender(function () { });
-        }
-        if (dragSelection) {
-            return invokeLineEdit(reference, callbackName, 'deleteByDrag', null, dragSelection, wrapper, null, true).then(function () {
-                return invokeLineEdit(reference, callbackName, inputType, content, selection, wrapper, copyRange);
-            });
-        }
-        else {
-            return invokeLineEdit(reference, callbackName, inputType, content, selection, wrapper, copyRange);
-        }
-    }
-}
-function invokeLineEdit(reference, callbackName, inputType, content, selection, wrapper, copyRange, ignoreSelection) {
-    return invokeBlazor(reference, callbackName, {
-        inputType: inputType,
-        data: content,
-        selection: selection,
-    }).then(function (result) {
-        var oldRange = copyRange;
-        var afterRender = function () {
-            if (!ignoreSelection) {
-                if (result.selection) {
-                    setSelectionRange(wrapper, result.selection.metaline, result.selection.lineId, result.selection.lineIndex, result.selection.range);
-                }
-                else if (oldRange) {
-                    var selection = getSelection();
-                    selection.removeAllRanges();
-                    selection.addRange(oldRange);
-                }
-                wrapper.classList.remove('refreshing');
-            }
-        };
-        if (result.failReason)
-            showToast("".concat(result.failReason.label, " (").concat(result.failReason.code, ")"), 'Bearbeitungsfehler', 5000);
-        if (!result.willRender || supportsSynchronousInvoke) {
-            afterRender();
-            notifyRenderFinished();
-        }
-        else {
-            return invokeAfterRender(afterRender);
-        }
-    });
-}
-function getLineId(node) {
-    var metalineId;
-    var lineId;
-    for (; node; node = node.parentElement) {
-        if (!('getAttribute' in node))
-            continue;
-        if (metalineId == null)
-            metalineId = node.getAttribute('data-metaline');
-        if (lineId == null)
-            lineId = node.getAttribute('data-line-index');
-        if (metalineId && lineId)
-            return {
-                metaline: metalineId,
-                line: parseInt(lineId)
-            };
-    }
 }
 function checkIsLine(node) {
     if (!node || !('classList' in node))
@@ -838,6 +575,10 @@ var ModificationEditor = (function () {
                 editRange = this.getLineSelection(targetRange);
             }
         }
+        var data = event.data;
+        if (!event.data && event.dataTransfer) {
+            data = event.dataTransfer.getData('text');
+        }
         console.log(event);
         var currentRange = getSelection().getRangeAt(0);
         if (event.inputType == 'deleteContent' || event.inputType == 'deleteContentBackward' || event.inputType == 'deleteContentForward') {
@@ -854,7 +595,7 @@ var ModificationEditor = (function () {
             this.callback(this, {
                 inputType: event.inputType,
                 editRange: editRange,
-                data: event.data
+                data: data
             }, currentRange, this.pauseRender.bind(this));
         }
         else {
@@ -866,7 +607,7 @@ var ModificationEditor = (function () {
                     _this.callback(_this, {
                         inputType: event.inputType,
                         editRange: editRange,
-                        data: event.data
+                        data: data
                     }, currentRange, _this.pauseRender.bind(_this));
                 }, debounce);
             };
@@ -910,8 +651,6 @@ var ModificationEditor = (function () {
     };
     ;
     ModificationEditor.prototype.revertModification = function (modification) {
-        console.log("Revert modification", modification);
-        console.log(JSON.stringify(modification, null, 2));
         var mutations = Array.from(modification.mutations.reverse());
         while (mutations.length != 0) {
             for (var m = 0; m < mutations.length; m++) {
@@ -979,29 +718,26 @@ var ModificationEditor = (function () {
             currentSelection.removeAllRanges();
         }
     };
-    ModificationEditor.prototype.getCurrentSelection = function () {
-        var _a;
-        var range = (_a = getSelection()) === null || _a === void 0 ? void 0 : _a.getRangeAt(0);
+    ModificationEditor.prototype.getCurrentSelection = function (documentSelection) {
+        if (documentSelection === undefined)
+            documentSelection = getSelection();
+        if (!documentSelection || documentSelection.rangeCount == 0)
+            return null;
+        var range = getSelection().getRangeAt(0);
         if (!range)
+            return null;
+        if (!this.editor.contains(range.startContainer) || !this.editor.contains(range.endContainer))
             return null;
         return this.getLineSelection(range);
     };
-    ModificationEditor.prototype.setCurrentSelection = function (selection) {
+    ModificationEditor.prototype.setCurrentSelection = function (lineSelection) {
         var documentSelection = getSelection();
-        if (!selection) {
+        if (!lineSelection) {
             if (documentSelection.rangeCount != 0)
                 documentSelection.removeAllRanges();
+            this.revertSelection = null;
             return documentSelection;
         }
-        var startMetaline = this.editor.querySelector(".metaline[data-metaline=\"".concat(selection.start.metaline, "\"]"));
-        var endMetaline = selection.end.metaline == selection.start.metaline ? startMetaline
-            : this.editor.querySelector(".metaline[data-metaline=\"".concat(selection.end.metaline, "\"]"));
-        var startLine = findLine(startMetaline, selection.start.line);
-        var endLine = selection.end.metaline == selection.start.metaline && selection.end.line == selection.start.line ? startMetaline
-            : findLine(endMetaline, selection.end.line);
-        var start = this.getNode(startLine, selection.start.offset);
-        var end = selection.end.metaline == selection.start.metaline && selection.end.line == selection.start.line && selection.end.offset == selection.start.offset ? start
-            : this.getNode(endLine, selection.end.offset);
         var range;
         if (documentSelection.rangeCount) {
             range = documentSelection.getRangeAt(0);
@@ -1010,6 +746,26 @@ var ModificationEditor = (function () {
             range = document.createRange();
             documentSelection.addRange(range);
         }
+        this.setLineSelectionRange(range, lineSelection);
+        this.revertSelection = new StaticRange(range);
+        return documentSelection;
+    };
+    ModificationEditor.prototype.setLineSelectionRange = function (range, lineSelection) {
+        var startLine = lineSelection.start.lineNode;
+        var endLine = lineSelection.end.lineNode;
+        if (!(startLine instanceof HTMLElement && endLine instanceof HTMLElement)) {
+            var metalineLineSelection = lineSelection;
+            var startMetaline = startLine ? null : this.editor.querySelector(".metaline[data-metaline=\"".concat(metalineLineSelection.start.metaline, "\"]"));
+            var endMetaline = metalineLineSelection.end.metaline == metalineLineSelection.start.metaline ? startMetaline
+                : endLine ? null
+                    : this.editor.querySelector(".metaline[data-metaline=\"".concat(metalineLineSelection.end.metaline, "\"]"));
+            startLine !== null && startLine !== void 0 ? startLine : (startLine = findLine(startMetaline, metalineLineSelection.start.line));
+            endLine !== null && endLine !== void 0 ? endLine : (endLine = metalineLineSelection.end.metaline == metalineLineSelection.start.metaline && metalineLineSelection.end.line == metalineLineSelection.start.line ? startMetaline
+                : findLine(endMetaline, metalineLineSelection.end.line));
+        }
+        var start = this.getNode(startLine, lineSelection.start.offset);
+        var end = startLine === endLine && lineSelection.end.offset == lineSelection.start.offset ? start
+            : this.getNode(endLine, lineSelection.end.offset);
         if (start.node instanceof Text && start.offset > start.node.length)
             range.setStart(start.node, start.node.length);
         else if (start.node instanceof HTMLElement && start.offset > start.node.childElementCount)
@@ -1022,8 +778,6 @@ var ModificationEditor = (function () {
             range.setEnd(end.node, end.node.childElementCount);
         else
             range.setEnd(end.node, end.offset);
-        this.revertSelection = new StaticRange(range);
-        return documentSelection;
         function findLine(metaline, line) {
             if (line === ModificationEditor.FIRST_LINE_ID) {
                 return metaline.querySelector('.line[data-line]');
@@ -1032,25 +786,28 @@ var ModificationEditor = (function () {
                 var lines = metaline.querySelectorAll('.line[data-line]');
                 return lines[lines.length - 1];
             }
-            return metaline.querySelector(".line[data-line=\"".concat(selection.start.line, "\"]"));
+            return metaline.querySelector(".line[data-line=\"".concat(line, "\"]"));
         }
     };
-    ModificationEditor.prototype.getLineSelection = function (range) {
+    ModificationEditor.prototype.getLineSelection = function (range, includeNode) {
         var start = this.getTextIndex(range.startContainer, this.getLineInfo, range.startOffset);
         var end = range.endContainer !== range.startContainer ? this.getTextIndex(range.endContainer, this.getLineInfo, range.endOffset) : {
             offset: start.offset + range.endOffset - range.startOffset,
             data: start.data,
+            node: start.node,
         };
         return {
             start: {
                 metaline: start.data.metaline,
                 line: start.data.line,
-                offset: start.offset
+                offset: start.offset,
+                lineNode: includeNode ? start.node : undefined,
             },
             end: {
                 metaline: end.data.metaline,
                 line: end.data.line,
-                offset: end.offset
+                offset: end.offset,
+                lineNode: includeNode ? end.node : undefined,
             }
         };
     };
@@ -1059,14 +816,18 @@ var ModificationEditor = (function () {
         if (!offset)
             offset = 0;
         var data = stopCondition(node);
-        for (var current = node; !data; current = current.parentElement, data = stopCondition(current)) {
+        var current;
+        for (current = node; current && !data; current = current.parentElement, data = stopCondition(current)) {
             for (var sibling = current.previousSibling; sibling; sibling = sibling.previousSibling) {
                 if (sibling.nodeType == Node.COMMENT_NODE)
                     continue;
                 offset += ((_a = sibling.textContent) === null || _a === void 0 ? void 0 : _a.length) || 0;
             }
         }
+        if (!data)
+            return null;
         return {
+            node: current,
             offset: offset,
             data: data
         };
@@ -1124,7 +885,7 @@ var ModificationEditor = (function () {
             return null;
         var nodeElement = node;
         var lineId = null;
-        if (nodeElement.classList.contains('line')) {
+        if (node.classList.contains('line')) {
             lineId = parseInt(nodeElement.getAttribute('data-line'));
             nodeElement = nodeElement.parentElement.parentElement;
         }
@@ -1143,6 +904,149 @@ var ModificationEditor = (function () {
     ModificationEditor.FIRST_LINE_ID = -1;
     ModificationEditor.LAST_LINE_ID = -2;
     return ModificationEditor;
+}());
+var SelectionObserver = (function () {
+    function SelectionObserver(modificationEditor) {
+        this.modificationEditor = modificationEditor;
+        this.supportsMultipleRanges = false;
+        this.editor = modificationEditor.editor;
+        this.editorWrapper = this.editor.parentElement;
+        this.customSelection = this.editorWrapper.querySelector('.custom-selection');
+        document.addEventListener('selectionchange', this.handleSelectionChange.bind(this));
+        this.editor.addEventListener('dragstart', this.handleDragStart.bind(this));
+    }
+    SelectionObserver.prototype.destroy = function () {
+        document.removeEventListener('selectionchange', this.handleSelectionChange.bind(this));
+        this.editor.removeEventListener('dragstart', this.handleDragStart.bind(this));
+    };
+    SelectionObserver.prototype.handleSelectionChange = function (event) {
+        var _a, _b;
+        var documentSelection = getSelection();
+        if (!documentSelection || documentSelection.rangeCount == 0 || documentSelection.isCollapsed)
+            return this.resetCustomSelections();
+        var range = documentSelection.getRangeAt(0);
+        if (documentSelection.rangeCount > 1) {
+            var firstRange = range;
+            var lastRange = documentSelection.getRangeAt(documentSelection.rangeCount - 1);
+            if (lastRange.startContainer.compareDocumentPosition(firstRange.startContainer) & Node.DOCUMENT_POSITION_FOLLOWING) {
+                firstRange = lastRange;
+                lastRange = range;
+            }
+            range = document.createRange();
+            if (firstRange.endContainer.compareDocumentPosition(firstRange.startContainer) & Node.DOCUMENT_POSITION_FOLLOWING) {
+                range.setStart(lastRange.endContainer, lastRange.endOffset);
+                range.setEnd(firstRange.startContainer, firstRange.startOffset);
+            }
+            else {
+                range.setStart(firstRange.startContainer, firstRange.startOffset);
+                range.setEnd(lastRange.endContainer, lastRange.endOffset);
+            }
+        }
+        if (!this.editor.contains(range.startContainer) || !this.editor.contains(range.endContainer))
+            return this.resetCustomSelections();
+        var lineSelection = this.modificationEditor.getLineSelection(range, true);
+        if (lineSelection.start.metaline != lineSelection.end.metaline)
+            return this.resetCustomSelections();
+        var metaline = (_b = (_a = lineSelection.start.lineNode) === null || _a === void 0 ? void 0 : _a.parentElement) === null || _b === void 0 ? void 0 : _b.parentElement;
+        if (!metaline)
+            return this.resetCustomSelections();
+        var selectionType = metaline.getAttribute('data-selection');
+        if (!selectionType)
+            return this.resetCustomSelections();
+        switch (selectionType) {
+            case 'box':
+                this.adjustBoxSelection(documentSelection, range, lineSelection);
+                break;
+            default:
+                this.resetCustomSelections();
+                break;
+        }
+    };
+    SelectionObserver.prototype.resetCustomSelections = function () {
+        this.customSelection.className = 'custom-selection';
+    };
+    SelectionObserver.prototype.adjustBoxSelection = function (documentSelection, range, lineSelection) {
+        if (!this.supportsMultipleRanges)
+            return emulateBoxSelection.bind(this)(range);
+        if (lineSelection.end.lineNode.compareDocumentPosition(lineSelection.start.lineNode) & Node.DOCUMENT_POSITION_FOLLOWING) {
+            lineSelection = {
+                start: lineSelection.end,
+                end: lineSelection.start,
+            };
+        }
+        var startLine = lineSelection.start.lineNode;
+        var endLine = lineSelection.end.lineNode;
+        if (!(startLine instanceof HTMLElement) || !(endLine instanceof HTMLElement))
+            return this.resetCustomSelections();
+        var lines = [startLine];
+        for (var current = startLine.nextSibling; current != endLine; current = current.nextSibling) {
+            if (!(current instanceof HTMLElement) || !current.classList.contains('line'))
+                continue;
+            lines.push(current);
+        }
+        lines.push(endLine);
+        var startOffset = lineSelection.start.offset;
+        var endOffset = lineSelection.end.offset;
+        documentSelection.removeAllRanges();
+        for (var i = 0; i < lines.length; i++) {
+            var line = lines[i];
+            var lineRange = document.createRange();
+            this.modificationEditor.setLineSelectionRange(lineRange, {
+                start: {
+                    lineNode: line,
+                    offset: startOffset,
+                },
+                end: {
+                    lineNode: line,
+                    offset: endOffset,
+                }
+            });
+            documentSelection.addRange(lineRange);
+        }
+        if (documentSelection.rangeCount != lines.length) {
+            this.supportsMultipleRanges = false;
+            emulateBoxSelection.bind(this)(range);
+        }
+        function emulateBoxSelection(range) {
+            var rects = range.getClientRects();
+            var startRect = rects[0];
+            var endRect = rects[rects.length - 1];
+            if (startRect.top > endRect.top) {
+                var temp = startRect;
+                startRect = endRect;
+                endRect = temp;
+            }
+            var x = startRect.left;
+            if (endRect.left < x)
+                x = endRect.right;
+            var y = startRect.top;
+            var width = +(startRect.left - endRect.right);
+            if (width < 0)
+                width = -width;
+            var height = endRect.bottom - startRect.top;
+            var wrapperRect = this.editorWrapper.getBoundingClientRect();
+            this.customSelection.style.top = (y - wrapperRect.top) + 'px';
+            this.customSelection.style.left = (x - wrapperRect.left) + 'px';
+            this.customSelection.style.width = width + 'px';
+            this.customSelection.style.height = height + 'px';
+            this.customSelection.className = 'custom-selection custom-selection-box';
+        }
+    };
+    SelectionObserver.prototype.handleDragStart = function (event) {
+        if (!(event.target instanceof Node))
+            return;
+        for (var current = event.target; current && current != this.editor; current = current.parentElement) {
+            if (!(current instanceof HTMLElement))
+                continue;
+            var selectionType = current.getAttribute('data-selection');
+            if (selectionType == 'box') {
+                event.preventDefault();
+                event.stopPropagation();
+                return false;
+            }
+        }
+    };
+    return SelectionObserver;
 }());
 var ActionQueue = (function () {
     function ActionQueue() {

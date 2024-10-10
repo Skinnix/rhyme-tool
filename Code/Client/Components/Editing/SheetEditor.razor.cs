@@ -170,7 +170,7 @@ partial class SheetEditor
 		//Bearbeitungstyp
 		var editResult = GetEditType(data) switch
 		{
-			EditType.InsertContent or EditType.InsertCompositionContent => line.Editing.InsertContent(context, data.Data, false, Formatter),
+			EditType.InsertContent or EditType.InsertCompositionContent when (data.Data is not null) => line.Editing.InsertContent(context, data.Data, false, Formatter),
 			EditType.InsertLine => line.Editing.InsertContent(context, "\n", false, Formatter),
 			EditType.DeleteBackward => line.Editing.DeleteContent(context, DeleteDirection.Backward, DeleteType.Character, false, Formatter),
 			EditType.DeleteForward => line.Editing.DeleteContent(context, DeleteDirection.Forward, DeleteType.Character, false, Formatter),
@@ -213,7 +213,7 @@ partial class SheetEditor
 		//Bearbeitungstyp
 		var editResult = GetEditType(data) switch
 		{
-			EditType.InsertContent or EditType.InsertCompositionContent => context.InsertContent(data.Data, Formatter),
+			EditType.InsertContent or EditType.InsertCompositionContent when(data.Data is not null) => context.InsertContent(data.Data, Formatter),
 			EditType.InsertLine => context.InsertContent("\n", Formatter),
 			EditType.DeleteBackward or EditType.DeleteWordBackward => context.DeleteContent(DeleteDirection.Backward, Formatter),
 			EditType.DeleteForward or EditType.DeleteWordForward => context.DeleteContent(DeleteDirection.Forward, Formatter),

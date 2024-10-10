@@ -31,13 +31,14 @@ $separatorColor: #6c757d;
 }
 
 .chord-sheet-wrapper {
-	overflow-x: auto;
+	position: relative;
 	display: flex;
 	flex-direction: row;
 	font-family: monospace;
 	line-height: 1.1em;
 	padding-bottom: 8em;
 	font-size: calc(0.01rem * var(--font-percent));
+	overflow-x: auto;
 	scroll-padding: 0 3em;
 
 	.calculator {
@@ -186,6 +187,75 @@ $separatorColor: #6c757d;
 		.accidental:not(:empty) {
 			display: inline-block;
 			width: 1ch;
+
+			/*&[data-accidental='#'] {
+				.accidental-content {
+					display: none;
+				}
+
+				&::before {
+					content: '♯';
+					display: inline-block;
+					width: 1ch;
+				}
+			}
+
+			&[data-accidental='b'] {
+				.accidental-content {
+					display: none;
+				}
+
+
+				&::before {
+					content: '♭';
+					display: inline-block;
+					width: 1ch;
+				}
+			}
+
+			&[data-accidental='♮'] {
+				.accidental-content {
+					display: none;
+				}
+
+
+				&::before {
+					content: '♮';
+					display: inline-block;
+					width: 1ch;
+				}
+			}*/
+		}
+
+		.chord-alteration {
+			.alteration-modifier:not(:empty) {
+				display: inline-block;
+				width: 1ch;
+
+				/*&[data-modifier='#'] {
+					.alteration-modifier-content {
+						display: none;
+					}
+
+					&::before {
+						content: '♯';
+						display: inline-block;
+						width: 1ch;
+					}
+				}
+
+				&[data-modifier='b'] {
+					.alteration-modifier-content {
+						display: none;
+					}
+
+					&::before {
+						content: '♭';
+						display: inline-block;
+						width: 1ch;
+					}
+				}*/
+			}
 		}
 
 		.chord-root {
@@ -239,6 +309,20 @@ $separatorColor: #6c757d;
 	}
 }
 
+.chord-sheet-wrapper /*:has(.custom-selection.custom-selection-box)*/ {
+	[data-selection='box'] {
+		/*@supports not (selector(::-moz-selection)) {
+			::selection {
+				background-color: transparent;
+			}
+		}*/
+
+		::selection {
+			background-color: transparent;
+		}
+	}
+}
+
 .chord-sheet.no-chords {
 	.line.line-chords {
 		display: none;
@@ -287,13 +371,23 @@ $separatorColor: #6c757d;
 			}
 		}
 
-		.line.line-tab {
-			caret-shape: block;
-		}
-
 		.breakpoint {
 			border-left: 1px solid blue;
 			margin-left: -1px;
 		}
+	}
+}
+
+.custom-selection {
+	position: absolute;
+	pointer-events: none;
+	z-index: 10;
+	background-color: var(--bs-primary);
+	opacity: 0.3;
+	display: none;
+
+	&.custom-selection-box {
+		display: block;
+		border: 1px solid black;
 	}
 }

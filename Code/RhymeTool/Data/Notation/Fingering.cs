@@ -10,13 +10,13 @@ public sealed record Fingering(IReadOnlyList<FingeringPosition> Positions, bool 
 {
 	public const char SEPARATOR = '-';
 
-	public static int TryRead(ISheetEditorFormatter? formatter, ReadOnlySpan<char> s, out Fingering? fingering, int minLength = 1)
+	public static int TryRead(ISheetEditorFormatter? formatter, ReadOnlySpan<char> s, out Fingering? fingering, int minLength = 3)
 		=> formatter?.TryReadFingering(s, out fingering, minLength) ?? TryRead(s, out fingering, minLength);
 
-	public static int TryRead(ReadOnlySpan<char> s, out Fingering? fingering, int minLength = 1)
+	public static int TryRead(ReadOnlySpan<char> s, out Fingering? fingering, int minLength = 3)
 	{
 		fingering = null;
-		if (s.IsEmpty)
+		if (s.Length < minLength)
 			return -1;
 
 		//Lese Positionen

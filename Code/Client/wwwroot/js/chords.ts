@@ -15,20 +15,6 @@ declare interface NodeSelection {
 	end: NodeSelectionAnchor,
 }
 
-declare interface LineIdentifier {
-	metaline: string,
-	line: number,
-}
-
-declare interface LineSelectionAnchor extends LineIdentifier {
-	offset: number,
-}
-
-declare interface LineSelection {
-	start: LineSelectionAnchor,
-	end: LineSelectionAnchor,
-}
-
 declare interface SimpleInputEvent {
 	inputType: string,
 	data: string,
@@ -122,7 +108,7 @@ function registerDropDownHandler(element: HTMLElement, reference: BlazorDotNetRe
 
 function showToast(message: string, title: string, delay: number): void {
 	//get container
-	var toastContainer = document.querySelector('.toast-container');
+	var toastContainer = document.querySelector('.toast-container')!;
 
 	//create toast
 	var toast = document.createElement('div');
@@ -165,14 +151,14 @@ function registerResize(element: HTMLElement, reference: BlazorDotNetReference, 
 	
 	var handler = function () {
 		//get character width
-		var characterWidth = element.querySelector('.calculator').getBoundingClientRect().width;
+		var characterWidth = element.querySelector('.calculator')!.getBoundingClientRect().width;
 
 		//get line offset
 		var line = element.querySelector('.line');
 		var lineOffsetX = 0;
 		if (line) {
 			//find element's child containing the line
-			var topParent = line;
+			let topParent = line;
 			for (; topParent.parentElement != element; topParent = topParent.parentElement);
 
 			//line offset is the difference between the line's width and the parent's width
@@ -260,6 +246,7 @@ function registerChordEditor(wrapper: HTMLElement, reference: BlazorDotNetRefere
 	//create editor wrapper (delayed)
 	let handler: (event: Event) => void;
 	let editor: ModificationEditor = null;
+	let selectionObserver: SelectionObserver = null;
 	handler = (event) => {
 		wrapper.removeEventListener('focus', handler);
 		createEditor();
@@ -272,12 +259,13 @@ function registerChordEditor(wrapper: HTMLElement, reference: BlazorDotNetRefere
 		notifyAfterRender: actionQueue.notifyRender.bind(actionQueue),
 		destroy: () => {
 			editor?.destroy();
+			selectionObserver?.destroy();
 		}
 	};
 
     function createEditor() {
         let afterRender: () => void;
-        let callback: EditorCallback = (editor, data, selectionRange, expectRender) => {
+        const callback: EditorCallback = (editor, data, selectionRange, expectRender) => {
             let result: MetalineEditResult;
             actionQueue.then(() => {
                 //prepare event data
@@ -324,7 +312,7 @@ function registerChordEditor(wrapper: HTMLElement, reference: BlazorDotNetRefere
                 afterRender();
 
 				let selection: Selection;
-                if (result.selection) {
+				if (result.selection && data.inputType != 'deleteByDrag') {
                     //set new selection range
                     selection = editor.setCurrentSelection(result.selection);
                 } else if (selectionRange) {
@@ -353,9 +341,27 @@ function registerChordEditor(wrapper: HTMLElement, reference: BlazorDotNetRefere
                 wrapper.classList.remove('refreshing');
             });
         };
-        editor = new ModificationEditor(wrapper, callback);
+		editor = new ModificationEditor(wrapper, callback);
+		selectionObserver = new SelectionObserver(editor);
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -383,348 +389,6 @@ function attachmentStartDrag(event: DragEvent) {
 
 	//store the chord's text in the dataTransfer object
 	event.dataTransfer.setData('text', attachmentElement.textContent);
-}
-
-
-function registerBeforeInput(wrapper: HTMLElement, reference: BlazorDotNetReference, callbackName: string) {
-	//prevent double registration
-	var existingReference = (wrapper as any)['data-reference'];
-	if (existingReference === reference) {
-		return;
-	} else if (existingReference) {
-		var existingListener = (wrapper as any)['data-listener'];
-		if (existingListener) {
-			wrapper.removeEventListener('beforeinput', existingListener);
-		}
-	}
-
-	//store current request promise and running requests
-	var currentRequest: Promise<any> = null;
-	
-	//store listener data
-	(wrapper as any)['data-reference'] = reference;
-	(wrapper as any)['data-listener'] = prepareBeforeInput;
-	
-	//on chrome mobile the beforeinput event is not cancelable for deletion events
-	let reverseAllEvents = true;
-	if (navigator.userAgent.includes('Chrome') && navigator.userAgent.includes('Mobile')) {
-		reverseAllEvents = true;
-	}
-
-	//add listener
-	wrapper.addEventListener('beforeinput', prepareBeforeInput);
-	wrapper.addEventListener('beforeinput', function (event) {
-		console.log(event);
-	});
-	wrapper.addEventListener('compositionstart', function (event) {
-		wrapper.setAttribute('readonly', 'true');
-	});
-	wrapper.addEventListener('compositionupdate', function (event) {
-		setTimeout(function () {
-			wrapper.removeAttribute('readonly');
-		}, 10);
-	});
-	wrapper.addEventListener('compositionend', function (event) {
-		console.log(event);
-	});
-	
-	type InputEventInfo = {
-		selection?: NodeSelection,
-		inputEvent: SimpleInputEvent,
-	};
-	var observations: InputEventInfo[] = [];
-	var observer = new MutationObserver(function (mutations) {
-		var observation = observations.shift();
-		if (!observations.length)
-			observer.disconnect();
-
-		var mutations = Array.from(mutations.reverse());
-		while (mutations.length != 0) {
-			for (var m = 0; m < mutations.length; m++) {
-				var mutation = mutations[m];
-				if (mutation.type == 'childList') {
-					if (mutation.removedNodes.length > 0) {
-						if (mutation.nextSibling) {
-							if (!mutation.target.contains(mutation.nextSibling))
-								continue;
-
-							for (var i = 0; i < mutation.removedNodes.length; i++) {
-								var node = mutation.removedNodes[i];
-								mutation.target.insertBefore(node, mutation.nextSibling);
-							}
-						} else {
-							for (var i = 0; i < mutation.removedNodes.length; i++) {
-								var node = mutation.removedNodes[i];
-								mutation.target.appendChild(node);
-							}
-						}
-					}
-
-					if (mutation.addedNodes.length > 0) {
-						var found = true;
-						for (var j = 0; j < mutation.addedNodes.length; j++) {
-							var node = mutation.addedNodes[j];
-							if (!node.parentElement) {
-								found = false;
-								break;
-							}
-						}
-						if (!found)
-							continue;
-
-						for (var j = 0; j < mutation.addedNodes.length; j++) {
-							var node = mutation.addedNodes[j];
-							node.parentElement.removeChild(node);
-						}
-					}
-				} else if (mutation.type == 'characterData') {
-					mutation.target.nodeValue = mutation.oldValue;
-				}
-
-				mutations.splice(m, 1);
-				m--;
-			}
-		}
-
-		//restore selection
-		var selection = getSelection();
-		selection.removeAllRanges();
-		if (observation?.selection) {
-			let range = document.createRange();
-			range.setStart(observation.selection.start.node, observation.selection.start.offset);
-			range.setEnd(observation.selection.end.node, observation.selection.end.offset);
-			selection.addRange(range);
-		}
-
-		//handle event
-		if (observation?.inputEvent) {
-			handleBeforeInput(observation.inputEvent, true);
-		}
-	});
-
-	function observeAndReverseInput(event: SimpleInputEvent) {
-		//store event data in order to process the event after the mutation observer has finished
-		let inputEvent = event;
-
-		//store selection so it can be restored after the mutation observer has finished
-		let currentSelection = getSelection();
-		let selection: NodeSelection;
-		if (currentSelection.rangeCount == 0) {
-			selection = null;
-		} else {
-			let range = currentSelection.getRangeAt(0);
-			selection = {
-				start: {
-					node: range.startContainer,
-					offset: range.startOffset
-				},
-				end: {
-					node: range.endContainer,
-					offset: range.endOffset
-				}
-			};
-		}
-
-		//store the observation
-		let wasObserving = observations.length;
-		observations.push({
-			inputEvent: inputEvent,
-			selection: selection,
-		});
-
-		//start the observer
-		if (wasObserving) {
-			console.log("observing: " + observations.length);
-		} else {
-			console.log("start observing");
-			observer.observe(wrapper, { childList: true, subtree: true, characterData: true, characterDataOldValue: true });
-		}
-	}
-
-	function prepareBeforeInput(event: InputEvent) {
-		console.log(`input event: ${event.inputType}, data: ${event.data}`);
-		//return;
-		//does the event need to be reversed?
-		if (reverseAllEvents || !event.cancelable) {
-			observeAndReverseInput(event);
-			return true;
-		}
-
-		//stop normal event
-		event.preventDefault();
-		event.stopPropagation();
-
-		//handle event
-		handleBeforeInput(event, false);
-	}
-
-	function handleBeforeInput(event: SimpleInputEvent, isReversed: boolean) {
-		//log event info
-		console.log(`input event: ${event.inputType}, data: ${event.data}`);
-
-		//get content and additional data
-		var content = event.data;
-		var dragSelection: LineSelection = null;
-		if (content === null && event.dataTransfer) {
-			content = event.dataTransfer.getData('text');
-			var json = event.dataTransfer.getData('text/json');
-			if (json) {
-				var jsonData = JSON.parse(json);
-				dragSelection = jsonData.drag;
-			}
-		}
-
-		//store necessary event data
-		var inputType = event.inputType;
-
-		//is there already a request?
-		if (currentRequest) {
-			//chain the request
-			currentRequest = currentRequest.then(function () {
-				//wait for render
-				if (isWaitingForRender()) {
-					return invokeAfterRender(function () {
-						sendInputEvent(inputType, content, dragSelection);
-					});
-				} else {
-					return sendInputEvent(inputType, content, dragSelection);
-				}
-			});
-		} else {
-			currentRequest = sendInputEvent(inputType, content, dragSelection);
-		}
-
-		return false;
-	}
-
-	function sendInputEvent(inputType: string, content: string, dragSelection: LineSelection): Promise<any> {
-		var originalSelection = getSelection();
-		var originalRange = originalSelection.rangeCount == 0 ? null : originalSelection.getRangeAt(0);
-
-		//mobile browsers like creating selections when deleting content
-		if (originalRange && inputType == 'deleteContent' || inputType == 'deleteContentBackward' || inputType == 'deleteContentForward') {
-			var content = originalRange.toString();
-			if (!content || content == "\n") {
-				//collapse the selection
-				if (inputType == 'deleteContentForward') {
-					originalRange.setEnd(originalRange.startContainer, originalRange.startOffset);
-				} else {
-					originalRange.setStart(originalRange.endContainer, originalRange.endOffset);
-				}
-			}
-		}
-
-        var copyRange = originalRange.cloneRange();
-		var selection = getSelectionRange(originalSelection, wrapper);
-		
-        //collapse empty, line-spanning selections
-		if (selection.start.line != selection.end.line && originalRange.toString() === '') {
-            if (inputType == 'deleteContent' || inputType == 'deleteContentBackward') {
-				selection.start = selection.end;
-            } else if (inputType == 'deleteContentForward') {
-				selection.end = selection.start;
-            }
-		}
-
-		//if no content is being added and the selection it non-empty, it is actually a deletion
-		if (inputType == 'insertText' && content == '') {
-			inputType = 'deleteContent';
-		}
-
-		//unwrap compositions
-		if (inputType == 'insertCompositionText') {
-			var currentContent = originalRange.toString();
-			if (content.startsWith(currentContent)) {
-				inputType = 'insertText';
-				originalRange.collapse(false);
-				selection.start = selection.end;
-			}
-		}
-
-		//console.log("selection is at:");
-		//console.log(selection);
-		
-        //hide caret
-        wrapper.classList.add('refreshing');
-		originalRange.collapse(true);
-		
-		//wait for render
-		if (!isWaitingForRender()) {
-			invokeAfterRender(function () { });
-		}
-
-        //drag selection?
-        if (dragSelection) {
-            //invoke drag event first
-            return invokeLineEdit(reference, callbackName, 'deleteByDrag', null, dragSelection, wrapper, null, true).then(function() {
-                //invoke actual edit event
-                return invokeLineEdit(reference, callbackName, inputType, content, selection, wrapper, copyRange);
-			});
-        } else {
-            //invoke edit event
-			return invokeLineEdit(reference, callbackName, inputType, content, selection, wrapper, copyRange);
-        }
-    }
-}
-
-function invokeLineEdit(reference: BlazorDotNetReference, callbackName: string,
-	inputType: string, content: string, selection: LineSelection,
-	wrapper: HTMLElement, copyRange: Range, ignoreSelection?: boolean): Promise<any> {
-	return invokeBlazor<JsMetalineEditResult>(reference, callbackName, {
-        inputType: inputType,
-		data: content,
-        selection: selection,
-	}).then(function (result) {
-		var oldRange = copyRange;
-		var afterRender = function () {
-			if (!ignoreSelection) {
-				if (result.selection) {
-					//set new range
-					setSelectionRange(wrapper, result.selection.metaline, result.selection.lineId, result.selection.lineIndex, result.selection.range);
-				} else if (oldRange) {
-					//restore old range
-					var selection = getSelection();
-					selection.removeAllRanges();
-					selection.addRange(oldRange);
-				}
-
-				//show caret
-				wrapper.classList.remove('refreshing');
-			}
-		}
-		
-		//show error
-		if (result.failReason)
-			showToast(`${result.failReason.label} (${result.failReason.code})`, 'Bearbeitungsfehler', 5000);
-
-		//no render coming (anymore)?
-		if (!result.willRender || supportsSynchronousInvoke) {
-			afterRender();
-			notifyRenderFinished();
-		} else {
-			return invokeAfterRender(afterRender);
-		}
-    });
-}
-
-function getLineId(node: Node): LineIdentifier {
-	var metalineId;
-	var lineId;
-	for (; node; node = node.parentElement) {
-		if (!('getAttribute' in node))
-			continue;
-
-		if (metalineId == null)
-			metalineId = (node as HTMLElement).getAttribute('data-metaline');
-		if (lineId == null)
-			lineId = (node as HTMLElement).getAttribute('data-line-index');
-
-		if (metalineId && lineId)
-			return {
-				metaline: metalineId,
-				line: parseInt(lineId)
-			};
-	}
 }
 
 function checkIsLine(node: Node): LineIdentifier {
@@ -760,7 +424,7 @@ function checkIsLine(node: Node): LineIdentifier {
 	};
 }
 
-function getLineAndOffset(node: Node, offset: number): LineSelectionAnchor {
+function getLineAndOffset(node: Node, offset: number): MetalineLineAnchor {
 	if (!offset)
 		offset = 0;
 
@@ -781,7 +445,7 @@ function getLineAndOffset(node: Node, offset: number): LineSelectionAnchor {
 	};
 }
 
-function getSelectionRange(selection: Selection, wrapper: HTMLElement): LineSelection {
+function getSelectionRange(selection: Selection, wrapper: HTMLElement): AnchorSelection<MetalineLineAnchor> {
 	if (selection.rangeCount == 0)
 		return null;
 	var range = selection.getRangeAt(0);

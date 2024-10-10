@@ -36,10 +36,10 @@ public enum AccidentalType : byte
     [EnumName("")]
     None,
 
-    [EnumName("♯", "#")]
+    [EnumName("#", "♯")]
     Sharp,
 
-    [EnumName("♭", "b")]
+    [EnumName("b", "♭")]
     Flat,
 }
 

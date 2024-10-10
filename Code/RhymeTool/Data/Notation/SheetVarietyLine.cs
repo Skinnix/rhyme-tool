@@ -1533,80 +1533,6 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			};
 		}
 
-		//private Action? TryMoveAttachment(VarietyComponent component, VarietyComponent.VarietyAttachment attachment,
-		//	ContentOffset contentMoveOffset, int displayMoveOffset, ISheetEditorFormatter? formatter)
-		//{
-		//	//Wird das Attachment nicht verschoben?
-		//	if (contentMoveOffset == ContentOffset.Zero && displayMoveOffset == 0)
-		//		return null;
-
-		//	//Wird das Attachment verschoben, aber in eine formatierungsbedingte Lücke, die die Verschiebung "schlucken" würde?
-		//	if (contentMoveOffset == ContentOffset.Zero)
-		//	{
-		//		//Verschiebe das Attachment um eine Stelle
-		//		contentMoveOffset = new ContentOffset(displayMoveOffset < 0 ? -1 : 1);
-		//	}
-
-		//	//Berechne den neuen Offset
-		//	var newContentOffset = attachment.Offset + contentMoveOffset;
-		//	if (newContentOffset < ContentOffset.Zero)
-		//	{
-		//		//Versuche das Attachment auf eine andere Komponente zu verschieben
-		//		return TryMoveAttachmentOver(component, attachment, displayMoveOffset, formatter);
-		//	}
-		//	else
-		//	{
-		//		var contentLength = component.Content.GetLength(formatter);
-		//		if (newContentOffset >= contentLength)
-		//		{
-		//			//Versuche das Attachment auf eine andere Komponente zu verschieben
-		//			return TryMoveAttachmentOver(component, attachment, displayMoveOffset, formatter);
-		//		}
-		//	}
-
-		//	//Wird at sich der Offset nicht verändern?
-		//	if (newContentOffset == attachment.Offset)
-		//		return null;
-
-		//	//Bearbeitung wird funktionieren
-		//	return () =>
-		//	{
-		//		//Verschiebe das Attachment
-		//		attachment.SetOffset(newContentOffset);
-		//	};
-		//}
-
-		//private Action? TryMoveAttachmentOver(VarietyComponent component, VarietyComponent.VarietyAttachment attachment,
-		//	int moveOffset, ISheetEditorFormatter? formatter = null)
-		//{
-		//	var newOffset = attachment.RenderBounds.StartOffset + moveOffset;
-		//	//Finde die Komponente, in die das Attachment verschoben werden soll
-		//	var componentOffset = attachment.Offset + newOffset;
-		//	var targetComponent = Line.components.FirstOrDefault(c
-		//		=> c.TotalRenderBounds.StartOffset <= componentOffset && c.TotalRenderBounds.EndOffset > componentOffset);
-
-		//	//Nicht gefunden?
-		//	if (targetComponent is null)
-		//		return null;
-
-		//	//Finde den Offset innerhalb der Komponente
-
-		//	//Finde die vorherige Komponente
-		//	var componentIndex = Line.components.IndexOf(component);
-		//	componentIndex--;
-		//	if (componentIndex > 0 && Line.components[componentIndex - 1] is VarietyComponent previousComponent)
-		//	{
-		//		//Ist in der vorherigen Komponente noch Platz?
-		//		var previousContentLength = previousComponent.Content.GetLength(formatter);
-		//		newOffset += previousContentLength;
-		//	}
-		//	else
-		//	{
-		//		//Verschiebe das Attachment an den Anfang der Komponente
-		//		newOffset = ContentOffset.Zero;
-		//	}
-		//}
-
 		public ReasonBase? SupportsEdit(SheetDisplayMultiLineEditingContext context)
 		{
 			//Bin ich Start- oder Endzeile?
@@ -1646,10 +1572,11 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 	public enum SpecialContentType
 	{
 		None = 0,
-		Chord = 1,
-		Fingering = 2,
+		Text = 1,
+		Chord = 2,
+		Fingering = 4,
 
-		All = Chord | Fingering,
+		All = Text | Chord | Fingering,
 	}
 
 	internal readonly record struct MergeResult(ComponentContent NewContent, ContentOffset LengthBefore)
@@ -1856,8 +1783,8 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			var afterTextContent = content.ToString(formatter);
 			var stringOffset = Math.Min(offset.Value, textContent.Length);
 
-			//Sonderfall: Wird ein Element hinten an einen Akkord angefügt?
-			if (Chord is not null && stringOffset >= textContent.Length)
+			//Sonderfall: Wird ein Text hinten an einen Akkord angefügt?
+			if (Chord is not null && content.Type is ContentType.Word && stringOffset >= textContent.Length)
 			{
 				//Verwende den ursprünglichen Text des Akkords
 				textContent = Chord.OriginalText;
@@ -2585,14 +2512,22 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			if (next is not VarietyComponent varietyMerge)
 				return null;
 
+			//Prüfe, zu welchen Typen der Inhalt zusammengeführt werden kann
+			var mergeType = CanMergeTo(Content, varietyMerge.Content)
+				& (Owner?.GetAllowedTypes(this) ?? SpecialContentType.Text);
+
+			//Kann der Inhalt gar nicht zusammengeführt werden?
+			if (mergeType == SpecialContentType.None)
+				return null;
+
 			//Füge Inhalt zusammen
 			var lengthBefore = Content.GetLength(formatter);
 			var mergeLengthBefore = varietyMerge.Content.GetLength(formatter);
-			var mergeResult = Content.MergeContents(varietyMerge.Content, offset, Owner?.GetAllowedTypes(this) ?? SpecialContentType.None, formatter);
+			var mergeResult = Content.MergeContents(varietyMerge.Content, offset, mergeType, formatter);
 
-			//Passen die Inhaltstypen nicht zusammen?
-			if (!CanAppendTo(Content, varietyMerge.Content, mergeResult.NewContent))
-				return null;
+			////Passen die Inhaltstypen nicht zusammen?
+			//if (!CanAppendTo(Content, varietyMerge.Content, mergeResult.NewContent))
+			//	return null;
 
 			Content = mergeResult.NewContent;
 			ResetDisplayCache();
@@ -2670,6 +2605,49 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 
 			ResetDisplayCache();
 			return true;
+		}
+
+		private static SpecialContentType CanMergeTo(ComponentContent left, ComponentContent right)
+		{
+			//Leerzeichen können nur mit Leerzeichen kombiniert werden
+			if (left.Type == ContentType.Space)
+				return right.Type == ContentType.Space ? SpecialContentType.Text : SpecialContentType.None;
+			else if (right.Type == ContentType.Space)
+				return SpecialContentType.None;
+
+			switch (left.Type)
+			{
+				//Fingerings nur kombiniert werden, wenn dabei Fingerings oder Text herauskommen
+				case ContentType.Fingering:
+					return right.Type switch
+					{
+						ContentType.Punctuation or ContentType.Word or ContentType.Fingering => SpecialContentType.Fingering | SpecialContentType.Text,
+						_ => SpecialContentType.None,
+					};
+
+				//Akkorde können nur kombiniert werden, wenn dabei Akkorde oder Text herauskommen
+				case ContentType.Chord:
+					return right.Type switch
+					{
+						ContentType.Word or ContentType.Punctuation or ContentType.Fingering => SpecialContentType.Chord | SpecialContentType.Text,
+						_ => SpecialContentType.None,
+					};
+
+				//An Punctuations können nur Punctuations angehängt werden
+				case ContentType.Punctuation:
+					return right.Type == ContentType.Punctuation ? SpecialContentType.Text : SpecialContentType.None;
+
+				//An Wörter kann alles außer Leerzeichen oder Punctuations angehängt werden
+				case ContentType.Word:
+					return right.Type switch
+					{
+						ContentType.Word or ContentType.Chord or ContentType.Fingering => SpecialContentType.Text | SpecialContentType.Chord | SpecialContentType.Fingering,
+						_ => SpecialContentType.None,
+					};
+
+				default:
+					return SpecialContentType.None;
+			}
 		}
 
 		private static bool CanAppendTo(ComponentContent left, ComponentContent right, ComponentContent total)

@@ -27,9 +27,6 @@ public readonly record struct ChordDegree(byte Value, ChordDegreeModifier Modifi
         ? Value.ToString()
         : $"{Modifier.GetDisplayName()}{Value}";
 
-    public string ToString(ISheetFormatter? formatter)
-        => formatter?.Format(this) ?? ToString();
-
     public static int TryRead(ReadOnlySpan<char> s, out ChordDegree degree)
     {
         degree = default;
@@ -100,8 +97,8 @@ public record struct ChordAlteration(ChordAlterationType Type, ChordDegree Degre
     public override string ToString()
         => $"{Type.GetDisplayName()}{Degree}";
 
-    public string ToString(ISheetFormatter? formatter)
-        => formatter?.Format(this) ?? ToString();
+    public string ToString(int index, ISheetFormatter? formatter)
+        => formatter?.Format(this, index) ?? ToString();
 
     public static int TryRead(ReadOnlySpan<char> s, out ChordAlteration alteration)
     {

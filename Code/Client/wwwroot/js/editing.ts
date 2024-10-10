@@ -11,11 +11,12 @@ declare interface ObservedModification {
 }
 
 declare interface LineIdentifier {
-	metaline: string,
-	line: number | null,
+	metaline: string;
+	line: number | null;
 }
 
 declare interface TextIndex<T> {
+	node: Node;
 	offset: number;
 	data: T;
 }
@@ -25,30 +26,36 @@ declare interface NodeSelectionAnchor {
 	offset: number,
 }
 
+declare interface AnchorSelection<TAnchor> {
+	start: TAnchor;
+	end: TAnchor;
+}
+
 declare interface NodeSelection {
 	start: NodeSelectionAnchor,
 	end: NodeSelectionAnchor,
 }
 
-declare interface LineSelectionAnchor extends LineIdentifier {
-	offset: number,
+declare interface MetalineLineAnchor extends LineIdentifier {
+	offset: number;
+	lineNode?: Node;
 }
 
-declare interface LineSelection {
-	start: LineSelectionAnchor,
-	end: LineSelectionAnchor,
+declare interface LineNodeAnchor {
+	offset: number;
+	lineNode: Node;
 }
 
 declare interface ModificationData {
 	inputType: string,
 	data: string,
-	editRange?: LineSelection,
+	editRange?: AnchorSelection<MetalineLineAnchor>,
 }
 
 declare interface MetalineEditResult {
 	success: boolean,
 	willRender: boolean,
-	selection: LineSelection | null,
+	selection: AnchorSelection<MetalineLineAnchor> | null,
 	failReason?: {
 		label: string,
 		code: string,
@@ -122,7 +129,7 @@ class ModificationEditor implements Destructible {
 
 	private isUncancelable = (event: InputEvent) => false;
 	
-	constructor(private editor: HTMLElement, private callback: EditorCallback) {
+	constructor(public editor: HTMLElement, private callback: EditorCallback) {
 		this.editor.addEventListener('beforeinput', this.handleBeforeInput.bind(this));
 		this.editor.addEventListener('input', this.handleInput.bind(this));
 		this.editor.addEventListener('compositionstart', this.handleCompositionStart.bind(this));
@@ -226,7 +233,7 @@ class ModificationEditor implements Destructible {
 	private handleBeforeInput(event: InputEvent) {
 		event.stopImmediatePropagation();
 
-		let editRange: LineSelection | null = null;
+		let editRange: AnchorSelection<MetalineLineAnchor> | null = null;
 		if (event.inputType == 'insertCompositionText') {
 			//Findet gerade gar keine Komposition statt?
 			if (!this.actualCompositionUpdate) {
@@ -240,6 +247,12 @@ class ModificationEditor implements Destructible {
 			if (targetRange) {
 				editRange = this.getLineSelection(targetRange);
 			}
+		}
+
+		//Lese Daten
+		let data = event.data;
+		if (!event.data && event.dataTransfer) {
+			data = event.dataTransfer.getData('text');
 		}
 
 		//Hole Auswahl
@@ -266,7 +279,7 @@ class ModificationEditor implements Destructible {
 			this.callback(this, {
 				inputType: event.inputType,
 				editRange: editRange,
-				data: event.data
+				data: data
 			}, currentRange, this.pauseRender.bind(this));
 		} else {
 			//Das Event wurde nicht verhindert und muss zunächst rückgängig gemacht werden
@@ -284,7 +297,7 @@ class ModificationEditor implements Destructible {
 					this.callback(this, {
 						inputType: event.inputType,
 						editRange: editRange,
-						data: event.data
+						data: data
 					}, currentRange, this.pauseRender.bind(this));
 				}, debounce);
 			};
@@ -339,8 +352,8 @@ class ModificationEditor implements Destructible {
 	};
 
 	private revertModification(modification: ObservedModification) {
-		console.log("Revert modification", modification);
-		console.log(JSON.stringify(modification, null, 2))
+		//console.log("Revert modification", modification);
+		//console.log(JSON.stringify(modification, null, 2))
 		var mutations = Array.from(modification.mutations.reverse());
 		while (mutations.length != 0) {
 			for (var m = 0; m < mutations.length; m++) {
@@ -410,34 +423,34 @@ class ModificationEditor implements Destructible {
 		}
 	}
 
-	public getCurrentSelection(): LineSelection | null {
-		let range = getSelection()?.getRangeAt(0);
+	public getCurrentSelection(documentSelection?: Selection | undefined): AnchorSelection<MetalineLineAnchor> | null {
+		if (documentSelection === undefined)
+			documentSelection = getSelection();
+
+		if (!documentSelection || documentSelection.rangeCount == 0)
+			return null;
+		let range = getSelection().getRangeAt(0);
 		if (!range)
+			return null;
+
+		if (!this.editor.contains(range.startContainer) || !this.editor.contains(range.endContainer))
 			return null;
 
 		return this.getLineSelection(range);
 	}
 
-	public setCurrentSelection(selection: LineSelection | null): Selection {
+	public setCurrentSelection(lineSelection: AnchorSelection<MetalineLineAnchor> | null): Selection {
+		//Nichts auswählen?
 		let documentSelection = getSelection();
-		if (!selection) {
+		if (!lineSelection) {
 			if (documentSelection.rangeCount != 0)
 				documentSelection.removeAllRanges();
 
+			this.revertSelection = null;
 			return documentSelection;
 		}
 
-		let startMetaline = this.editor.querySelector(`.metaline[data-metaline="${selection.start.metaline}"]`);
-		let endMetaline = selection.end.metaline == selection.start.metaline ? startMetaline
-			: this.editor.querySelector(`.metaline[data-metaline="${selection.end.metaline}"]`);
-		let startLine = findLine(startMetaline, selection.start.line);
-		let endLine = selection.end.metaline == selection.start.metaline && selection.end.line == selection.start.line ? startMetaline
-			: findLine(endMetaline, selection.end.line);
-
-		let start = this.getNode(startLine, selection.start.offset);
-		let end = selection.end.metaline == selection.start.metaline && selection.end.line == selection.start.line && selection.end.offset == selection.start.offset ? start
-			: this.getNode(endLine, selection.end.offset);
-			
+		//Hole/erzeuge Range
 		let range: Range;
 		if (documentSelection.rangeCount) {
 			range = documentSelection.getRangeAt(0);
@@ -446,9 +459,37 @@ class ModificationEditor implements Destructible {
 			documentSelection.addRange(range);
 		}
 
+		//Setze Range
+		this.setLineSelectionRange(range, lineSelection);
+
+		//Speichere die Auswahl, um sie später wiederherstellen zu können
+		this.revertSelection = new StaticRange(range);
+		return documentSelection;
+	}
+
+	public setLineSelectionRange(range: Range, lineSelection: AnchorSelection<MetalineLineAnchor> | AnchorSelection<LineNodeAnchor>) {
+		let startLine = lineSelection.start.lineNode;
+		let endLine = lineSelection.end.lineNode;
+
+		if (!(startLine instanceof HTMLElement && endLine instanceof HTMLElement)) {
+			let metalineLineSelection = <AnchorSelection<MetalineLineAnchor>>lineSelection;
+
+			let startMetaline = startLine ? null : this.editor.querySelector(`.metaline[data-metaline="${metalineLineSelection.start.metaline}"]`);
+			let endMetaline = metalineLineSelection.end.metaline == metalineLineSelection.start.metaline ? startMetaline
+				: endLine ? null
+					: this.editor.querySelector(`.metaline[data-metaline="${metalineLineSelection.end.metaline}"]`);
+			startLine ??= findLine(startMetaline, metalineLineSelection.start.line);
+			endLine ??= metalineLineSelection.end.metaline == metalineLineSelection.start.metaline && metalineLineSelection.end.line == metalineLineSelection.start.line ? startMetaline
+				: findLine(endMetaline, metalineLineSelection.end.line);
+		}
+
+		let start = this.getNode(startLine, lineSelection.start.offset);
+		let end = startLine === endLine && lineSelection.end.offset == lineSelection.start.offset ? start
+			: this.getNode(endLine, lineSelection.end.offset);
+
 		if (start.node instanceof Text && start.offset > start.node.length)
 			range.setStart(start.node, start.node.length);
-		else if(start.node instanceof HTMLElement && start.offset > start.node.childElementCount)
+		else if (start.node instanceof HTMLElement && start.offset > start.node.childElementCount)
 			range.setStart(start.node, start.node.childElementCount);
 		else
 			range.setStart(start.node, start.offset);
@@ -460,9 +501,6 @@ class ModificationEditor implements Destructible {
 		else
 			range.setEnd(end.node, end.offset);
 
-		this.revertSelection = new StaticRange(range);
-		return documentSelection;
-
 		function findLine(metaline: Element, line: number): Element {
 			if (line === ModificationEditor.FIRST_LINE_ID) {
 				return metaline.querySelector('.line[data-line]');
@@ -471,11 +509,11 @@ class ModificationEditor implements Destructible {
 				return lines[lines.length - 1];
 			}
 
-			return metaline.querySelector(`.line[data-line="${selection.start.line}"]`);
+			return metaline.querySelector(`.line[data-line="${line}"]`);
 		}
 	}
 
-	private getLineSelection(range: AbstractRange): LineSelection {
+	public getLineSelection(range: AbstractRange, includeNode?: boolean): AnchorSelection<MetalineLineAnchor> {
 		//Finde Offset des Startknotens
 		let start = this.getTextIndex(range.startContainer, this.getLineInfo, range.startOffset);
 
@@ -483,28 +521,32 @@ class ModificationEditor implements Destructible {
 		let end = range.endContainer !== range.startContainer ? this.getTextIndex(range.endContainer, this.getLineInfo, range.endOffset) : {
 			offset: start.offset + range.endOffset - range.startOffset,
 			data: start.data,
+			node: start.node,
 		};
 
 		return {
 			start: {
 				metaline: start.data.metaline,
 				line: start.data.line,
-				offset: start.offset
+				offset: start.offset,
+				lineNode: includeNode ? start.node : undefined,
 			},
 			end: {
 				metaline: end.data.metaline,
 				line: end.data.line,
-				offset: end.offset
+				offset: end.offset,
+				lineNode: includeNode ? end.node : undefined,
 			}
 		}
 	}
 
-	private getTextIndex<T>(node: Node, stopCondition: (node: Node) => T | null, offset?: number): TextIndex<T> {
+	private getTextIndex<T>(node: Node, stopCondition: (node: Node) => T | null, offset?: number): TextIndex<T> | null {
 		if (!offset)
 			offset = 0;
 
 		let data = stopCondition(node);
-		for (let current = node; !data; current = current.parentElement, data = stopCondition(current)) {
+		let current: Node;
+		for (current = node; current && !data; current = current.parentElement, data = stopCondition(current)) {
 			//Addiere die Länge aller Siblings
 			for (var sibling = current.previousSibling; sibling; sibling = sibling.previousSibling) {
 				if (sibling.nodeType == Node.COMMENT_NODE)
@@ -514,7 +556,11 @@ class ModificationEditor implements Destructible {
 			}
 		}
 
+		if (!data)
+			return null;
+
 		return {
+			node: current,
 			offset: offset,
 			data: data
 		};
@@ -585,7 +631,7 @@ class ModificationEditor implements Destructible {
 		let nodeElement = <HTMLElement>node;
 
 		let lineId: number | null = null;
-		if (nodeElement.classList.contains('line')) {
+		if (node.classList.contains('line')) {
 			lineId = parseInt(nodeElement.getAttribute('data-line'));
 			nodeElement = nodeElement.parentElement.parentElement;
 		} else if (nodeElement.classList.contains('metaline-lines')) {
@@ -599,5 +645,197 @@ class ModificationEditor implements Destructible {
 			metaline: metalineId,
 			line: lineId
 		};
+	}
+}
+
+class SelectionObserver implements Destructible {
+	private supportsMultipleRanges = false; // /Firefox/.test(navigator.userAgent);
+	private customSelection: HTMLElement;
+	private editor: HTMLElement;
+	private editorWrapper: HTMLElement;
+
+	constructor(private modificationEditor: ModificationEditor) {
+		this.editor = modificationEditor.editor;
+		this.editorWrapper = this.editor.parentElement;
+		this.customSelection = this.editorWrapper.querySelector('.custom-selection');
+
+		document.addEventListener('selectionchange', this.handleSelectionChange.bind(this));
+		this.editor.addEventListener('dragstart', this.handleDragStart.bind(this));
+	}
+
+	destroy(): void {
+		document.removeEventListener('selectionchange', this.handleSelectionChange.bind(this));
+		this.editor.removeEventListener('dragstart', this.handleDragStart.bind(this));
+	}
+
+	private handleSelectionChange(event: Event) {
+		const documentSelection = getSelection();
+		if (!documentSelection || documentSelection.rangeCount == 0 || documentSelection.isCollapsed)
+			return this.resetCustomSelections();
+
+		//Mehrere Ranges?
+		let range = documentSelection.getRangeAt(0);
+		if (documentSelection.rangeCount > 1) {
+			let firstRange = range;
+			let lastRange = documentSelection.getRangeAt(documentSelection.rangeCount - 1);
+			if (lastRange.startContainer.compareDocumentPosition(firstRange.startContainer) & Node.DOCUMENT_POSITION_FOLLOWING) {
+				firstRange = lastRange;
+				lastRange = range;
+			}
+
+			range = document.createRange();
+			if (firstRange.endContainer.compareDocumentPosition(firstRange.startContainer) & Node.DOCUMENT_POSITION_FOLLOWING) {
+				range.setStart(lastRange.endContainer, lastRange.endOffset);
+				range.setEnd(firstRange.startContainer, firstRange.startOffset);
+			} else {
+				range.setStart(firstRange.startContainer, firstRange.startOffset);
+				range.setEnd(lastRange.endContainer, lastRange.endOffset);
+			}
+		}
+
+		//Ist die Auswahl nicht im Editor?
+		if (!this.editor.contains(range.startContainer) || !this.editor.contains(range.endContainer))
+			return this.resetCustomSelections();
+			
+		//Finde die Metazeilen/Zeilen
+		const lineSelection = this.modificationEditor.getLineSelection(range, true);
+
+		//Mehr als eine Metazeile?
+		if (lineSelection.start.metaline != lineSelection.end.metaline)
+			return this.resetCustomSelections();
+
+		//Metazeile mit Box-Auswahl?
+		const metaline = lineSelection.start.lineNode?.parentElement?.parentElement;
+		if (!metaline)
+			return this.resetCustomSelections();
+		const selectionType = metaline.getAttribute('data-selection');
+		if (!selectionType)
+			return this.resetCustomSelections();
+			
+		switch (selectionType) {
+			case 'box':
+				this.adjustBoxSelection(documentSelection, range, lineSelection);
+				break;
+			default:
+				this.resetCustomSelections();
+				break;
+		}
+	}
+
+	private resetCustomSelections() {
+		//Blende die Box aus
+		this.customSelection.className = 'custom-selection';
+	}
+
+	private adjustBoxSelection(documentSelection: Selection, range: Range, lineSelection: AnchorSelection<MetalineLineAnchor>) {
+		//Nur eine Zeile?
+		/*if (lineSelection.start.line == lineSelection.end.line)
+			return this.resetCustomSelections();*/
+
+		//Nicht unterstützt?
+		if (!this.supportsMultipleRanges)
+			return emulateBoxSelection.bind(this)(range);
+
+		//Invertiere ggf. die Auswahl
+		if (lineSelection.end.lineNode.compareDocumentPosition(lineSelection.start.lineNode) & Node.DOCUMENT_POSITION_FOLLOWING) {
+			lineSelection = {
+				start: lineSelection.end,
+				end: lineSelection.start,
+			};
+		}
+
+		//Ermittle die Zeilen
+		const startLine = lineSelection.start.lineNode;
+		const endLine = lineSelection.end.lineNode;
+		if (!(startLine instanceof HTMLElement) || !(endLine instanceof HTMLElement))
+			return this.resetCustomSelections();
+		let lines = [startLine];
+		for (let current = startLine.nextSibling; current != endLine; current = current.nextSibling) {
+			if (!(current instanceof HTMLElement) || !current.classList.contains('line'))
+				continue;
+
+			lines.push(current);
+		}
+		lines.push(endLine);
+
+		//Ermittle die Offsets
+		const startOffset = lineSelection.start.offset;
+		const endOffset = lineSelection.end.offset;
+
+		//Erzeuge die Ranges
+		documentSelection.removeAllRanges();
+		for (let i = 0; i < lines.length; i++) {
+			//Erzeuge die Range
+			let line = lines[i];
+			let lineRange = document.createRange();
+
+			//Setze die Range
+			this.modificationEditor.setLineSelectionRange(lineRange, {
+				start: {
+					lineNode: line,
+					offset: startOffset,
+				},
+				end: {
+					lineNode: line,
+					offset: endOffset,
+				}
+			});
+
+			//Füge die Range hinzu
+			documentSelection.addRange(lineRange);
+		}
+
+		//Hat das nicht funktioniert?
+		if (documentSelection.rangeCount != lines.length) {
+			this.supportsMultipleRanges = false;
+			emulateBoxSelection.bind(this)(range);
+		}
+		
+		function emulateBoxSelection(range: Range) {
+			//Positioniere die Box
+			let rects = range.getClientRects();
+			let startRect = rects[0];
+			let endRect = rects[rects.length - 1];
+			if (startRect.top > endRect.top) {
+				let temp = startRect;
+				startRect = endRect;
+				endRect = temp;
+			}
+			let x = startRect.left;
+			if (endRect.left < x)
+				x = endRect.right;
+			let y = startRect.top;
+			let width = +(startRect.left - endRect.right);
+			if (width < 0)
+				width = -width;
+			let height = endRect.bottom - startRect.top;
+			let wrapperRect = this.editorWrapper.getBoundingClientRect();
+
+			this.customSelection.style.top = (y - wrapperRect.top) + 'px';
+			this.customSelection.style.left = (x - wrapperRect.left) + 'px';
+			this.customSelection.style.width = width + 'px';
+			this.customSelection.style.height = height + 'px';
+
+			//Mache die Box sichtbar
+			this.customSelection.className = 'custom-selection custom-selection-box';
+		}
+
+    }
+
+	private handleDragStart(event: DragEvent) {
+		if (!(event.target instanceof Node))
+			return;
+
+		for (let current = event.target; current && current != this.editor; current = current.parentElement) {
+			if (!(current instanceof HTMLElement))
+				continue;
+
+			let selectionType = current.getAttribute('data-selection');
+			if (selectionType == 'box') {
+				event.preventDefault();
+				event.stopPropagation();
+				return false;
+			}
+		}
 	}
 }

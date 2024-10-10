@@ -13,31 +13,44 @@
     void RenderNote(Note note, bool isBassNote = false)
     {
         var format = (isBassNote ? Formatter?.FormatBassNote(note) : Formatter?.FormatNote(note))
-            ?? (note.Accidental == AccidentalType.None ? new(note.Type.GetDisplayName())
-            : new(note.Type.GetDisplayName(), note.Accidental.GetDisplayName()));
-
-        @(format.Type)
-
-        <span class="accidental">@format.Accidental</span>
+            ?? new(note.Type.GetDisplayName(), note.Accidental.GetDisplayName());
+            
+        if (!string.IsNullOrEmpty(format.Accidental))
+        {
+            @(format.Type)<span class="accidental" data-accidental="@format.Accidental"><span class="accidental-content">@format.Accidental</span></span>
+        }
+        else
+        {
+            @(format.Type)
+        }
     }
 
     void RenderChordContent(Chord chord)
     {
-        <span class="chord-root">@{ RenderNote(chord.Root); }</span><span class="chord-quality">@chord.Quality.ToString(Formatter)</span>
+        <span class="chord-root">@{ RenderNote(chord.Root); }</span><span class="chord-quality">@(Formatter?.Format(chord.Quality) ?? chord.Quality.ToString())</span>
 
         @if (chord.Alterations.Count > 0)
         {
-            var firstAlteration = true;
+            var i = 0;
             <span class="chord-alterations">
                 @foreach (var alteration in chord.Alterations)
                 {
-                    if (!firstAlteration)
+                    var alterationFormat = Formatter?.FormatAlteration(alteration, i)
+                        ?? new AlterationFormat(alteration.Type.ToString(), alteration.Degree.Value.ToString(), alteration.Degree.Modifier.ToString(), false);
+
+                    if (i++ != 0)
                     {
                         <span class="chord-alteration-separator">/</span>
                     }
-                    firstAlteration = false;
 
-                    <span class="chord-alteration">@alteration.ToString(Formatter)</span>
+                    if (alterationFormat.ModifierAfter)
+                    {
+                        <span class="chord-alteration">@(alterationFormat.Type)@(alterationFormat.Degree)<span class="alteration-modifier" data-modifier="@(alterationFormat.Modifier)"><span class="alteration-modifier-content">@(alterationFormat.Modifier)</span></span></span>
+                    }
+                    else
+                    {
+                        <span class="chord-alteration">@(alterationFormat.Type)<span class="alteration-modifier" data-modifier="@(alterationFormat.Modifier)"><span class="alteration-modifier-content">@(alterationFormat.Modifier)</span></span>@(alterationFormat.Degree)</span>
+                    }
                 }
             </span>
         }
@@ -122,7 +135,7 @@
 
 @if (Line is not null)
 {
-    <span class="metaline" data-metaline="@Line.Guid" data-type="@Line.GetType()?.Name" data-render-key="@(renderKey++)">
+    <span class="metaline" data-metaline="@Line.Guid" data-type="@Line.GetType()?.Name" data-render-key="@(renderKey++)" @attributes="GetAdditionalAttributes()">
         <span class="metaline-controls" contenteditable="false"><div class="metaline-bracket"></div>@*<MetalineTypeButton Line="Line" />*@</span><span class="metaline-lines">
             @foreach (var display in (renderedLines = Line.CreateDisplayLines(Formatter).ToArray()))
             {
@@ -231,6 +244,12 @@
         }
 
         return type;
+    }
+
+    private IEnumerable<KeyValuePair<string, object?>> GetAdditionalAttributes()
+    {
+        if (Line is SheetTabLine)
+            yield return new("data-selection", "box");
     }
 
     private object? GetKey(SheetDisplayLineElement element)
