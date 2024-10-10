@@ -50,7 +50,7 @@ public sealed record Chord(Note Root, ChordQuality Quality, string OriginalText)
     }
 
     public string ToString(ISheetFormatter? formatter)
-        => formatter?.Format(this) ?? ToString();
+        => formatter?.ToString(this) ?? ToString();
 
 	public static int TryRead(ISheetEditorFormatter? formatter, ReadOnlySpan<char> s, out Chord? chord)
 		=> formatter?.TryReadChord(s, out chord) ?? TryRead(s, out chord);

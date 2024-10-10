@@ -98,7 +98,7 @@ public record struct ChordAlteration(ChordAlterationType Type, ChordDegree Degre
         => $"{Type.GetDisplayName()}{Degree}";
 
     public string ToString(int index, ISheetFormatter? formatter)
-        => formatter?.Format(this, index) ?? ToString();
+        => formatter?.ToString(this, index) ?? ToString();
 
     public static int TryRead(ReadOnlySpan<char> s, out ChordAlteration alteration)
     {

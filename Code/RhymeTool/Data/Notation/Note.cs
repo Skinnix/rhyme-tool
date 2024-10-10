@@ -69,7 +69,7 @@ public readonly record struct Note(NoteType Type, AccidentalType Accidental)
         : $"{Type.GetDisplayName()}{Accidental.GetDisplayName()}";
 
     public string ToString(ISheetFormatter? formatter)
-        => formatter?.Format(this) ?? ToString();
+        => formatter?.ToString(this) ?? ToString();
 
     public static int TryRead(ReadOnlySpan<char> s, out Note note)
     {
