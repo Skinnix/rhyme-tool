@@ -110,6 +110,9 @@ public record MetalineEditResult
 	public static MetalineEditResult Fail(ReasonBase reason)
 		=> new(reason);
 
+	public static MetalineEditResult SuccessWithoutSelection()
+		=> new((MetalineSelectionRange?)null!);
+
 	public void Execute(SheetDocument document, SheetLine line)
 	{
 		//Füge ggf. Zeilen hinzu oder entferne sie
@@ -123,22 +126,26 @@ public record MetalineSelectionRange
 	public const int FIRST_LINE = -1;
 	public const int LAST_LINE = -2;
 
-	public SheetLine Metaline { get; init; }
-	public int LineId { get; init; }
+	public SheetLine StartMetaline { get; init; }
+	public SheetLine EndMetaline { get; init; }
+
+	public int StartLineId { get; init; }
+	public int EndLineId { get; init; }
+
 	public SimpleRange Range { get; init; }
 
 	public MetalineSelectionRange(ISheetDisplayLineEditing editing, SimpleRange range)
 	{
-		Metaline = editing.Line;
-		LineId = editing.LineId;
+		StartMetaline = EndMetaline = editing.Line;
+		StartLineId = EndLineId = editing.LineId;
 		Range = range;
 	}
 
 	public MetalineSelectionRange(SheetLine metaline, SimpleRange range, int lineId)
 	{
-		Metaline = metaline;
+		StartMetaline = EndMetaline = metaline;
 		Range = range;
-		LineId = lineId;
+		StartLineId = EndLineId = lineId;
 	}
 }
 

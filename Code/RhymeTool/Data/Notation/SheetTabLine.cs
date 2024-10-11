@@ -18,6 +18,7 @@ public class SheetTabLine : SheetLine
 	public static readonly Reason CannotEditMultipleNotes = new("Mehrere Noten können nicht gleichzeitig bearbeitet werden");
 	public static readonly Reason NotANumber = new("Der Inhalt muss eine Zahl sein");
 	public static readonly Reason CannotEditBarLines = new("Taktstriche können nicht bearbeitet werden");
+	public static readonly Reason InvalidPosition = new("Ungültige Position");
 
 	private ISheetBuilderFormatter? cachedFormatter;
 	private IEnumerable<SheetDisplayLine>? cachedLines;
@@ -129,7 +130,7 @@ public class SheetTabLine : SheetLine
 			if (currentBarLength >= BarLength)
 			{
 				builder.AddBarLine();
-				currentBarLength = 0;
+				currentBarLength = 1;
 			}
 			else
 			{
@@ -237,6 +238,11 @@ public class SheetTabLine : SheetLine
 
 	public class TabLineDefinition(SheetTabLine owner, int lineIndex, Note note) : ISheetDisplayLineEditing
 	{
+		private const int INDEX_BAR_LINE = -1;
+		private const int INDEX_INVALID = -2;
+
+		private readonly int lineIndex = lineIndex;
+
 		public SheetLine Line => owner;
 		public int LineId => lineIndex;
 
@@ -259,89 +265,334 @@ public class SheetTabLine : SheetLine
 
 		DelayedMetalineEditResult ISheetDisplayLineEditing.TryDeleteContent(SheetDisplayLineEditingContext context, SheetDisplayMultiLineEditingContext? multilineContext,
 			DeleteDirection direction, DeleteType type, ISheetEditorFormatter? formatter)
-			=> TryDeleteContent(context, multilineContext, direction, type, 0, formatter);
-		public DelayedMetalineEditResult TryDeleteContent(SheetDisplayLineEditingContext context, SheetDisplayMultiLineEditingContext? multilineContext, 
-			DeleteDirection direction, DeleteType type, int selectionOffset, ISheetEditorFormatter? formatter = null)
 		{
+			//Einzeilige Bearbeitung?
+			if (multilineContext is null)
+				return TryDeleteContent(context, context.SelectionRange, direction, type, true, out _, formatter);
+
+			//Die StartLine kümmert sich um alles
+			if (multilineContext.StartLine != this)
+			{
+				//Keine Bearbeitung und keine Auswahl nötig
+				return new DelayedMetalineEditResult(MetalineEditResult.SuccessWithoutSelection);
+			}
+
 			//Lese tatsächliche Auswahl
 			var range = GetActualEditRange(context, multilineContext);
-			if (range.Length > 0)
-				return DelayedMetalineEditResult.Fail(CannotEditMultipleNotes);
 
-			//Lese Position
-			var editIndex = range.Start;
-			if (direction == DeleteDirection.Backward)
-				editIndex--;
-			var (barIndex, noteIndex, component) = GetBarAndNoteIndex(editIndex);
-
-			//Keine Komponente?
-			if (component is null)
-				return NoEdit(context);
-
-			//Keine Note?
-			var note = component.TryGetNote(lineIndex);
-			if (note.IsEmpty)
-				return NoEdit(context);
-
-			//Lösche die Note
-			return new(() =>
+			//Bearbeite alle betroffenen Zeilen
+			var lineResults = new List<DelayedMetalineEditResult>();
+			foreach (var line in owner.Lines.SkipWhile(l => l != multilineContext.StartLine))
 			{
-				component.SetNote(lineIndex, default);
-				if (component.IsEmpty)
-					owner.Components[barIndex * owner.BarLength + noteIndex] = null;
+				//Bereite die Bearbeitung vor
+				var lineResult = line.TryDeleteContent(context, range, direction, type, false, out var willChange, formatter);
+				if (!lineResult.Success)
+					return lineResult;
+
+				//Keine Bearbeitung?
+				if (!willChange)
+					continue;
+
+				//Speichere die Bearbeitung
+				lineResults.Add(lineResult);
+				if (line == multilineContext.EndLine)
+					break;
+			}
+
+			//Keine Veränderung?
+			if (lineResults.Count == 0)
+				return NoEdit(context);
+
+			//Führe die Bearbeitungen aus
+			return new DelayedMetalineEditResult(() =>
+			{
+				//Führe aus und speichere die erste Bearbeitung
+				MetalineEditResult? firstResult = null;
+				foreach (var lineResult in lineResults)
+				{
+					var result = lineResult.Execute!();
+					firstResult ??= result;
+				}
+
+				//Modified-Event
 				owner.RaiseModifiedAndInvalidateCache();
 
-				return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAt(editIndex + selectionOffset)));
+				//Erfolg? (Safeguard)
+				if (!firstResult!.Success)
+					return firstResult;
+
+				//Mehrzeilige Selektion
+				return new MetalineEditResult(firstResult!.NewSelection with
+				{
+					EndLineId = multilineContext.EndLine.LineId,
+				});
+			});
+		}
+		private DelayedMetalineEditResult TryDeleteContent(SheetDisplayLineEditingContext context, SimpleRange range,
+			DeleteDirection direction, DeleteType type, bool raiseEvent, out bool willChange, ISheetEditorFormatter? formatter = null)
+		{
+			//Erweitere leere Ranges in Richtung der Löschung
+			if (range.Length == 0)
+			{
+				if (direction == DeleteDirection.Backward)
+					range = new(range.Start - 1, range.Start);
+				else
+					range = new(range.Start, range.Start + 1);
+			}
+
+			//Finde Komponenten
+			var hasBarLine = false;
+			var hasInvalid = false;
+			var components = Enumerable.Range(range.Start, range.Length)
+				.Select(GetBarAndNoteIndex)
+				.Where(c =>
+				{
+					if (c.NoteIndex == INDEX_BAR_LINE)
+						hasBarLine = true;
+					else if (c.NoteIndex == INDEX_INVALID)
+						hasInvalid = true;
+
+					return c.Component is not null;
+				})
+				.ToList();
+
+			//Nur Taktstrich/ungültig?
+			willChange = components.Count != 0;
+			if (range.Length == 1 && components.Count == 0)
+			{
+				if (hasInvalid)
+					return DelayedMetalineEditResult.Fail(InvalidPosition);
+				else if (hasBarLine)
+					return DelayedMetalineEditResult.Fail(CannotEditBarLines);
+			}
+
+			//Nichts gefunden?
+			if (!willChange)
+			{
+				//Sonderfall: wird nach dem letzten Taktstrich gelöscht?
+				if (owner.barLineEditIndexes.Count != 0 && range.Start == owner.barLineEditIndexes[^1] + 1)
+				{
+					//Füge hier ein Null-Element ein
+					var index = GetBarAndNoteIndex(range.Start);
+					willChange = true;
+					return new DelayedMetalineEditResult(() =>
+					{
+						owner.Components.EnsureCreated(index.BarIndex * owner.BarLength + index.NoteIndex);
+						if (raiseEvent)
+							owner.RaiseModifiedAndInvalidateCache();
+						return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAt(range.Start)));
+					});
+				}
+
+				//Sonderfall: wird nach dem obigen Szenario wieder irgendwo gelöscht?
+				if (owner.Components.Count != 0 && owner.Components[^1] is null)
+				{
+					//Lösche die leeren Stellen am Ende wieder
+					return new DelayedMetalineEditResult(() =>
+					{
+						owner.Components[owner.Components.Count - 1] = null;
+						if (raiseEvent)
+							owner.RaiseModifiedAndInvalidateCache();
+						return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAt(range.Start)));
+					});
+				}
+
+				return NoEdit(context);
+			}
+
+			//Lösche die Noten
+			return new(() =>
+			{
+				foreach (var component in components)
+				{
+					component.Component!.SetNote(lineIndex, default);
+					if (component.Component.IsEmpty)
+						owner.Components[component.BarIndex * owner.BarLength + component.NoteIndex] = null;
+				}
+
+				if (raiseEvent)
+					owner.RaiseModifiedAndInvalidateCache();
+				return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAt(range.Start)));
 			});
 		}
 
-		public DelayedMetalineEditResult TryInsertContent(SheetDisplayLineEditingContext context, SheetDisplayMultiLineEditingContext? multilineContext,
-			string content, ISheetEditorFormatter? formatter = null)
+		DelayedMetalineEditResult ISheetDisplayLineEditing.TryInsertContent(SheetDisplayLineEditingContext context, SheetDisplayMultiLineEditingContext? multilineContext,
+			string content, ISheetEditorFormatter? formatter)
 		{
 			//Minus?
 			if (content == "-")
-				return TryDeleteContent(context, multilineContext, DeleteDirection.Forward, DeleteType.Character, 1, formatter);
+			{
+				//Lösche das folgende Zeichen
+				var deleteResult = (this as ISheetDisplayLineEditing).TryDeleteContent(context, multilineContext, DeleteDirection.Forward, DeleteType.Character);
 
-			//Lese tatsächliche Auswahl
-			var range = GetActualEditRange(context, multilineContext);
-			if (range.Length > 0)
-				return DelayedMetalineEditResult.Fail(CannotEditMultipleNotes);
+				//Keine Auswahl?
+				if (context.SelectionRange.Length == 0)
+				{
+					//Bewege den Cursor danach um eins nach rechts
+					if (deleteResult.Success)
+					{
+						return new DelayedMetalineEditResult(() =>
+						{
+							var result = deleteResult.Execute();
+							if (result.Success && result.NewSelection is not null)
+							{
+								//Nächste Position auf Taktstrich?
+								var nextPosition = result.NewSelection.Range.Start + 1;
+								while (GetBarAndNoteIndex(nextPosition).NoteIndex < 0)
+									nextPosition++;
+								return result with
+								{
+									NewSelection = result.NewSelection with
+									{
+										Range = SimpleRange.CursorAt(nextPosition)
+									}
+								};
+							}
+
+							return result;
+						});
+					}
+				}
+
+				return deleteResult;
+			}
 
 			//Keine Zahl?
 			if (!int.TryParse(content, out var value))
 				return DelayedMetalineEditResult.Fail(NotANumber);
 
-			//Lese Position
-			var (barIndex, noteIndex, component) = GetBarAndNoteIndex(range.Start);
+			//Einzeilige Bearbeitung?
+			if (multilineContext is null)
+				return TryInsertContent(context, context.SelectionRange, value, [lineIndex], formatter);
 
-			//Taktstrich?
-			if (noteIndex < 0)
-				return DelayedMetalineEditResult.Fail(CannotEditBarLines);
-
-			//Keine Komponente?
-			if (component is null)
+			//Die StartLine kümmert sich um alles
+			if (multilineContext.StartLine != this)
 			{
-				//Erzeuge die Komponente
-				return new(() =>
-				{
-					//Erzeuge die Komponente
-					var newComponent = new Component(Enumerable.Range(0, owner.Lines.Count)
-						.Select(i => i == lineIndex ? new TabNote(value) : default));
-
-					//Füge die Komponente hinzu
-					owner.Components[barIndex * owner.BarLength + noteIndex] = newComponent;
-					owner.RaiseModifiedAndInvalidateCache();
-					return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAt(range.Start + 1)));
-				});
+				//Keine Bearbeitung und keine Auswahl nötig
+				return new DelayedMetalineEditResult(MetalineEditResult.SuccessWithoutSelection);
 			}
 
-			//Bearbeite die Komponente
+			//Lese tatsächliche Auswahl
+			var range = GetActualEditRange(context, multilineContext);
+
+			//Sammle Indizes der betroffenen Zeilen
+			var lineIndexes = new List<int>();
+			foreach (var line in owner.Lines.SkipWhile(l => l != multilineContext.StartLine))
+			{
+				lineIndexes.Add(line.lineIndex);
+				if (line == multilineContext.EndLine)
+					break;
+			}
+
+			//Bearbeite alle betroffenen Zeilen
+			return TryInsertContent(context, range, value, lineIndexes, formatter);
+
+			//var lineResults = new List<DelayedMetalineEditResult>();
+			//foreach (var line in owner.Lines.SkipWhile(l => l != multilineContext.StartLine))
+			//{
+			//	//Bereite die Bearbeitung vor
+			//	var lineResult = line.TryInsertContent(context, range, value, false, formatter);
+			//	if (!lineResult.Success)
+			//		return lineResult;
+
+			//	//Speichere die Bearbeitung
+			//	lineResults.Add(lineResult);
+			//	if (line == multilineContext.EndLine)
+			//		break;
+			//}
+
+			////Keine Veränderung?
+			//if (lineResults.Count == 0)
+			//	return NoEdit(context);
+
+			////Führe die Bearbeitungen aus
+			//return new DelayedMetalineEditResult(() =>
+			//{
+			//	//Führe aus und speichere die erste Bearbeitung
+			//	MetalineEditResult? firstResult = null;
+			//	foreach (var lineResult in lineResults)
+			//	{
+			//		var result = lineResult.Execute!();
+			//		firstResult ??= result;
+			//	}
+
+			//	//Modified-Event
+			//	owner.RaiseModifiedAndInvalidateCache();
+			//	return firstResult!;
+			//});
+		}
+
+		private DelayedMetalineEditResult TryInsertContent(SheetDisplayLineEditingContext context, SimpleRange range,
+			int value, List<int> lineIndexes, ISheetEditorFormatter? formatter = null)
+		{
+			//Leere Range?
+			if (range.Length == 0)
+				range = new(range.Start, range.Start + 1);
+
+			//Taktstrich?
+			var invalid = false;
+			var barLine = false;
+			for (var i = range.Start; i < range.End; i++)
+			{
+				var note = GetBarAndNoteIndex(i);
+				if (note.NoteIndex == INDEX_INVALID)
+				{
+					invalid = true;
+					break;
+				}
+
+				if (note.NoteIndex == INDEX_BAR_LINE)
+					barLine = true;
+			}
+			if (invalid)
+				return DelayedMetalineEditResult.Fail(InvalidPosition);
+			if (barLine)
+				return DelayedMetalineEditResult.Fail(CannotEditBarLines);
+
+			//Füge Werte ein
 			return new(() =>
 			{
-				//Bearbeite die Note
-				component.SetNote(lineIndex, new TabNote(value));
+				//Finde Komponenten
+				var components = Enumerable.Range(range.Start, range.Length)
+					.Select(i => (EditIndex: i, Data: GetBarAndNoteIndex(i)))
+					.ToList();
+
+				foreach (var component in components)
+				{
+					//Keine Komponente?
+					if (component.Data.Component is null)
+					{
+						//Erzeuge die Komponente
+						var newComponent = new Component(Enumerable.Range(0, owner.Lines.Count)
+							.Select(i => lineIndexes.Contains(i) ? new TabNote(value) : default))
+						{
+							RenderBounds = new(component.EditIndex, component.EditIndex + 1),
+						};
+
+						//Füge die Komponente hinzu
+						owner.Components[component.Data.BarIndex * owner.BarLength + component.Data.NoteIndex] = newComponent;
+					}
+					else
+					{
+						//Bearbeite die Komponente
+						foreach (var index in lineIndexes)
+							component.Data.Component.SetNote(index, new TabNote(value));
+					}
+				}
+
+				//Modified-Event
 				owner.RaiseModifiedAndInvalidateCache();
-				return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAt(range.Start + 1)));
+
+				//Nächste Position auf Taktstrich?
+				var nextPosition = range.Start + 1;
+				while (GetBarAndNoteIndex(nextPosition).NoteIndex < 0)
+					nextPosition++;
+
+				//Mehrzeilige Selektion
+				return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAt(nextPosition)) with
+				{
+					EndLineId = lineIndexes[^1],
+				});
 			});
 		}
 
@@ -381,14 +632,14 @@ public class SheetTabLine : SheetLine
 
 				//Genau den Taktstrich getroffen?
 				if (barNoteIndex.Remainder == 0 && owner.barLineEditIndexes.Contains(editIndex))
-					return (barNoteIndex.Quotient, -1, null);
+					return (barNoteIndex.Quotient, INDEX_BAR_LINE, null);
 
 				//Komponente an der aktuellen Position?
 				if (component is not null && component.RenderBounds.StartOffset <= editIndex && component.RenderBounds.AfterOffset > editIndex)
 					return (barNoteIndex.Quotient, barNoteIndex.Remainder, component);
-				
+
 				//Keine Komponente
-				return (barNoteIndex.Quotient, barNoteIndex.Remainder, null);
+				break;
 			}
 
 			//Keine Komponenten?
@@ -400,7 +651,11 @@ public class SheetTabLine : SheetLine
 
 				//Genau den Taktstrich getroffen?
 				if (barNoteIndex.Remainder == 0 && owner.barLineEditIndexes.Contains(editIndex))
-					return (barNoteIndex.Quotient, -1, null);
+					return (barNoteIndex.Quotient, INDEX_BAR_LINE, null);
+
+				//Ungültige Position?
+				if (barNoteIndex.Remainder < 1)
+					return (barNoteIndex.Quotient, INDEX_INVALID, null);
 
 				//Keine Komponente
 				return (barNoteIndex.Quotient, barNoteIndex.Remainder - 1, null);
@@ -411,18 +666,29 @@ public class SheetTabLine : SheetLine
 
 			//Taktindex und Notenindex der letzten Komponente berechnen
 			var lastBarNoteIndex = Math.DivRem(lastIndex, owner.BarLength);
-			var adjust = Math.DivRem(lastBarNoteIndex.Remainder + distance, owner.BarLength + 1);
-			var barIndex = lastBarNoteIndex.Quotient + adjust.Quotient;
-			var noteIndex = adjust.Remainder;
-			if (noteIndex == owner.barLength)
-			{
-				barIndex++;
-				noteIndex = 0;
-			}
 
+			//Wie viele Taktstriche liegen dazwischen?
+			var barLinesInBetween = Math.DivRem(lastBarNoteIndex.Remainder + distance, owner.BarLength + 1).Quotient;
+			distance -= barLinesInBetween;
+
+			//Index
+			var componentIndex = lastIndex + distance;
+			var componentPosition = Math.DivRem(componentIndex, owner.BarLength);
+			var barIndex = componentPosition.Quotient;
+			var noteIndex = componentPosition.Remainder;
+
+			//var adjust = Math.DivRem(lastBarNoteIndex.Remainder + distance, owner.BarLength + 1);
+			//var barIndex = lastBarNoteIndex.Quotient + adjust.Quotient;
+			//var noteIndex = adjust.Remainder;
+			//if (noteIndex == owner.barLength)
+			//{
+			//	barIndex++;
+			//	noteIndex = 0;
+			//}
+			
 			//Genau den Taktstrich getroffen?
-			if (noteIndex == 0 && owner.barLineEditIndexes.Contains(editIndex))
-				return (barIndex, -1, null);
+			if (owner.barLineEditIndexes.Contains(editIndex))
+				return (barIndex, INDEX_BAR_LINE, null);
 
 			//Index am Ende
 			return (barIndex, noteIndex, null);
@@ -530,9 +796,9 @@ public class SheetTabLine : SheetLine
 				this.components = new List<Component?>(components);
 			}
 
-			private void SetComponent(int index, Component? component)
+			private void SetComponent(int index, Component? component, bool forceNull = false)
 			{
-				if (component is not null)
+				if (component is not null || forceNull)
 				{
 					if (index >= components.Count)
 					{
@@ -548,11 +814,18 @@ public class SheetTabLine : SheetLine
 				else
 				{
 					if (index >= components.Count)
+					{
+						if (components.Count != 0 && components[^1] is null)
+							SetComponent(Count - 1, null);
+
 						return;
+					}
 
 					if (index < components.Count - 1)
 					{
 						components[index] = null;
+						if (components[^1] is null)
+							SetComponent(Count - 1, null);
 						return;
 					}
 
@@ -568,6 +841,14 @@ public class SheetTabLine : SheetLine
 					else
 						components.RemoveRange(lastComponent + 1, components.Count - lastComponent - 1);
 				}
+			}
+
+			internal void EnsureCreated(int index)
+			{
+				if (components.Count + 1>= index)
+					return;
+
+				SetComponent(index, null, true);
 			}
 
 			public IEnumerator<Component?> GetEnumerator() => components.GetEnumerator();

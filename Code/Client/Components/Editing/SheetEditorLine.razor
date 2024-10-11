@@ -97,6 +97,10 @@
                 <span class="scroll-anchor" id="sheetSegment-@(Line.Guid)"></span><span @key="GetKey(element)" class="@SheetRenderer.GetElementClasses(element)">@titleBracket.ToString(Formatter)</span>
                 break;
 
+            // case SheetDisplayLineTabBarLine barLine:
+            //     <span @key="GetKey(element)" class="@SheetRenderer.GetElementClasses(barLine)"><span class="bar-line-content">@element.ToString()</span></span>
+            //     break;
+
             default:
                 RenderSpan(element);
                 break;

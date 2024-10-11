@@ -76,6 +76,10 @@
                 <span class="@GetElementClasses(element)" data-breakpoint-index="@breakpoint.BreakPointIndex" data-breakpoint-offset="@breakpoint.StartingPointOffset"></span>
                 break;
 
+            // case SheetDisplayLineTabBarLine barLine:
+            //     <span @key="GetKey(element)" class="@SheetRenderer.GetElementClasses(barLine)"><span class="bar-line-content">@element.ToString()</span></span>
+            //     break;
+
             default:
                 <span @key="element.Slice" class="@GetElementClasses(element)">@element.ToString(Formatter)</span>
                 break;
@@ -219,15 +223,23 @@
     {
         SheetDisplayLineFormatSpace or SheetDisplayTabLineFormatSpace => "format-space",
         SheetDisplayLineSpace => "space",
-        SheetDisplayLineTabLineNote => "tab-line-note",
+
         SheetDisplayLineChord => "chord",
         SheetDisplayLineFingering => "fingering",
+
         SheetDisplayLineText => "text",
         SheetDisplayLineAnchorText => "anchor-text",
+
         SheetDisplayLineSegmentTitleBracket => "segment-title-bracket",
         SheetDisplayLineSegmentTitleText => "segment-title",
+
+        SheetDisplayLineTabLineNote => "tuning-note",
+        SheetDisplayLineTabNote => "note",
+        SheetDisplayLineTabBarLine => "bar-line",
+
         SheetDisplayLineHyphen => "hyphen",
         SheetDisplayLineBreakPoint => "breakpoint",
+
         _ => null
     };
 }

@@ -1,5 +1,5 @@
 ﻿$chordColor: var(--bs-primary);
-$fingeringColor : var(--bs-primary);
+$fingeringColor: var(--bs-primary);
 $tabLineNoteColor: var(--bs-primary);
 $anchorTextColor: var(--bs-info-text-emphasis);
 $separatorColor: #6c757d;
@@ -180,111 +180,72 @@ $separatorColor: #6c757d;
 		content: ' ';
 	}*/
 
-	.chord {
-		color: $chordColor;
-		position: relative;
+	.line {
+		.chord {
+			color: $chordColor;
+			position: relative;
 
-		.accidental:not(:empty) {
-			display: inline-block;
-			width: 1ch;
-			/*&[data-accidental='#'] {
-				.accidental-content {
-					display: none;
-				}
+			.accidental:not(:empty) {
+				display: inline-block;
+				width: 1ch;
+			}
 
-				&::before {
-					content: '♯';
-					display: inline-block;
-					width: 1ch;
+			.chord-alteration {
+				.alteration-modifier:not(:empty) {
+					&[data-modifier='#'] {
+						display: inline-block;
+						width: 1ch;
+					}
+
+					&[data-modifier='b'] {
+						display: inline-block;
+						width: 1ch;
+					}
 				}
 			}
 
-			&[data-accidental='b'] {
-				.accidental-content {
-					display: none;
-				}
-
-
-				&::before {
-					content: '♭';
-					display: inline-block;
-					width: 1ch;
-				}
+			.chord-root {
+				font-weight: bold;
 			}
 
-			&[data-accidental='♮'] {
-				.accidental-content {
-					display: none;
-				}
+			.chord-alterations {
+				vertical-align: super;
+			}
 
-
-				&::before {
-					content: '♮';
-					display: inline-block;
-					width: 1ch;
-				}
-			}*/
-		}
-
-		.chord-alteration {
-			.alteration-modifier:not(:empty) {
-				&[data-modifier='#'] {
-					display: inline-block;
-					width: 1ch;
-
-					/*.alteration-modifier-content {
-						display: none;
-					}
-
-					&::before {
-						content: '♯';
-						display: inline-block;
-						width: 1ch;
-					}*/
-				}
-
-				&[data-modifier='b'] {
-					display: inline-block;
-					width: 1ch;
-
-					/*.alteration-modifier-content {
-						display: none;
-					}
-
-					&::before {
-						content: '♭';
-						display: inline-block;
-						width: 1ch;
-					}*/
-				}
+			.chord-alteration-separator, .chord-bass-separator {
+				color: $separatorColor;
 			}
 		}
 
-		.chord-root {
+		.fingering {
+			color: $fingeringColor;
+			position: relative;
+		}
+
+		.anchor-text {
+			text-decoration: underline;
+		}
+	}
+
+	.line.line-tab {
+		.tuning-note {
+			color: $tabLineNoteColor;
 			font-weight: bold;
 		}
 
-		.chord-alterations {
-			vertical-align: super;
+		.note {
+
 		}
 
-		.chord-alteration-separator, .chord-bass-separator {
-			color: $separatorColor;
+		.bar-line {
+			/*.bar-line-content {
+				display: none;
+			}
+
+			&::before {
+				content: '|';
+			}*/
 		}
-	}
-
-	.fingering {
-		color: $fingeringColor;
-		position: relative;
-	}
-
-	.tab-line-note {
-		color: $tabLineNoteColor;
-		font-weight: bold;
-	}
-
-	.anchor-text {
-		text-decoration: underline;
 	}
 
 	.attachment {
