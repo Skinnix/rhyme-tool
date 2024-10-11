@@ -3,9 +3,23 @@ using Skinnix.RhymeTool.Data.Notation.Display;
 
 namespace Skinnix.RhymeTool.Data.Notation;
 
+public abstract record SheetLineType(Type Type, string Label)
+{
+	public static SheetLineType Create<T>(string label) => new Simple(typeof(T), label);
+
+	private sealed record Simple(Type Type, string Label) : SheetLineType(Type, Label);
+}
+
 public interface ISheetLine
 {
+	SheetLineType Type { get; }
 	Guid Guid { get; }
+	bool IsEmpty { get; }
+}
+
+public interface ISelectableSheetLine : ISheetLine
+{
+	static abstract SheetLineType LineType { get; }
 }
 
 public interface ISheetTitleLine : ISheetLine
@@ -20,13 +34,26 @@ public abstract class SheetLine : DeepObservableBase, ISheetLine
 	public static readonly Reason NoLineAfter = new("Keine Zeile danach");
 	public static readonly Reason NoLineBefore = new("Keine Zeile davor");
 
+	public SheetLineType Type { get; }
+
 	public Guid Guid { get; set; } = Guid.NewGuid();
 
+	public abstract bool IsEmpty { get; }
+
+	protected SheetLine(SheetLineType type)
+	{
+		this.Type = type;
+	}
+
     public abstract IEnumerable<SheetDisplayLine> CreateDisplayLines(ISheetBuilderFormatter? formatter = null);
+
+	public abstract IEnumerable<SheetLineConversion> GetPossibleConversions(ISheetBuilderFormatter? formatter = null);
 }
 
-public class SheetEmptyLine : SheetLine, ISheetDisplayLineEditing
+public class SheetEmptyLine() : SheetLine(LineType), ISelectableSheetLine, ISheetDisplayLineEditing
 {
+	public static SheetLineType LineType { get; } = SheetLineType.Create<SheetEmptyLine>("Leer");
+
 	SheetLine ISheetDisplayLineEditing.Line => this;
 	public int LineId => 0;
 
@@ -36,6 +63,11 @@ public class SheetEmptyLine : SheetLine, ISheetDisplayLineEditing
 		get => count;
 		set => Set(ref count, value);
 	}
+
+	public override bool IsEmpty => true;
+
+	public override IEnumerable<SheetLineConversion> GetPossibleConversions(ISheetBuilderFormatter? formatter = null)
+		=> [SheetLineConversion.Simple<SheetTabLine>.Instance];
 
 	public override IEnumerable<SheetDisplayLine> CreateDisplayLines(ISheetBuilderFormatter? formatter = null)
     {

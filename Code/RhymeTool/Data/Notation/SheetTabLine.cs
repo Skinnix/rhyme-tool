@@ -11,7 +11,7 @@ using Skinnix.RhymeTool.Data.Notation.Display;
 
 namespace Skinnix.RhymeTool.Data.Notation;
 
-public class SheetTabLine : SheetLine
+public class SheetTabLine : SheetLine, ISelectableSheetLine
 {
 	public static readonly Reason CannotMixTabsWithOthers = new("Tabulaturen können nicht gleichzeitig mit anderen Zeilen bearbeitet werden");
 	public static readonly Reason CannotMultilineEdit = new("Tabulaturzeilen können nicht mehrzeilig bearbeitet werden");
@@ -19,6 +19,8 @@ public class SheetTabLine : SheetLine
 	public static readonly Reason NotANumber = new("Der Inhalt muss eine Zahl sein");
 	public static readonly Reason CannotEditBarLines = new("Taktstriche können nicht bearbeitet werden");
 	public static readonly Reason InvalidPosition = new("Ungültige Position");
+
+	public static SheetLineType LineType { get; } = SheetLineType.Create<SheetTabLine>("Tabulatur");
 
 	private ISheetBuilderFormatter? cachedFormatter;
 	private IEnumerable<SheetDisplayLine>? cachedLines;
@@ -44,11 +46,35 @@ public class SheetTabLine : SheetLine
 		}
 	}
 
+	public override bool IsEmpty
+	{
+		get
+		{
+			if (Components.Count == 0)
+				return true;
+			if (Components[^1] is not null)
+				return false;
+
+			return Components.All(c => c is null);
+		}
+	}
+
 	public SheetTabLine()
+		: base(LineType)
 	{
 		Lines = new TabLineDefinition.Collection(this, [Note.E, Note.B, Note.G, Note.D, Note.A, Note.E]);
 		Components = new Component.Collection(this);
 	}
+
+	#region Conversion
+	public override IEnumerable<SheetLineConversion> GetPossibleConversions(ISheetBuilderFormatter? formatter = null)
+	{
+		if (!IsEmpty)
+			return [];
+
+		return [SheetLineConversion.Simple<SheetEmptyLine>.Instance];
+	}
+	#endregion
 
 	#region Display
 	public override IEnumerable<SheetDisplayLine> CreateDisplayLines(ISheetBuilderFormatter? formatter = null)
@@ -236,6 +262,7 @@ public class SheetTabLine : SheetLine
 	}
 	#endregion
 
+	#region Definition/Editing
 	public class TabLineDefinition(SheetTabLine owner, int lineIndex, Note note) : ISheetDisplayLineEditing
 	{
 		private const int INDEX_BAR_LINE = -1;
@@ -855,4 +882,5 @@ public class SheetTabLine : SheetLine
 			IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 		}
 	}
+	#endregion
 }

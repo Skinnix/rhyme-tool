@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Linq.Expressions;
 using Skinnix.RhymeTool.ComponentModel;
 
 namespace Skinnix.RhymeTool.Data.Notation;
@@ -182,6 +183,17 @@ public class SheetLineCollection : IReadOnlyList<SheetLine>, IModifiable
 		//Hat sich etwas verändert?
 		if (removeLine || removeLineBefore || removeLineAfter || countBefore != lines.Count)
 			RaiseModified(new ModifiedEventArgs(this));
+	}
+
+	public bool Replace(SheetLine existing, SheetLine line)
+	{
+		var index = lines.IndexOf(existing);
+		if (index < 0)
+			return false;
+
+		lines[index] = line;
+		RaiseModified(new ModifiedEventArgs(this));
+		return true;
 	}
 
 	private void RaiseModified(ModifiedEventArgs args) => Modified?.Invoke(this, args);

@@ -18,8 +18,10 @@ using Skinnix.RhymeTool.Data.Notation.Display.Caching;
 
 namespace Skinnix.RhymeTool.Data.Notation;
 
-public class SheetVarietyLine : SheetLine, ISheetTitleLine
+public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 {
+	public static SheetLineType LineType { get; } = SheetLineType.Create<SheetVarietyLine>("Text");
+
 	public event EventHandler? IsTitleLineChanged;
 
 	private readonly ComponentCollection components;
@@ -36,7 +38,10 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 	public int TextLineId => contentEditor.LineId;
 	public int AttachmentLineId => attachmentEditor.LineId;
 
+	public override bool IsEmpty => components.Count == 0;
+
 	public SheetVarietyLine()
+		: base(LineType)
 	{
 		components = new(this);
 
@@ -45,6 +50,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 	}
 
 	public SheetVarietyLine(IEnumerable<Component> components)
+		: base(LineType)
 	{
 		this.components = new(this, components);
 
@@ -52,6 +58,15 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 		attachmentEditor = new(this);
 	}
 
+	public override IEnumerable<SheetLineConversion> GetPossibleConversions(ISheetBuilderFormatter? formatter = null)
+	{
+		if (!IsEmpty)
+			return [];
+
+		return [SheetLineConversion.Simple<SheetTabLine>.Instance];
+	}
+
+	#region Display
 	public override IEnumerable<SheetDisplayLine> CreateDisplayLines(ISheetBuilderFormatter? formatter = null)
 	{
 		//Prüfe Cache
@@ -129,6 +144,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 		if (formatter?.ShowLine(this, builders.TextLine) != false)
 			yield return builders.TextLine.CreateDisplayLine(0, contentEditor);
 	}
+	#endregion
 
 	#region Title
 	public bool IsTitleLine(out string? title)

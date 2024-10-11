@@ -19,6 +19,9 @@ $separatorColor: #6c757d;
 @mixin controls {
 	background-color: var(--bs-body-bg);
 	z-index: 10;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
 
 	&:has(.dropdown-menu.show) {
 		z-index: 20;
@@ -39,7 +42,7 @@ $separatorColor: #6c757d;
 	padding-bottom: 8em;
 	font-size: calc(0.01rem * var(--font-percent));
 	overflow-x: auto;
-	scroll-padding: 0 3em;
+	scroll-padding: 0 3.5em;
 
 	.calculator {
 		position: absolute;
@@ -63,6 +66,7 @@ $separatorColor: #6c757d;
 	grid-template-columns: min-content auto;
 	grid-gap: 0.4em 0.2em;
 	align-items: baseline;
+	padding: 1px 0;
 
 	&.refreshing[contenteditable] {
 		caret-color: transparent;
@@ -106,7 +110,9 @@ $separatorColor: #6c757d;
 			grid-column: 1;
 			align-self: stretch;
 			position: sticky;
-			left: 0;
+			left: 0px;
+			border-right: 0.2em solid var(--bs-body-bg);
+			margin-right: -0.2em;
 
 			.metaline-bracket {
 				@include bracket;
@@ -116,6 +122,7 @@ $separatorColor: #6c757d;
 			}
 
 			.line-type {
+				margin-left: 9px;
 
 				.dropdown-toggle::after {
 					content: unset;
@@ -136,7 +143,7 @@ $separatorColor: #6c757d;
 				@include controls;
 				grid-column: 1;
 				position: sticky;
-				left: 3px;
+				left: calc(1.5em + 1ch);
 
 				.line-type {
 					.btn {
@@ -234,7 +241,6 @@ $separatorColor: #6c757d;
 		}
 
 		.note {
-
 		}
 
 		.bar-line {

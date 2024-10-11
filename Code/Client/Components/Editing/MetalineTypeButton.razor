@@ -15,14 +15,21 @@
                 break;
         }
     </a><span class="dropdown-menu">
-        @if (expanded)
+        @if (expanded && Document is not null && Line is not null)
         {
-            
+            foreach (var conversion in Line.GetPossibleConversions())
+            {
+                <button class="dropdown-item" onclick="@(() => conversion.Execute(Document, Line))">@(
+                    conversion.Type == SheetEmptyLine.LineType ? SheetVarietyLine.LineType.Label : conversion.Type.Label
+                )</button>
+            }
         }
      </span>
 </span>
 
 @code {
+    [CascadingParameter] public SheetDocument? Document { get; set; }
+
     [Parameter] public SheetLine? Line { get; set; }
 
     private bool expanded;
