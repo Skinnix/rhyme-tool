@@ -13,6 +13,7 @@ namespace Skinnix.RhymeTool.Data.Notation;
 
 public class SheetTabLine : SheetLine
 {
+	public static readonly Reason CannotMixTabsWithOthers = new("Tabulaturen können nicht gleichzeitig mit anderen Zeilen bearbeitet werden");
 	public static readonly Reason CannotMultilineEdit = new("Tabulaturzeilen können nicht mehrzeilig bearbeitet werden");
 	public static readonly Reason CannotEditMultipleNotes = new("Mehrere Noten können nicht gleichzeitig bearbeitet werden");
 	public static readonly Reason NotANumber = new("Der Inhalt muss eine Zahl sein");
@@ -48,6 +49,7 @@ public class SheetTabLine : SheetLine
 		Components = new Component.Collection(this);
 	}
 
+	#region Display
 	public override IEnumerable<SheetDisplayLine> CreateDisplayLines(ISheetBuilderFormatter? formatter = null)
 	{
 		//Prüfe Cache
@@ -231,6 +233,7 @@ public class SheetTabLine : SheetLine
 			}
 		}
 	}
+	#endregion
 
 	public class TabLineDefinition(SheetTabLine owner, int lineIndex, Note note) : ISheetDisplayLineEditing
 	{
@@ -239,17 +242,34 @@ public class SheetTabLine : SheetLine
 
 		public Note Note { get; } = note;
 
-		public ReasonBase? SupportsEdit(SheetDisplayMultiLineEditingContext context) => CannotMultilineEdit;
-
-		DelayedMetalineEditResult ISheetDisplayLineEditing.TryDeleteContent(SheetDisplayLineEditingContext context, DeleteDirection direction, DeleteType type, bool isMultilineEdit, ISheetEditorFormatter? formatter)
-			=> TryDeleteContent(context, direction, type, isMultilineEdit, 0, formatter);
-		public DelayedMetalineEditResult TryDeleteContent(SheetDisplayLineEditingContext context, DeleteDirection direction, DeleteType type, bool isMultilineEdit, int selectionOffset, ISheetEditorFormatter? formatter = null)
+		public ReasonBase? SupportsEdit(SheetDisplayMultiLineEditingContext context)
 		{
-			if (context.SelectionRange.Length > 0)
+			if (context.StartLine is not ISheetDisplayLineEditing startLine
+				|| context.EndLine is not ISheetDisplayLineEditing endLine)
+				return CannotMixTabsWithOthers;
+
+			if (context.LinesBetween.Count != 0)
+				return CannotMultilineEdit;
+
+			if (startLine.Line != endLine.Line)
+				return CannotMultilineEdit;
+
+			return null;
+		}
+
+		DelayedMetalineEditResult ISheetDisplayLineEditing.TryDeleteContent(SheetDisplayLineEditingContext context, SheetDisplayMultiLineEditingContext? multilineContext,
+			DeleteDirection direction, DeleteType type, ISheetEditorFormatter? formatter)
+			=> TryDeleteContent(context, multilineContext, direction, type, 0, formatter);
+		public DelayedMetalineEditResult TryDeleteContent(SheetDisplayLineEditingContext context, SheetDisplayMultiLineEditingContext? multilineContext, 
+			DeleteDirection direction, DeleteType type, int selectionOffset, ISheetEditorFormatter? formatter = null)
+		{
+			//Lese tatsächliche Auswahl
+			var range = GetActualEditRange(context, multilineContext);
+			if (range.Length > 0)
 				return DelayedMetalineEditResult.Fail(CannotEditMultipleNotes);
 
 			//Lese Position
-			var editIndex = context.SelectionRange.Start;
+			var editIndex = range.Start;
 			if (direction == DeleteDirection.Backward)
 				editIndex--;
 			var (barIndex, noteIndex, component) = GetBarAndNoteIndex(editIndex);
@@ -275,21 +295,24 @@ public class SheetTabLine : SheetLine
 			});
 		}
 
-		public DelayedMetalineEditResult TryInsertContent(SheetDisplayLineEditingContext context, string content, bool isMultilineEdit, ISheetEditorFormatter? formatter = null)
+		public DelayedMetalineEditResult TryInsertContent(SheetDisplayLineEditingContext context, SheetDisplayMultiLineEditingContext? multilineContext,
+			string content, ISheetEditorFormatter? formatter = null)
 		{
-			if (context.SelectionRange.Length > 0)
-				return DelayedMetalineEditResult.Fail(CannotEditMultipleNotes);
-
 			//Minus?
 			if (content == "-")
-				return TryDeleteContent(context, DeleteDirection.Forward, DeleteType.Character, isMultilineEdit, 1, formatter);
+				return TryDeleteContent(context, multilineContext, DeleteDirection.Forward, DeleteType.Character, 1, formatter);
+
+			//Lese tatsächliche Auswahl
+			var range = GetActualEditRange(context, multilineContext);
+			if (range.Length > 0)
+				return DelayedMetalineEditResult.Fail(CannotEditMultipleNotes);
 
 			//Keine Zahl?
 			if (!int.TryParse(content, out var value))
 				return DelayedMetalineEditResult.Fail(NotANumber);
 
 			//Lese Position
-			var (barIndex, noteIndex, component) = GetBarAndNoteIndex(context.SelectionRange.Start);
+			var (barIndex, noteIndex, component) = GetBarAndNoteIndex(range.Start);
 
 			//Taktstrich?
 			if (noteIndex < 0)
@@ -308,7 +331,7 @@ public class SheetTabLine : SheetLine
 					//Füge die Komponente hinzu
 					owner.Components[barIndex * owner.BarLength + noteIndex] = newComponent;
 					owner.RaiseModifiedAndInvalidateCache();
-					return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAt(context.SelectionRange.Start + 1)));
+					return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAt(range.Start + 1)));
 				});
 			}
 
@@ -318,8 +341,17 @@ public class SheetTabLine : SheetLine
 				//Bearbeite die Note
 				component.SetNote(lineIndex, new TabNote(value));
 				owner.RaiseModifiedAndInvalidateCache();
-				return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAt(context.SelectionRange.Start + 1)));
+				return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAt(range.Start + 1)));
 			});
+		}
+
+		private static SimpleRange GetActualEditRange(SheetDisplayLineEditingContext context, SheetDisplayMultiLineEditingContext? multilineContext)
+		{
+			if (multilineContext is null)
+				return context.SelectionRange;
+
+			//Wenn mehrere Zeilen bearbeitet werden, simuliere eine Box-Auswahl
+			return new(multilineContext.SelectionStart, multilineContext.SelectionEnd);
 		}
 
 		private DelayedMetalineEditResult NoEdit(SheetDisplayLineEditingContext context)

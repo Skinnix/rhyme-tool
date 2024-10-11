@@ -15,7 +15,7 @@ public record SheetDisplayMultiLineEditingContext(SheetDocument Document,
 		{
 			GetLineAfter = () => LinesBetween.Count == 0 ? EndLine.Line : LinesBetween[1],
 		};
-		var firstLineResult = StartLine.TryDeleteContent(firstLineContext, DeleteDirection.Forward, DeleteType.Character, true, formatter);
+		var firstLineResult = StartLine.TryDeleteContent(firstLineContext, this, DeleteDirection.Forward, DeleteType.Character, formatter);
 		if (!firstLineResult.Success)
 			return MultilineEditResult.Fail(firstLineResult.FailReason);
 
@@ -24,7 +24,7 @@ public record SheetDisplayMultiLineEditingContext(SheetDocument Document,
 		{
 			GetLineBefore = () => LinesBetween.Count == 0 ? StartLine.Line : LinesBetween[^1],
 		};
-		var lastLineResult = EndLine.TryDeleteContent(lastLineContext, DeleteDirection.Backward, DeleteType.Character, true, formatter);
+		var lastLineResult = EndLine.TryDeleteContent(lastLineContext, this, DeleteDirection.Backward, DeleteType.Character, formatter);
 		if (!lastLineResult.Success)
 			return MultilineEditResult.Fail(lastLineResult.FailReason);
 
@@ -47,7 +47,7 @@ public record SheetDisplayMultiLineEditingContext(SheetDocument Document,
 			combineResult = EndLine.DeleteContent(new SheetDisplayLineEditingContext(SimpleRange.CursorAtStart)
 			{
 				GetLineBefore = () => StartLine.Line,
-			}, DeleteDirection.Backward, DeleteType.Character, false, formatter);
+			}, this, DeleteDirection.Backward, DeleteType.Character, formatter);
 			combineResult.Execute(Document, EndLine.Line);
 		}
 
@@ -72,7 +72,7 @@ public record SheetDisplayMultiLineEditingContext(SheetDocument Document,
 		{
 			GetLineAfter = () => LinesBetween.Count == 0 ? EndLine.Line : LinesBetween[1],
 		};
-		var firstLineResult = StartLine.TryInsertContent(firstLineContext, content, true, formatter);
+		var firstLineResult = StartLine.TryInsertContent(firstLineContext, this, content, formatter);
 		if (!firstLineResult.Success)
 			return MultilineEditResult.Fail(firstLineResult.FailReason);
 
@@ -81,7 +81,7 @@ public record SheetDisplayMultiLineEditingContext(SheetDocument Document,
 		{
 			GetLineBefore = () => LinesBetween.Count == 0 ? StartLine.Line : LinesBetween[^1],
 		};
-		var lastLineResult = EndLine.TryDeleteContent(lastLineContext, DeleteDirection.Backward, DeleteType.Character, true, formatter);
+		var lastLineResult = EndLine.TryDeleteContent(lastLineContext, this, DeleteDirection.Backward, DeleteType.Character, formatter);
 		if (!lastLineResult.Success)
 			return MultilineEditResult.Fail(lastLineResult.FailReason);
 
@@ -100,7 +100,7 @@ public record SheetDisplayMultiLineEditingContext(SheetDocument Document,
 		var combineResult = EndLine.DeleteContent(new SheetDisplayLineEditingContext(SimpleRange.CursorAtStart)
 		{
 			GetLineBefore = () => StartLine.Line,
-		}, DeleteDirection.Backward, DeleteType.Character, false, formatter);
+		}, this, DeleteDirection.Backward, DeleteType.Character, formatter);
 		combineResult.Execute(Document, EndLine.Line);
 
 		//Verwende die Selektion der Kombination der Zeilen. Sollte das nicht funktioniert haben, verwende die Selektion der ersten oder letzten Zeile

@@ -9,21 +9,21 @@ public interface ISheetDisplayLineEditing
 	SheetLine Line { get; }
 	int LineId { get; }
 
-	DelayedMetalineEditResult TryInsertContent(SheetDisplayLineEditingContext context, string content, bool isMultilineEdit, ISheetEditorFormatter? formatter = null);
-	DelayedMetalineEditResult TryDeleteContent(SheetDisplayLineEditingContext context, DeleteDirection direction, DeleteType type, bool isMultilineEdit, ISheetEditorFormatter? formatter = null);
+	DelayedMetalineEditResult TryInsertContent(SheetDisplayLineEditingContext context, SheetDisplayMultiLineEditingContext? multilineContext, string content, ISheetEditorFormatter? formatter = null);
+	DelayedMetalineEditResult TryDeleteContent(SheetDisplayLineEditingContext context, SheetDisplayMultiLineEditingContext? multilineContext, DeleteDirection direction, DeleteType type, ISheetEditorFormatter? formatter = null);
 
-	MetalineEditResult InsertContent(SheetDisplayLineEditingContext context, string content, bool isMultilineEdit, ISheetEditorFormatter? formatter = null)
+	MetalineEditResult InsertContent(SheetDisplayLineEditingContext context, SheetDisplayMultiLineEditingContext? multilineContext, string content, ISheetEditorFormatter? formatter = null)
 	{
-		var tryResult = TryInsertContent(context, content, isMultilineEdit, formatter);
+		var tryResult = TryInsertContent(context, multilineContext, content, formatter);
 		if (!tryResult.Success)
 			return MetalineEditResult.Fail(tryResult.FailReason);
 
 		return tryResult.Execute();
 	}
 
-	MetalineEditResult DeleteContent(SheetDisplayLineEditingContext context, DeleteDirection direction, DeleteType type, bool isMultilineEdit, ISheetEditorFormatter? formatter = null)
+	MetalineEditResult DeleteContent(SheetDisplayLineEditingContext context, SheetDisplayMultiLineEditingContext? multilineContext, DeleteDirection direction, DeleteType type, ISheetEditorFormatter? formatter = null)
 	{
-		var tryResult = TryDeleteContent(context, direction, type, isMultilineEdit, formatter);
+		var tryResult = TryDeleteContent(context, multilineContext, direction, type, formatter);
 		if (!tryResult.Success)
 			return MetalineEditResult.Fail(tryResult.FailReason);
 

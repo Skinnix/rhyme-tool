@@ -490,19 +490,15 @@ var ModificationEditor = (function () {
         this.observer = new MutationObserver(function (mutations) {
             if (self.ignoreMutation(mutations, editor))
                 return;
+            if (self.isRenderDone(mutations)) {
+                self.revertModifications = true;
+                console.log("render done");
+                return;
+            }
             if (self.revertModifications) {
                 self.revertModificationAndRestoreSelection({
                     mutations: mutations
                 }, self.revertSelection);
-            }
-            else {
-                if (self.isRenderDone(mutations)) {
-                    console.log("render done");
-                    if (self.revertModifications) {
-                        console.error('revert conflict');
-                    }
-                    self.revertModifications = true;
-                }
             }
             if (self.afterModification) {
                 var handler = self.afterModification;
@@ -651,6 +647,8 @@ var ModificationEditor = (function () {
     };
     ;
     ModificationEditor.prototype.revertModification = function (modification) {
+        console.log("Revert modification", modification);
+        console.log(JSON.stringify(modification, null, 2));
         var mutations = Array.from(modification.mutations.reverse());
         while (mutations.length != 0) {
             for (var m = 0; m < mutations.length; m++) {
@@ -760,7 +758,7 @@ var ModificationEditor = (function () {
                 : endLine ? null
                     : this.editor.querySelector(".metaline[data-metaline=\"".concat(metalineLineSelection.end.metaline, "\"]"));
             startLine !== null && startLine !== void 0 ? startLine : (startLine = findLine(startMetaline, metalineLineSelection.start.line));
-            endLine !== null && endLine !== void 0 ? endLine : (endLine = metalineLineSelection.end.metaline == metalineLineSelection.start.metaline && metalineLineSelection.end.line == metalineLineSelection.start.line ? startMetaline
+            endLine !== null && endLine !== void 0 ? endLine : (endLine = metalineLineSelection.end.metaline == metalineLineSelection.start.metaline && metalineLineSelection.end.line == metalineLineSelection.start.line ? startLine
                 : findLine(endMetaline, metalineLineSelection.end.line));
         }
         var start = this.getNode(startLine, lineSelection.start.offset);

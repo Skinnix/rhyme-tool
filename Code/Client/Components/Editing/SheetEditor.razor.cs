@@ -54,6 +54,7 @@ partial class SheetEditor
 		if (Formatter != loadedFormatter)
 		{
 			shouldRender = true;
+			rerenderAnchor?.TriggerRender();
 
 			loadedFormatter = Formatter;
 		}
@@ -170,12 +171,12 @@ partial class SheetEditor
 		//Bearbeitungstyp
 		var editResult = GetEditType(data) switch
 		{
-			EditType.InsertContent or EditType.InsertCompositionContent when (data.Data is not null) => line.Editing.InsertContent(context, data.Data, false, Formatter),
-			EditType.InsertLine => line.Editing.InsertContent(context, "\n", false, Formatter),
-			EditType.DeleteBackward => line.Editing.DeleteContent(context, DeleteDirection.Backward, DeleteType.Character, false, Formatter),
-			EditType.DeleteForward => line.Editing.DeleteContent(context, DeleteDirection.Forward, DeleteType.Character, false, Formatter),
-			EditType.DeleteWordBackward => line.Editing.DeleteContent(context, DeleteDirection.Backward, DeleteType.Word, false, Formatter),
-			EditType.DeleteWordForward => line.Editing.DeleteContent(context, DeleteDirection.Forward, DeleteType.Word, false, Formatter),
+			EditType.InsertContent or EditType.InsertCompositionContent when (data.Data is not null) => line.Editing.InsertContent(context, null, data.Data, Formatter),
+			EditType.InsertLine => line.Editing.InsertContent(context, null, "\n", Formatter),
+			EditType.DeleteBackward => line.Editing.DeleteContent(context, null, DeleteDirection.Backward, DeleteType.Character, Formatter),
+			EditType.DeleteForward => line.Editing.DeleteContent(context, null, DeleteDirection.Forward, DeleteType.Character, Formatter),
+			EditType.DeleteWordBackward => line.Editing.DeleteContent(context, null, DeleteDirection.Backward, DeleteType.Word, Formatter),
+			EditType.DeleteWordForward => line.Editing.DeleteContent(context, null, DeleteDirection.Forward, DeleteType.Word, Formatter),
 			_ => MetalineEditResult.Fail(UnknownEditType)
 		};
 

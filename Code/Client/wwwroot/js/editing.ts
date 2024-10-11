@@ -152,19 +152,18 @@ class ModificationEditor implements Destructible {
 			if (self.ignoreMutation(mutations, editor))
 				return;
 
+			//Rerender?
+			if (self.isRenderDone(mutations)) {
+				//Render fertig
+				self.revertModifications = true;
+				console.log("render done");
+				return;
+			}
+
 			if (self.revertModifications) {
 				self.revertModificationAndRestoreSelection({
 					mutations: mutations
 				}, self.revertSelection);
-			} else {
-				//Render fertig?
-				if (self.isRenderDone(mutations)) {
-					console.log("render done");
-					if (self.revertModifications) {
-						console.error('revert conflict');
-					}
-					self.revertModifications = true;
-				}
 			}
 
 			if (self.afterModification) {
@@ -352,8 +351,8 @@ class ModificationEditor implements Destructible {
 	};
 
 	private revertModification(modification: ObservedModification) {
-		//console.log("Revert modification", modification);
-		//console.log(JSON.stringify(modification, null, 2))
+		console.log("Revert modification", modification);
+		console.log(JSON.stringify(modification, null, 2))
 		var mutations = Array.from(modification.mutations.reverse());
 		while (mutations.length != 0) {
 			for (var m = 0; m < mutations.length; m++) {
@@ -479,7 +478,7 @@ class ModificationEditor implements Destructible {
 				: endLine ? null
 					: this.editor.querySelector(`.metaline[data-metaline="${metalineLineSelection.end.metaline}"]`);
 			startLine ??= findLine(startMetaline, metalineLineSelection.start.line);
-			endLine ??= metalineLineSelection.end.metaline == metalineLineSelection.start.metaline && metalineLineSelection.end.line == metalineLineSelection.start.line ? startMetaline
+			endLine ??= metalineLineSelection.end.metaline == metalineLineSelection.start.metaline && metalineLineSelection.end.line == metalineLineSelection.start.line ? startLine
 				: findLine(endMetaline, metalineLineSelection.end.line);
 		}
 

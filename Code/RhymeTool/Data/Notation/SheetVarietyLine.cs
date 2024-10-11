@@ -201,7 +201,7 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 	{
 		//Hat eine der Komponenten Attachments?
 		if (components.OfType<VarietyComponent>().Any(c => c.Attachments.Count > 0))
-			return SpecialContentType.None;
+			return SpecialContentType.Text;
 
 		return SpecialContentType.All;
 	}
@@ -218,7 +218,8 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			this.Line = owner;
 		}
 
-		public DelayedMetalineEditResult TryDeleteContent(SheetDisplayLineEditingContext context, DeleteDirection direction, DeleteType type, bool isMultilineEdit, ISheetEditorFormatter? formatter = null)
+		public DelayedMetalineEditResult TryDeleteContent(SheetDisplayLineEditingContext context, SheetDisplayMultiLineEditingContext? multilineContext,
+			DeleteDirection direction, DeleteType type, ISheetEditorFormatter? formatter = null)
 		{
 			//Ist der Bereich leer?
 			if (context.SelectionRange.Length == 0)
@@ -499,7 +500,8 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			return new DelayedMetalineEditResult(() => DeleteAndInsertContent(context, formatter, null, direction));
 		}
 
-		public DelayedMetalineEditResult TryInsertContent(SheetDisplayLineEditingContext context, string content, bool isMultilineEdit, ISheetEditorFormatter? formatter)
+		public DelayedMetalineEditResult TryInsertContent(SheetDisplayLineEditingContext context, SheetDisplayMultiLineEditingContext? multilineContext,
+			string content, ISheetEditorFormatter? formatter)
 		{
 			//Wird eine neue Zeile eingefügt?
 			if (content == "\n")
@@ -1155,7 +1157,8 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			this.Line = owner;
 		}
 
-		public DelayedMetalineEditResult TryDeleteContent(SheetDisplayLineEditingContext context, DeleteDirection direction, DeleteType type, bool isMultilineEdit, ISheetEditorFormatter? formatter = null)
+		public DelayedMetalineEditResult TryDeleteContent(SheetDisplayLineEditingContext context, SheetDisplayMultiLineEditingContext? multilineContext,
+			DeleteDirection direction, DeleteType type, ISheetEditorFormatter? formatter = null)
 		{
 			//Ist der Bereich leer?
 			if (context.SelectionRange.Length == 0)
@@ -1231,7 +1234,8 @@ public class SheetVarietyLine : SheetLine, ISheetTitleLine
 			return TryFindAndMoveNextAttachment(context.SelectionRange, 0, formatter);
 		}
 
-		public DelayedMetalineEditResult TryInsertContent(SheetDisplayLineEditingContext context, string content, bool isMultilineEdit, ISheetEditorFormatter? formatter)
+		public DelayedMetalineEditResult TryInsertContent(SheetDisplayLineEditingContext context, SheetDisplayMultiLineEditingContext? multilineContext,
+			string content, ISheetEditorFormatter? formatter)
 		{
 			//Finde alle Attachments im Bereich
 			var attachments = FindAttachmentsInRange(context.SelectionRange, formatter).ToList();
