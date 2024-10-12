@@ -1589,6 +1589,7 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 		Punctuation,
 		Chord,
 		Fingering,
+		Rhythm,
 	}
 
 	[Flags]
@@ -1598,8 +1599,9 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 		Text = 1,
 		Chord = 2,
 		Fingering = 4,
+		Rhythm = 8,
 
-		All = Text | Chord | Fingering,
+		All = Text | Chord | Fingering | Rhythm,
 	}
 
 	internal readonly record struct MergeResult(ComponentContent NewContent, ContentOffset LengthBefore)
@@ -1614,11 +1616,13 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 		public string? Text { get; }
 		public Chord? Chord { get; }
 		public Fingering? Fingering { get; }
+		public RhythmPattern? Rhythm { get; }
 
-		public bool IsEmpty => Chord is null && Fingering is null && string.IsNullOrEmpty(Text);
+		public bool IsEmpty => Type == ContentType.Space && string.IsNullOrEmpty(Text);
 
 		public ContentType Type => Chord is not null ? ContentType.Chord
 			: Fingering is not null ? ContentType.Fingering
+			: Rhythm is not null ? ContentType.Rhythm
 			: string.IsNullOrWhiteSpace(Text) ? ContentType.Space
 			: Text.All(PUNCTUATION.Contains) ? ContentType.Punctuation
 			: ContentType.Word;
@@ -1636,6 +1640,11 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 		public ComponentContent(Fingering fingering)
 		{
 			Fingering = fingering;
+		}
+
+		public ComponentContent(RhythmPattern rhythm)
+		{
+			Rhythm = rhythm;
 		}
 
 		public static ComponentContent FromString(string content, ISheetEditorFormatter? formatter, SpecialContentType allowedTypes = SpecialContentType.All)
@@ -1659,6 +1668,17 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 				{
 					//Der Inhalt ist ein Fingering
 					return new(fingering);
+				}
+			}
+
+			if ((allowedTypes & SpecialContentType.Rhythm) != 0)
+			{
+				//Versuche den Inhalt als Rhythmus zu lesen
+				var rhythmLength = RhythmPattern.TryRead(formatter, content, out var rhythm);
+				if (rhythm is not null && rhythmLength == content.Length)
+				{
+					//Der Inhalt ist ein Rhythmus
+					return new(rhythm);
 				}
 			}
 
@@ -1687,6 +1707,14 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 			if (read > 0 && fingering is not null)
 			{
 				result = new ComponentContent(fingering);
+				return read;
+			}
+
+			//Prüfe auf Rhythmus
+			read = RhythmPattern.TryRead(formatter, content, out var rhythm);
+			if (read > 0 && rhythm is not null)
+			{
+				result = new ComponentContent(rhythm);
 				return read;
 			}
 
@@ -1726,6 +1754,11 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 				};
 			else if (Fingering is not null)
 				return new SheetDisplayLineFingering(Fingering)
+				{
+					Slice = sliceInfo
+				};
+			else if (Rhythm is not null)
+				return new SheetDisplayLineRhythmPattern(Rhythm)
 				{
 					Slice = sliceInfo
 				};
@@ -1848,7 +1881,11 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 		#region Operators
 		public override string ToString() => ToString(null);
 		public string ToString(ISheetFormatter? formatter)
-			=> Text ?? Chord?.ToString(formatter) ?? Fingering?.ToString(formatter) ?? string.Empty;
+			=> Text
+			?? Chord?.ToString(formatter)
+			?? Fingering?.ToString(formatter)
+			?? Rhythm?.ToString(formatter)
+			?? string.Empty;
 		#endregion
 	}
 	#endregion
@@ -2537,7 +2574,9 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 				return null;
 
 			//Prüfe, zu welchen Typen der Inhalt zusammengeführt werden kann
-			var mergeType = CanMergeTo(Content, varietyMerge.Content)
+			var lengthBefore = Content.GetLength(formatter);
+			var mergeLengthBefore = varietyMerge.Content.GetLength(formatter);
+			var mergeType = CanMergeTo(Content, lengthBefore, varietyMerge.Content, mergeLengthBefore, offset)
 				& (Owner?.GetAllowedTypes(this) ?? SpecialContentType.Text);
 
 			//Kann der Inhalt gar nicht zusammengeführt werden?
@@ -2545,8 +2584,6 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 				return null;
 
 			//Füge Inhalt zusammen
-			var lengthBefore = Content.GetLength(formatter);
-			var mergeLengthBefore = varietyMerge.Content.GetLength(formatter);
 			var mergeResult = Content.MergeContents(varietyMerge.Content, offset, mergeType, formatter);
 
 			////Passen die Inhaltstypen nicht zusammen?
@@ -2631,13 +2668,11 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 			return true;
 		}
 
-		private static SpecialContentType CanMergeTo(ComponentContent left, ComponentContent right)
+		private static SpecialContentType CanMergeTo(ComponentContent left, ContentOffset leftLength, ComponentContent right, ContentOffset rightLength, ContentOffset offset)
 		{
 			//Leerzeichen können nur mit Leerzeichen kombiniert werden
 			if (left.Type == ContentType.Space)
 				return right.Type == ContentType.Space ? SpecialContentType.Text : SpecialContentType.None;
-			else if (right.Type == ContentType.Space)
-				return SpecialContentType.None;
 
 			switch (left.Type)
 			{
@@ -2646,6 +2681,16 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 					return right.Type switch
 					{
 						ContentType.Punctuation or ContentType.Word or ContentType.Fingering => SpecialContentType.Fingering | SpecialContentType.Text,
+						_ => SpecialContentType.None,
+					};
+
+				//Rhythmen können mit Leerzeichen, Punctuation oder Wörtern kombiniert werden
+				case ContentType.Rhythm:
+					if (offset <= ContentOffset.Zero || offset >= leftLength)
+						return SpecialContentType.None;
+					return right.Type switch
+					{
+						ContentType.Space or SheetVarietyLine.ContentType.Punctuation or ContentType.Word => SpecialContentType.Rhythm,
 						_ => SpecialContentType.None,
 					};
 
@@ -2665,7 +2710,7 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 				case ContentType.Word:
 					return right.Type switch
 					{
-						ContentType.Word or ContentType.Chord or ContentType.Fingering => SpecialContentType.Text | SpecialContentType.Chord | SpecialContentType.Fingering,
+						ContentType.Word or ContentType.Chord or ContentType.Fingering => SpecialContentType.Text | SpecialContentType.Chord | SpecialContentType.Fingering | SpecialContentType.Rhythm,
 						_ => SpecialContentType.None,
 					};
 

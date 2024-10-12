@@ -1,6 +1,10 @@
 ﻿$chordColor: var(--bs-primary);
 $fingeringColor: var(--bs-primary);
-$tabLineNoteColor: var(--bs-primary);
+$rhythmDelimiterColor: #6c757d;
+$rhythmStrokeColor: var(--bs-dark);
+$rhythmLightColor: var(--bs-gray-dark);
+$rhythmRestColor: var(--bs-gray-400);
+$tabTuningNoteColor: var(--bs-primary);
 $anchorTextColor: var(--bs-info-text-emphasis);
 $separatorColor: #6c757d;
 
@@ -229,6 +233,68 @@ $separatorColor: #6c757d;
 			position: relative;
 		}
 
+		.rhythm-pattern {
+			.rhythm-pattern-delimiter {
+				color: $separatorColor;
+			}
+
+			.rhythm-pattern-stroke {
+				display: inline-block;
+				width: 1ch;
+				text-align: center;
+				vertical-align: middle;
+				color: $rhythmStrokeColor;
+
+				&[data-stroke^='Light'] {
+					color: $rhythmLightColor;
+				}
+
+				&[data-stroke='None'] {
+					//color: $rhythmRestColor;
+					background-image: radial-gradient($rhythmRestColor 0.15em, transparent 0);
+					background-size: 1ch 1ch;
+					background-repeat: no-repeat;
+					background-position: center;
+				}
+
+				.stroke-note {
+					&::before {
+						content: var(--note-content, ' ');
+						display: block;
+					}
+
+					&[data-note='1']::before {
+						content: '𝅝';
+					}
+
+					&[data-note='2']::before {
+						content: '𝅗𝅥';
+					}
+
+					&[data-note='4']::before {
+						content: '𝅘𝅥';
+					}
+
+					&[data-note='8']::before {
+						content: '𝅘𝅥𝅮';
+					}
+
+					&[data-note='16']::before {
+						content: '𝅘𝅥𝅯';
+					}
+
+					&[data-note='32']::before {
+						content: '𝅘𝅥𝅰';
+					}
+				}
+
+				.stroke-length::after {
+					content: '' var(--stroke-length);
+					display: block;
+				}
+			}
+		}
+
 		.anchor-text {
 			text-decoration: underline;
 		}
@@ -236,7 +302,7 @@ $separatorColor: #6c757d;
 
 	.line.line-tab {
 		.tuning-note {
-			color: $tabLineNoteColor;
+			color: $tabTuningNoteColor;
 			font-weight: bold;
 		}
 
@@ -248,7 +314,7 @@ $separatorColor: #6c757d;
 				display: none;
 			}
 
-			&::before {
+			&:before {
 				content: '|';
 			}*/
 		}
@@ -263,7 +329,7 @@ $separatorColor: #6c757d;
 			left: 0;
 			color: transparent;
 
-			&::after {
+			&:after {
 				content: var(--content);
 			}
 		}
@@ -311,21 +377,7 @@ $separatorColor: #6c757d;
 
 	.chord-sheet {
 		.line.line-text {
-			.anchor-text, .text {
-				border-left: 1px dotted red;
-				border-right: 1px dotted green;
-				margin-left: -1px;
-				margin-right: -1px;
-			}
-
-			.chord {
-				border-left: 1px dotted red;
-				border-right: 1px dotted green;
-				margin-left: -1px;
-				margin-right: -1px;
-			}
-
-			.fingering {
+			.anchor-text, .text, .chord, .fingering, .rhythm-pattern {
 				border-left: 1px dotted red;
 				border-right: 1px dotted green;
 				margin-left: -1px;

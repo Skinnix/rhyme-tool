@@ -20,7 +20,7 @@
         }
     }
 
-    void RenderChordContent(Chord chord)
+    void RenderChord(Chord chord)
     {
         <span class="chord-root">@{ RenderNote(chord.Root); }</span><span class="chord-quality">@(Formatter?.ToString(chord.Quality) ?? chord.Quality.ToString())</span>
 
@@ -60,12 +60,31 @@
         }
     }
 
+    void RenderRhythmPattern(RhythmPattern rhythm)
+    {
+        var format = Formatter?.Format(rhythm)
+            ?? new RhythmPatternFormat(RhythmPattern.LEFT_DELIMITER.ToString(), RhythmPattern.RIGHT_DELIMITER.ToString(), rhythm.Select(s => new StrokeFormat(s.ToString(), s.Type)).ToArray());
+
+        <span class="rhythm-pattern-delimiter">@format.LeftDelimiter</span>
+
+        @foreach (var stroke in format.Strokes)
+        {
+            <span class="rhythm-pattern-stroke" data-stroke="@stroke.Type"><span class="stroke-note" style="--note-content: '@(stroke.NoteLength?.ToString(Formatter) ?? " ")'"></span>@stroke.Stroke<span class="stroke-length" style="--stroke-length: '@(stroke.Length?.ToString() ?? " ")'"></span></span>
+        }
+
+        <span class="rhythm-pattern-delimiter">@format.RightDelimiter</span>
+    }
+
     void RenderElement(SheetLine line, SheetDisplayLineElement element)
     {
         switch (element)
         {
             case SheetDisplayLineChord chord:
-                <span @key="chord.Slice" class="@GetElementClasses(element)">@{ RenderChordContent(chord.Chord); }</span>
+                <span @key="chord.Slice" class="@GetElementClasses(element)">@{ RenderChord(chord.Chord); }</span>
+                break;
+
+            case SheetDisplayLineRhythmPattern rhythm:
+                <span @key="rhythm.Slice" class="@GetElementClasses(element)">@{ RenderRhythmPattern(rhythm.Rhythm); }</span>
                 break;
 
             case SheetDisplayLineSegmentTitleBracket titleBracket when titleBracket.IsTitleStart:
@@ -226,6 +245,7 @@
 
         SheetDisplayLineChord => "chord",
         SheetDisplayLineFingering => "fingering",
+        SheetDisplayLineRhythmPattern => "rhythm-pattern",
 
         SheetDisplayLineText => "text",
         SheetDisplayLineAnchorText => "anchor-text",

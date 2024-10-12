@@ -21,10 +21,22 @@ public readonly record struct AlterationFormat(string Type, string Degree, strin
 	public override string ToString() => Type + (ModifierAfter ? Degree + Modifier : Modifier + Degree);
 }
 
+public readonly record struct RhythmPatternFormat(string LeftDelimiter, string RightDelimiter, StrokeFormat[] Strokes)
+{
+	public override string ToString() => LeftDelimiter + string.Join(null, Strokes) + RightDelimiter;
+}
+
+public record struct StrokeFormat(string Stroke, StrokeType Type)
+{
+	public int? Length { get; set; }
+	public NoteLength? NoteLength { get; set; }
+
+	public override string ToString() => Stroke;
+}
+
 public interface ISheetFormatter
 {
 	string ToString(Note note);
-
 	NoteFormat Format(Note note);
 
 	string ToString(Chord chord);
@@ -36,6 +48,12 @@ public interface ISheetFormatter
 	AlterationFormat Format(ChordAlteration alteration, int index);
 
 	string ToString(Fingering fingering);
+
+	string ToString(NoteLength noteLength);
+
+	string ToString(Stroke stroke);
+	string ToString(RhythmPattern pattern);
+	RhythmPatternFormat Format(RhythmPattern pattern);
 }
 
 public interface ISheetBuilderFormatter : ISheetFormatter
@@ -51,6 +69,7 @@ public interface ISheetEditorFormatter : ISheetBuilderFormatter
 {
 	int TryReadChord(ReadOnlySpan<char> s, out Chord? chord);
 	int TryReadFingering(ReadOnlySpan<char> s, out Fingering? fingering, int minLength = 1);
+	int TryReadRhythm(ReadOnlySpan<char> s, out RhythmPattern? rhythm);
 }
 
 public enum GermanNoteMode
@@ -105,6 +124,44 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 	public string TextFlatDegreeModifier { get; init; } = TextFlatModifier;
 	public string TextMajorDegreeModifier { get; init; } = "maj";
 	public string TextMajorSeventhDegreeModifier { get; init; } = "Δ";
+
+	public string RhythmPatternLeftDelimiter { get; init; } = "|";
+	public string RhythmPatternRightDelimiter { get; init; } = "|";
+
+	public string TextRhythmPatternLeftDelimiter { get; init; } = "|";
+	public string TextRhythmPatternRightDelimiter { get; init; } = "|";
+
+	public IReadOnlyList<string> StrokeTypes { get; init; } = new List<string>(Enum.GetNames<StrokeType>())
+	{
+		[(int)StrokeType.None]      = " ", // "·",
+		[(int)StrokeType.Down]      = "↓",
+		[(int)StrokeType.Up]        = "↑",
+		[(int)StrokeType.LightDown] = "⇣",
+		[(int)StrokeType.LightUp]   = "⇡",
+		[(int)StrokeType.MuteDown]  = "⤈",
+		[(int)StrokeType.MuteUp]    = "⤉",
+		[(int)StrokeType.Hold]      = "—",
+		[(int)StrokeType.Rest]      = "/",
+		[(int)StrokeType.DeadNote]  = "×",
+	};
+
+	public IReadOnlyList<string> TextStrokeTypes { get; init; } = new List<string>(Enum.GetNames<StrokeType>())
+	{
+		[(int)StrokeType.None]      = " ",
+		[(int)StrokeType.Down]      = "v",
+		[(int)StrokeType.Up]        = "^",
+		[(int)StrokeType.LightDown] = ",",
+		[(int)StrokeType.LightUp]   = "'",
+		[(int)StrokeType.MuteDown]  = "m",
+		[(int)StrokeType.MuteUp]    = "M",
+		[(int)StrokeType.Hold]      = "-",
+		[(int)StrokeType.Rest]      = ".",
+		[(int)StrokeType.DeadNote]  = "x",
+	};
+
+	public string[] NoteLengths { get; init; } = [" ", "𝅝", "𝅗𝅥", "𝅘𝅥", "𝅘𝅥𝅮", "𝅘𝅥𝅯", "𝅘𝅥𝅰", "𝅘𝅥𝅱", "𝅘𝅥𝅲"];
+	public string[] RestLengths { get; init; } = [" ", "𝄻", "𝄼", "𝄽", "𝄾", "𝄿", "𝅀", "𝅁", "𝅂"];
+	public char NoteLengthDot { get; init; } = '·';
 
 	public GermanNoteMode GermanMode { get; init; } = GermanNoteMode.AlwaysB;
 
@@ -255,7 +312,64 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 		return new(note.Type.GetDisplayName(), ToString(note.Accidental, inDocument, transform));
 	}
 
-	public string ToString(Fingering fingering) => string.Join("", fingering.Positions.Select(p => p.ToString()));
+	public string ToString(Fingering fingering)
+		=> string.Join(null, fingering.Positions.Select(p => p.ToString()));
+
+	public string ToString(NoteLength noteLength)
+	{
+		var strings = noteLength.IsRest ? RestLengths : NoteLengths;
+		var s = noteLength.Values.Select(v => v >= 0 && (int)v <= (strings.Length - 1) ? strings[(int)v] : " ");
+		return string.Join(null, s) + new string(NoteLengthDot, noteLength.Dots);
+	}
+
+	public string ToString(Stroke stroke)
+		=> TextStrokeTypes[(int)stroke.Type];
+
+	public string ToString(RhythmPattern pattern)
+		=> TextRhythmPatternLeftDelimiter + string.Join(null, pattern.Select(ToString)) + TextRhythmPatternRightDelimiter;
+
+	public RhythmPatternFormat Format(RhythmPattern pattern)
+	{
+		//Taktlänge
+		var noteLength = TryCalculateBarLength(pattern) ?? NoteValue.Eighth;
+
+		var strokes = new StrokeFormat[pattern.Count];
+		var nextLength = 1;
+		for (var i = pattern.Count - 1; i >= 0; i--)
+		{
+			var stroke = pattern[i];
+			var strokeString = StrokeTypes[(int)stroke.Type];
+			if (stroke.Type is StrokeType.Hold or StrokeType.None)
+			{
+				strokes[i] = new(strokeString, stroke.Type);
+				nextLength++;
+				continue;
+			}
+
+			strokes[i] = new(strokeString, stroke.Type)
+			{
+				Length = nextLength,
+				NoteLength = NoteLength.Create(noteLength, nextLength),
+			};
+			nextLength = 1;
+		}
+
+		return new(RhythmPatternLeftDelimiter, RhythmPatternRightDelimiter, strokes);
+	}
+
+	private NoteValue? TryCalculateBarLength(RhythmPattern pattern)
+	{
+		if (pattern.Count <= 1)
+			return NoteValue.Whole;
+		if (pattern.Count == 2)
+			return NoteValue.Half;
+
+		var noteValue = NoteValue.Whole;
+		for (var value = pattern.Count - 1; value != 0; value >>= 1)
+			noteValue += 1;
+
+		return noteValue;
+	}
 
 	public IEnumerable<int> GetLineIndentations() => LineIndentations;
 
@@ -332,6 +446,9 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 
 	public int TryReadFingering(ReadOnlySpan<char> s, out Fingering? fingering, int minLength = 2)
 		=> Fingering.TryRead(s, out fingering, minLength);
+
+	public int TryReadRhythm(ReadOnlySpan<char> s, out RhythmPattern? rhythm)
+		=> RhythmPattern.TryRead(s, out rhythm);
 }
 
 public static class SheetFormatterExtensions

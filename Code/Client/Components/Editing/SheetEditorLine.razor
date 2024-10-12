@@ -1,4 +1,4 @@
-﻿@namespace Skinnix.RhymeTool.Client.Components.Editing
+@namespace Skinnix.RhymeTool.Client.Components.Editing
 
 @using Skinnix.RhymeTool.Client.Components.Rendering
 @using Skinnix.RhymeTool.ComponentModel
@@ -25,7 +25,7 @@
         }
     }
 
-    void RenderChordContent(Chord chord)
+    void RenderChord(Chord chord)
     {
         <span class="chord-root">@{ RenderNote(chord.Root); }</span><span class="chord-quality">@(Formatter?.ToString(chord.Quality) ?? chord.Quality.ToString())</span>
 
@@ -69,12 +69,32 @@
         <span class="drag-handle" draggable="true" style="--content: '@chord.ToString(Formatter)';" ondragstart="chordStartDrag(event)"></span>
     }
 
+    void RenderRhythmPattern(RhythmPattern rhythm)
+    {
+        var format = Formatter?.Format(rhythm)
+            ?? new RhythmPatternFormat(RhythmPattern.LEFT_DELIMITER.ToString(), RhythmPattern.RIGHT_DELIMITER.ToString(),
+                rhythm.Select(s => new StrokeFormat(s.ToString(), s.Type)).ToArray());
+
+        <span class="rhythm-pattern-delimiter">@format.LeftDelimiter</span>
+
+        @foreach (var stroke in format.Strokes)
+        {
+            <span class="rhythm-pattern-stroke" data-stroke="@stroke.Type"><span class="stroke-note" style="--note-content: '@(stroke.NoteLength?.ToString(Formatter) ?? " ")'"></span>@stroke.Stroke<span class="stroke-length" style="--stroke-length: '@(stroke.Length?.ToString() ?? " ")'"></span></span>
+        }
+
+        <span class="rhythm-pattern-delimiter">@format.RightDelimiter</span>
+    }
+
     void RenderSpan(SheetDisplayLineElement element)
     {
         string? elementString = null;
         <span @key="GetKey(element)" class="@SheetRenderer.GetElementClasses(element)">@if (element is SheetDisplayLineChord chord)
             {
-                RenderChordContent(chord.Chord);
+                RenderChord(chord.Chord);
+            }
+            else if (element is SheetDisplayLineRhythmPattern rhythm)
+            {
+                RenderRhythmPattern(rhythm.Rhythm);
             }
             else
             {

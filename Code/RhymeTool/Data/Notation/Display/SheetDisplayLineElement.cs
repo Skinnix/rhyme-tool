@@ -90,6 +90,11 @@ public record SheetDisplayLineFingering(Fingering Fingering) : SheetDisplayLineE
     public override string ToString(ISheetFormatter? formatter = null) => Fingering.ToString(formatter);
 }
 
+public record SheetDisplayLineRhythmPattern(RhythmPattern Rhythm) : SheetDisplayLineElement
+{
+	public override string ToString(ISheetFormatter? formatter = null) => Rhythm.ToString(formatter);
+}
+
 public record SheetDisplayLineSegmentTitleText(string Text) : SheetDisplayLineElement
 {
 	public override string ToString(ISheetFormatter? formatter = null) => Text;
