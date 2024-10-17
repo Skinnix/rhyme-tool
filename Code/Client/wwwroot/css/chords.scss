@@ -306,6 +306,11 @@ $separatorColor: #6c757d;
 			font-weight: bold;
 		}
 
+		& > * {
+			display: inline-block;
+			width: var(--tab-element-width, 1) 'ch';
+		}
+
 		.note {
 		}
 

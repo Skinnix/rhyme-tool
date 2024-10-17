@@ -343,6 +343,11 @@ function registerChordEditor(wrapper: HTMLElement, reference: BlazorDotNetRefere
         };
 		editor = new ModificationEditor(wrapper, callback);
 		selectionObserver = new SelectionObserver(editor);
+
+		if ((<any>window).isDebugging) {
+			(<any>window).editor = editor;
+			(<any>window).selectionObserver = selectionObserver;
+		}
     }
 }
 

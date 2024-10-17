@@ -26,6 +26,7 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 	private IEnumerable<SheetDisplayLine>? cachedLines;
 
 	private List<int> barLineEditIndexes = [];
+	private List<RenderBounds> indexBounds = [];
 
 	public TabLineDefinition.Collection Lines { get; }
 	public Component.Collection Components { get; }
@@ -117,6 +118,8 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 		if (bars < 1)
 			bars = 1;
 		var builder = new Builder(Lines, formatter, barLineEditIndexes = new());
+		var totalNotes = bars * BarLength;
+		indexBounds = new(totalNotes + 1);
 
 		//Notenwerte
 		var i = 0;
@@ -166,42 +169,58 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 			//Keine Komponente?
 			if (component is null)
 			{
+				//Setze Render-Offset
+				var currentRenderOffset = builder.Builders[0].CurrentLength;
 				builder.AddEmpty();
+				indexBounds.Add(new(currentRenderOffset, currentRenderOffset + 1));
 				continue;
 			}
 
-			//Setze Render-Offset
-			var renderOffset = builder.Builders[0].CurrentLength;
-			component.RenderBounds = new(renderOffset, renderOffset + 1);
-
-			//Füge Komponente hinzu
-			i = -1;
-			foreach (var line in builder.Builders)
+			//Erzeuge Elemente
+			var elements = new SheetDisplayLineTabNoteBase[Lines.Count];
+			var componentWidth = 1;
+			for (i = 0; i < Lines.Count; i++)
 			{
-				i++;
+				//Erzeuge Element
 				var note = component.TryGetNote(i);
-				if (note.IsEmpty)
-				{
-					line.Append(new SheetDisplayLineTabEmptyNote()
+				var element = elements[i] = note.IsEmpty
+					? new SheetDisplayLineTabEmptyNote()
 					{
 						Slice = new(component, new ContentOffset(index)),
-					}, formatter);
-				}
-				else
-				{
-					line.Append(new SheetDisplayLineTabNote(note.Value.ToString()!)
+					}
+					: new SheetDisplayLineTabNote(note.Value.ToString()!)
 					{
 						Slice = new(component, new ContentOffset(index)),
-					}, formatter);
-				}
+					};
+
+				if (element.Width > componentWidth)
+					componentWidth = element.Width;
 			}
+
+			//Breitere Elemente?
+			if (componentWidth > 1)
+				foreach (var element in elements)
+					element.Width = componentWidth;
+
+			//Füge Elemente hinzu
+			var renderOffset = builder.Builders[0].CurrentLength;
+			foreach ((var line, var element) in builder.Builders.Zip(elements))
+				line.Append(element, formatter);
+
+			//Setze Render-Offset
+			indexBounds.Add(new(renderOffset, renderOffset + componentWidth));
 		}
 
 		//Mache den aktuellen Takt voll
 		while (currentBarLength < BarLength)
 		{
+			index++;
+			var renderOffset = builder.Builders[0].CurrentLength;
 			builder.AddEmpty();
 			currentBarLength++;
+
+			//Setze Render-Offset
+			indexBounds.Add(new(renderOffset, renderOffset + 1));
 		}
 
 		//Letzter Taktstrich
@@ -486,7 +505,31 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 
 			//Keine Zahl?
 			if (!int.TryParse(content, out var value))
-				return DelayedMetalineEditResult.Fail(NotANumber);
+			{
+				switch (content)
+				{
+					case "a" or "A":
+						value = 10;
+						break;
+					case "b" or "B":
+						value = 11;
+						break;
+					case "c" or "C":
+						value = 12;
+						break;
+					case "d" or "D":
+						value = 13;
+						break;
+					case "e" or "E":
+						value = 14;
+						break;
+					case "f" or "F":
+						value = 15;
+						break;
+					default:
+						return DelayedMetalineEditResult.Fail(NotANumber);
+				}
+			}
 
 			//Einzeilige Bearbeitung?
 			if (multilineContext is null)
@@ -591,13 +634,14 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 					{
 						//Erzeuge die Komponente
 						var newComponent = new Component(Enumerable.Range(0, owner.Lines.Count)
-							.Select(i => lineIndexes.Contains(i) ? new TabNote(value) : default))
-						{
-							RenderBounds = new(component.EditIndex, component.EditIndex + 1),
-						};
+							.Select(i => lineIndexes.Contains(i) ? new TabNote(value) : default));
+						if (component.Data.ComponentIndex >= owner.indexBounds.Count)
+							owner.indexBounds.Add(new(component.EditIndex, component.EditIndex + 1));
+						else
+							owner.indexBounds[component.Data.ComponentIndex] = new(component.EditIndex, component.EditIndex + 1);
 
 						//Füge die Komponente hinzu
-						owner.Components[component.Data.BarIndex * owner.BarLength + component.Data.NoteIndex] = newComponent;
+						owner.Components[component.Data.ComponentIndex] = newComponent;
 					}
 					else
 					{
@@ -635,90 +679,108 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 		private DelayedMetalineEditResult NoEdit(SheetDisplayLineEditingContext context)
 			=> new DelayedMetalineEditResult(() => new MetalineEditResult(new MetalineSelectionRange(this, context.SelectionRange)));
 
-		private (int BarIndex, int NoteIndex, Component? Component) GetBarAndNoteIndex(int editIndex)
+		private (int ComponentIndex, int BarIndex, int NoteIndex, Component? Component) GetBarAndNoteIndex(int editIndex)
 		{
-			Component? last = null;
-			int lastIndex = -1;
-			var index = -1;
-			foreach (var component in owner.Components)
+			//Finde passende RenderBounds
+			var index = owner.indexBounds.BinarySearch(new RenderBounds(editIndex, editIndex + 1), RenderBounds.PositionInsideComparer);
+			if (index >= 0)
 			{
-				//Vor dem editIndex?
-				index++;
-				if (component is null || component.RenderBounds.AfterOffset <= editIndex)
-				{
-					if (component is not null)
-					{
-						last = component;
-						lastIndex = index;
-					}
-					continue;
-				}
-
 				//Taktindex und Notenindex berechnen
 				var barNoteIndex = Math.DivRem(index, owner.BarLength);
-
-				//Genau den Taktstrich getroffen?
-				if (barNoteIndex.Remainder == 0 && owner.barLineEditIndexes.Contains(editIndex))
-					return (barNoteIndex.Quotient, INDEX_BAR_LINE, null);
-
-				//Komponente an der aktuellen Position?
-				if (component is not null && component.RenderBounds.StartOffset <= editIndex && component.RenderBounds.AfterOffset > editIndex)
-					return (barNoteIndex.Quotient, barNoteIndex.Remainder, component);
-
-				//Keine Komponente
-				break;
+				return (index, barNoteIndex.Quotient, barNoteIndex.Remainder, owner.Components[index]);
 			}
 
-			//Keine Komponenten?
-			if (last is null)
-			{
-				//Taktindex und Notenindex berechnen
-				var barNoteIndex = owner.barLineEditIndexes.Count == 0 ? Math.DivRem(editIndex, owner.BarLength + 1)
-					: Math.DivRem(editIndex - owner.barLineEditIndexes[0], owner.BarLength + 1);
+			//Taktstrich getroffen?
+			var barLineIndex = owner.barLineEditIndexes.BinarySearch(editIndex);
+			if (barLineIndex >= 0)
+				return (0, barLineIndex - 1, INDEX_BAR_LINE, null);
 
-				//Genau den Taktstrich getroffen?
-				if (barNoteIndex.Remainder == 0 && owner.barLineEditIndexes.Contains(editIndex))
-					return (barNoteIndex.Quotient, INDEX_BAR_LINE, null);
+			//Erste Note im nächsten Takt
+			index = (owner.barLineEditIndexes.Count - 1) * owner.BarLength;
+			return (index, owner.barLineEditIndexes.Count - 1, 0, null);
 
-				//Ungültige Position?
-				if (barNoteIndex.Remainder < 1)
-					return (barNoteIndex.Quotient, INDEX_INVALID, null);
-
-				//Keine Komponente
-				return (barNoteIndex.Quotient, barNoteIndex.Remainder - 1, null);
-			}
-
-			//Berechne Abstand zur letzten Komponente
-			var distance = editIndex - last.RenderBounds.AfterOffset + 1;
-
-			//Taktindex und Notenindex der letzten Komponente berechnen
-			var lastBarNoteIndex = Math.DivRem(lastIndex, owner.BarLength);
-
-			//Wie viele Taktstriche liegen dazwischen?
-			var barLinesInBetween = Math.DivRem(lastBarNoteIndex.Remainder + distance, owner.BarLength + 1).Quotient;
-			distance -= barLinesInBetween;
-
-			//Index
-			var componentIndex = lastIndex + distance;
-			var componentPosition = Math.DivRem(componentIndex, owner.BarLength);
-			var barIndex = componentPosition.Quotient;
-			var noteIndex = componentPosition.Remainder;
-
-			//var adjust = Math.DivRem(lastBarNoteIndex.Remainder + distance, owner.BarLength + 1);
-			//var barIndex = lastBarNoteIndex.Quotient + adjust.Quotient;
-			//var noteIndex = adjust.Remainder;
-			//if (noteIndex == owner.barLength)
+			//Component? last = null;
+			//int lastIndex = -1;
+			//var index = -1;
+			//foreach (var component in owner.Components)
 			//{
-			//	barIndex++;
-			//	noteIndex = 0;
-			//}
-			
-			//Genau den Taktstrich getroffen?
-			if (owner.barLineEditIndexes.Contains(editIndex))
-				return (barIndex, INDEX_BAR_LINE, null);
+			//	//Vor dem editIndex?
+			//	index++;
+			//	if (component is null || component.RenderBounds.AfterOffset <= editIndex)
+			//	{
+			//		if (component is not null)
+			//		{
+			//			last = component;
+			//			lastIndex = index;
+			//		}
+			//		continue;
+			//	}
 
-			//Index am Ende
-			return (barIndex, noteIndex, null);
+			//	//Taktindex und Notenindex berechnen
+			//	var barNoteIndex = Math.DivRem(index, owner.BarLength);
+
+			//	//Genau den Taktstrich getroffen?
+			//	if (barNoteIndex.Remainder == 0 && owner.barLineEditIndexes.Contains(editIndex))
+			//		return (barNoteIndex.Quotient, INDEX_BAR_LINE, null);
+
+			//	//Komponente an der aktuellen Position?
+			//	if (component is not null && component.RenderBounds.StartOffset <= editIndex && component.RenderBounds.AfterOffset > editIndex)
+			//		return (barNoteIndex.Quotient, barNoteIndex.Remainder, component);
+
+			//	//Keine Komponente
+			//	break;
+			//}
+
+			////Keine Komponenten?
+			//if (last is null)
+			//{
+			//	//Taktindex und Notenindex berechnen
+			//	var barNoteIndex = owner.barLineEditIndexes.Count == 0 ? Math.DivRem(editIndex, owner.BarLength + 1)
+			//		: Math.DivRem(editIndex - owner.barLineEditIndexes[0], owner.BarLength + 1);
+
+			//	//Genau den Taktstrich getroffen?
+			//	if (barNoteIndex.Remainder == 0 && owner.barLineEditIndexes.Contains(editIndex))
+			//		return (barNoteIndex.Quotient, INDEX_BAR_LINE, null);
+
+			//	//Ungültige Position?
+			//	if (barNoteIndex.Remainder < 1)
+			//		return (barNoteIndex.Quotient, INDEX_INVALID, null);
+
+			//	//Keine Komponente
+			//	return (barNoteIndex.Quotient, barNoteIndex.Remainder - 1, null);
+			//}
+
+			////Berechne Abstand zur letzten Komponente
+			//var distance = editIndex - last.RenderBounds.AfterOffset + 1;
+
+			////Taktindex und Notenindex der letzten Komponente berechnen
+			//var lastBarNoteIndex = Math.DivRem(lastIndex, owner.BarLength);
+
+			////Wie viele Taktstriche liegen dazwischen?
+			//var barLinesInBetween = Math.DivRem(lastBarNoteIndex.Remainder + distance, owner.BarLength + 1).Quotient;
+			//distance -= barLinesInBetween;
+
+			////Index
+			//var componentIndex = lastIndex + distance;
+			//var componentPosition = Math.DivRem(componentIndex, owner.BarLength);
+			//var barIndex = componentPosition.Quotient;
+			//var noteIndex = componentPosition.Remainder;
+
+			////var adjust = Math.DivRem(lastBarNoteIndex.Remainder + distance, owner.BarLength + 1);
+			////var barIndex = lastBarNoteIndex.Quotient + adjust.Quotient;
+			////var noteIndex = adjust.Remainder;
+			////if (noteIndex == owner.barLength)
+			////{
+			////	barIndex++;
+			////	noteIndex = 0;
+			////}
+
+			////Genau den Taktstrich getroffen?
+			//if (owner.barLineEditIndexes.Contains(editIndex))
+			//	return (barIndex, INDEX_BAR_LINE, null);
+
+			////Index am Ende
+			//return (barIndex, noteIndex, null);
 		}
 
 		public class Collection : IReadOnlyList<TabLineDefinition>
@@ -771,6 +833,7 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 
 		public IReadOnlyList<TabNote> Notes => notes;
 
+		[Obsolete()]
 		internal RenderBounds RenderBounds { get; set; } = RenderBounds.Empty;
 
 		public bool IsEmpty => Notes.All(n => n.IsEmpty);
@@ -807,7 +870,7 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 
 			public Component? this[int index]
 			{
-				get => components[index];
+				get => index >= components.Count ? null : components[index];
 				set => SetComponent(index, value);
 			}
 

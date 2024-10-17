@@ -238,6 +238,10 @@ function registerChordEditor(wrapper, reference, callbackName) {
         };
         editor = new ModificationEditor(wrapper, callback);
         selectionObserver = new SelectionObserver(editor);
+        if (window.isDebugging) {
+            window.editor = editor;
+            window.selectionObserver = selectionObserver;
+        }
     }
 }
 function attachmentStartDrag(event) {

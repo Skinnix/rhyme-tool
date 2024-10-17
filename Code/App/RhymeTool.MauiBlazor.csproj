@@ -20,6 +20,7 @@
 		<AssemblyName>Skinnix.RhymeTool.MauiBlazor</AssemblyName>
 		<RootNamespace>Skinnix.RhymeTool.MauiBlazor</RootNamespace>
 		<EnableDefaultCssItems>false</EnableDefaultCssItems>
+		<PublishTrimmed>true</PublishTrimmed>
 		<Nullable>enable</Nullable>
 
 		<!-- Display name -->
