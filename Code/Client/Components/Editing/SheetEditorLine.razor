@@ -85,10 +85,23 @@
         <span class="rhythm-pattern-delimiter">@format.RightDelimiter</span>
     }
 
+    void RenderTabNote(SheetDisplayLineTabNoteBase tabNote)
+    {
+        var format = Formatter?.Format(tabNote.Note, tabNote.Width)
+            ?? new(tabNote.Note.ToString(), tabNote.Width);
+
+        var style = format.Width == 1 && format.Prefix is null && format.Suffix is null ? null
+            : (format.Width == 1 ? null : $"--tab-note-width: {format.Width};--tab-note-padding: {format.Width - format.TotalTextLength};")
+            + (format.Prefix is null ? null : $"--tab-note-prefix: '{format.Prefix}';--tab-note-prefix-length: {format.Prefix.Length}")
+            + (format.Suffix is null ? null : $"--tab-note-suffix: '{format.Suffix}';--tab-note-suffix-length: {format.Suffix.Length}");
+
+        <span @key="tabNote.Slice" class="@SheetRenderer.GetElementClasses(tabNote)" style="@style" @attributes="SheetRenderer.GetElementAttributes(tabNote)">@format.Text</span>
+    }
+
     void RenderSpan(SheetDisplayLineElement element)
     {
         string? elementString = null;
-        <span @key="GetKey(element)" class="@SheetRenderer.GetElementClasses(element)">@if (element is SheetDisplayLineChord chord)
+        <span @key="GetKey(element)" class="@SheetRenderer.GetElementClasses(element)" @attributes="SheetRenderer.GetElementAttributes(element)">@if (element is SheetDisplayLineChord chord)
             {
                 RenderChord(chord.Chord);
             }
@@ -115,6 +128,10 @@
 
             case SheetDisplayLineSegmentTitleBracket titleBracket when titleBracket.IsTitleStart:
                 <span class="scroll-anchor" id="sheetSegment-@(Line.Guid)"></span><span @key="GetKey(element)" class="@SheetRenderer.GetElementClasses(element)">@titleBracket.ToString(Formatter)</span>
+                break;
+
+            case SheetDisplayLineTabNoteBase tabNote:
+                RenderTabNote(tabNote);
                 break;
 
             // case SheetDisplayLineTabBarLine barLine:

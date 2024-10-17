@@ -748,13 +748,14 @@ var ModificationEditor = (function () {
             range = document.createRange();
             documentSelection.addRange(range);
         }
-        this.setLineSelectionRange(range, lineSelection);
+        this.setLineSelectionRange(documentSelection, range, lineSelection);
         this.revertSelection = new StaticRange(range);
         return documentSelection;
     };
-    ModificationEditor.prototype.setLineSelectionRange = function (range, lineSelection) {
+    ModificationEditor.prototype.setLineSelectionRange = function (documentSelection, range, lineSelection) {
         var startLine = lineSelection.start.lineNode;
         var endLine = lineSelection.end.lineNode;
+        console.log('selecting', lineSelection);
         if (!(startLine instanceof HTMLElement && endLine instanceof HTMLElement)) {
             var metalineLineSelection = lineSelection;
             var startMetaline = startLine ? null : this.editor.querySelector(".metaline[data-metaline=\"".concat(metalineLineSelection.start.metaline, "\"]"));
@@ -765,21 +766,44 @@ var ModificationEditor = (function () {
             endLine !== null && endLine !== void 0 ? endLine : (endLine = metalineLineSelection.end.metaline == metalineLineSelection.start.metaline && metalineLineSelection.end.line == metalineLineSelection.start.line ? startLine
                 : findLine(endMetaline, metalineLineSelection.end.line));
         }
-        var start = this.getNode(startLine, lineSelection.start.offset);
-        var end = startLine === endLine && lineSelection.end.offset == lineSelection.start.offset ? start
-            : this.getNode(endLine, lineSelection.end.offset);
-        if (start.node instanceof Text && start.offset > start.node.length)
-            range.setStart(start.node, start.node.length);
-        else if (start.node instanceof HTMLElement && start.offset > start.node.childElementCount)
-            range.setStart(start.node, start.node.childElementCount);
-        else
-            range.setStart(start.node, start.offset);
-        if (end.node instanceof Text && end.offset > end.node.length)
-            range.setEnd(end.node, end.node.length);
-        else if (end.node instanceof HTMLElement && end.offset > end.node.childElementCount)
-            range.setEnd(end.node, end.node.childElementCount);
-        else
-            range.setEnd(end.node, end.offset);
+        if (lineSelection.start.offset < 0 || lineSelection.start.offset >= startLine.textContent.length) {
+            var current = startLine;
+            while (current.lastChild)
+                current = current.lastChild;
+            range.setStart(current, current.textContent.length);
+            range.collapse(true);
+            for (var i_1 = -1; i_1 > lineSelection.start.offset; i_1--)
+                documentSelection.modify('move', 'backward', 'character');
+        }
+        else {
+            range.setStart(startLine, 0);
+            range.collapse(true);
+            for (var i = 0; i < lineSelection.start.offset; i++)
+                documentSelection.modify('move', 'forward', 'character');
+        }
+        if (startLine === endLine) {
+            if (lineSelection.start.offset == lineSelection.end.offset) {
+                return;
+            }
+            else if (lineSelection.end.offset >= 0) {
+                for (var i = lineSelection.start.offset; i < lineSelection.end.offset; i++)
+                    documentSelection.modify('extend', 'forward', 'character');
+                return;
+            }
+        }
+        if (lineSelection.end.offset < 0 || lineSelection.end.offset >= endLine.textContent.length) {
+            var current = endLine;
+            while (current.lastChild)
+                current = current.lastChild;
+            range.setEnd(current, current.textContent.length);
+            for (var i_2 = -1; i_2 > lineSelection.end.offset; i_2--)
+                documentSelection.modify('extend', 'backward', 'character');
+        }
+        else {
+            range.setEnd(endLine, 0);
+            for (var i = 0; i < lineSelection.end.offset; i++)
+                documentSelection.modify('extend', 'forward', 'character');
+        }
         function findLine(metaline, line) {
             if (line === ModificationEditor.FIRST_LINE_ID) {
                 return metaline.querySelector('.line[data-line]');
@@ -924,7 +948,7 @@ var SelectionObserver = (function () {
     SelectionObserver.prototype.handleSelectionChange = function (event) {
         var _a, _b;
         var documentSelection = getSelection();
-        if (!documentSelection || documentSelection.rangeCount == 0 || documentSelection.isCollapsed)
+        if (!documentSelection || documentSelection.rangeCount == 0)
             return this.resetCustomSelections();
         var range = documentSelection.getRangeAt(0);
         if (documentSelection.rangeCount > 1) {
@@ -968,8 +992,25 @@ var SelectionObserver = (function () {
         this.customSelection.className = 'custom-selection';
     };
     SelectionObserver.prototype.adjustBoxSelection = function (documentSelection, range, lineSelection) {
+        if (range.collapsed) {
+            var newEnd = extendRangeByOne(range.startContainer, range.startOffset);
+            if (typeof newEnd === 'number') {
+                var newRange = document.createRange();
+                newRange.setStart(range.endContainer, range.endOffset);
+                newRange.setEnd(range.endContainer, newEnd);
+                range = newRange;
+            }
+            else if (newEnd) {
+                var newRange = document.createRange();
+                newRange.setStart(newEnd, 0);
+                newRange.setEnd(newEnd, 1);
+                range = newRange;
+            }
+        }
+        if (range.collapsed)
+            return this.resetCustomSelections();
         if (!this.supportsMultipleRanges)
-            return emulateBoxSelection.bind(this)(range);
+            return emulateBoxSelection(this, documentSelection, range);
         if (lineSelection.end.lineNode.compareDocumentPosition(lineSelection.start.lineNode) & Node.DOCUMENT_POSITION_FOLLOWING) {
             lineSelection = {
                 start: lineSelection.end,
@@ -993,7 +1034,8 @@ var SelectionObserver = (function () {
         for (var i = 0; i < lines.length; i++) {
             var line = lines[i];
             var lineRange = document.createRange();
-            this.modificationEditor.setLineSelectionRange(lineRange, {
+            documentSelection.addRange(lineRange);
+            this.modificationEditor.setLineSelectionRange(documentSelection, lineRange, {
                 start: {
                     lineNode: line,
                     offset: startOffset,
@@ -1003,13 +1045,28 @@ var SelectionObserver = (function () {
                     offset: endOffset,
                 }
             });
-            documentSelection.addRange(lineRange);
         }
         if (documentSelection.rangeCount != lines.length) {
             this.supportsMultipleRanges = false;
-            emulateBoxSelection.bind(this)(range);
+            emulateBoxSelection(this, documentSelection, range);
         }
-        function emulateBoxSelection(range) {
+        function emulateBoxSelection(self, documentSelection, range) {
+            var lineSelection = self.modificationEditor.getLineSelection(range, false);
+            if (lineSelection.start.offset == lineSelection.end.offset) {
+                var newEnd = extendRangeByOne(range.endContainer, range.endOffset);
+                if (typeof newEnd === 'number') {
+                    var newRange = document.createRange();
+                    newRange.setStart(range.startContainer, range.startOffset);
+                    newRange.setEnd(range.endContainer, newEnd);
+                    range = newRange;
+                }
+                else if (newEnd) {
+                    var newRange = document.createRange();
+                    newRange.setStart(range.startContainer, range.startOffset);
+                    newRange.setEnd(newEnd, 1);
+                    range = newRange;
+                }
+            }
             var rects = range.getClientRects();
             var startRect = rects[0];
             var endRect = rects[rects.length - 1];
@@ -1019,19 +1076,39 @@ var SelectionObserver = (function () {
                 endRect = temp;
             }
             var x = startRect.left;
-            if (endRect.left < x)
+            if (lineSelection.end.offset < lineSelection.start.offset)
                 x = endRect.right;
             var y = startRect.top;
             var width = +(startRect.left - endRect.right);
             if (width < 0)
                 width = -width;
             var height = endRect.bottom - startRect.top;
-            var wrapperRect = this.editorWrapper.getBoundingClientRect();
-            this.customSelection.style.top = (y - wrapperRect.top) + 'px';
-            this.customSelection.style.left = (x - wrapperRect.left) + 'px';
-            this.customSelection.style.width = width + 'px';
-            this.customSelection.style.height = height + 'px';
-            this.customSelection.className = 'custom-selection custom-selection-box';
+            var wrapperRect = self.editorWrapper.getBoundingClientRect();
+            self.customSelection.style.top = (y - wrapperRect.top) + 'px';
+            self.customSelection.style.left = (x - wrapperRect.left) + 'px';
+            self.customSelection.style.width = width + 'px';
+            self.customSelection.style.height = height + 'px';
+            self.customSelection.className = 'custom-selection custom-selection-box';
+        }
+        function extendRangeByOne(container, offset) {
+            if (offset < container.textContent.length)
+                return offset + 1;
+            do {
+                while (!container.nextSibling) {
+                    container = container.parentElement;
+                    if (container.nodeType == Node.ELEMENT_NODE && container.classList.contains('line')) {
+                        return null;
+                    }
+                }
+                container = container.nextSibling;
+            } while (container.textContent.length == 0);
+            do {
+                if (container.nodeType != Node.TEXT_NODE)
+                    container = container.firstChild;
+                while (container.textContent.length == 0)
+                    container = container.nextSibling;
+            } while (container.nodeType != Node.TEXT_NODE);
+            return container;
         }
     };
     SelectionObserver.prototype.handleDragStart = function (event) {

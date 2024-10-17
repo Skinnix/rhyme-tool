@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -188,7 +187,7 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 					{
 						Slice = new(component, new ContentOffset(index)),
 					}
-					: new SheetDisplayLineTabNote(note.Value.ToString()!)
+					: new SheetDisplayLineTabNote(note)
 					{
 						Slice = new(component, new ContentOffset(index)),
 					};
@@ -208,7 +207,8 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 				line.Append(element, formatter);
 
 			//Setze Render-Offset
-			indexBounds.Add(new(renderOffset, renderOffset + componentWidth));
+			var afterOffset = builder.Builders[0].CurrentLength;
+			indexBounds.Add(new(renderOffset, afterOffset));
 		}
 
 		//Mache den aktuellen Takt voll
@@ -806,24 +806,6 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 
 			public IEnumerator<TabLineDefinition> GetEnumerator() => lines.GetEnumerator();
 			IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-		}
-	}
-
-	public readonly record struct TabNote
-	{
-		private readonly int value;
-		
-		public int? Value => value == 0 ? null : value - 1;
-
-		[MemberNotNullWhen(false, nameof(Value))]
-		public bool IsEmpty => value == 0;
-
-		public TabNote(int? value)
-		{
-			if (value < 0)
-				throw new ArgumentOutOfRangeException(nameof(value), "Note kann nicht kleiner als Null sein");
-
-			this.value = value.GetValueOrDefault(-1) + 1;
 		}
 	}
 

@@ -307,8 +307,27 @@ $separatorColor: #6c757d;
 		}
 
 		& > * {
-			display: inline-block;
-			width: var(--tab-element-width, 1) 'ch';
+			//display: inline-block;
+			//width: calc(var(--tab-note-width)* 1ch);
+			//letter-spacing: calc(var(--tab-note-width) * 0.5ch);
+			padding: 0 calc(var(--tab-note-padding) * 0.5ch);
+
+			&.note {
+				letter-spacing: calc(var(--tab-note-suffix-length, 0) * 1ch);
+				position: relative;
+
+				&::before {
+					content: var(--tab-note-prefix);
+					position: absolute;
+					right: 0ch;
+				}
+
+				&::after {
+					content: var(--tab-note-suffix);
+					position: absolute;
+					left: 1ch;
+				}
+			}
 		}
 
 		.note {
@@ -363,6 +382,12 @@ $separatorColor: #6c757d;
 	}
 }
 
+.chord-sheet-wrapper:has(.custom-selection.custom-selection-box) {
+	[data-selection='box'] {
+		caret-color: transparent;
+	}
+}
+
 .chord-sheet.no-chords {
 	.line.line-chords {
 		display: none;
@@ -407,6 +432,13 @@ $separatorColor: #6c757d;
 		.breakpoint {
 			border-left: 1px solid blue;
 			margin-left: -1px;
+		}
+	}
+
+	[data-selection='box'] {
+		::selection {
+			background-color: red;
+			opacity: 0.3;
 		}
 	}
 }

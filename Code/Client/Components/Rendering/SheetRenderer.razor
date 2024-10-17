@@ -75,16 +75,33 @@
         <span class="rhythm-pattern-delimiter">@format.RightDelimiter</span>
     }
 
+    void RenderTabNote(SheetDisplayLineTabNoteBase tabNote)
+    {
+        var format = Formatter?.Format(tabNote.Note, tabNote.Width)
+            ?? new(tabNote.Note.ToString(), tabNote.Width);
+
+        var style = format.Width == 1 && format.Prefix is null && format.Suffix is null ? null
+            : (format.Width == 1 ? null : $"--tab-note-width: {format.Width};--tab-note-padding: {format.Width - format.TotalTextLength};")
+            + (format.Prefix is null ? null : $"--tab-note-prefix: '{format.Prefix}';--tab-note-prefix-length: {format.Prefix.Length}")
+            + (format.Suffix is null ? null : $"--tab-note-suffix: '{format.Suffix}';--tab-note-suffix-length: {format.Suffix.Length}");
+
+        <span @key="tabNote.Slice" class="@GetElementClasses(tabNote)" style="@style" @attributes="GetElementAttributes(tabNote)">@format.Text</span>
+    }
+
     void RenderElement(SheetLine line, SheetDisplayLineElement element)
     {
         switch (element)
         {
             case SheetDisplayLineChord chord:
-                <span @key="chord.Slice" class="@GetElementClasses(element)">@{ RenderChord(chord.Chord); }</span>
+                <span @key="element.Slice" class="@GetElementClasses(element)" @attributes="GetElementAttributes(element)">@{ RenderChord(chord.Chord); }</span>
                 break;
 
             case SheetDisplayLineRhythmPattern rhythm:
-                <span @key="rhythm.Slice" class="@GetElementClasses(element)">@{ RenderRhythmPattern(rhythm.Rhythm); }</span>
+                <span @key="element.Slice" class="@GetElementClasses(element)" @attributes="GetElementAttributes(element)">@{ RenderRhythmPattern(rhythm.Rhythm); }</span>
+                break;
+
+            case SheetDisplayLineTabNoteBase tabNote:
+                RenderTabNote(tabNote);
                 break;
 
             case SheetDisplayLineSegmentTitleBracket titleBracket when titleBracket.IsTitleStart:
@@ -92,9 +109,9 @@
                 break;
 
             case SheetDisplayLineBreakPoint breakpoint:
-                <span class="@GetElementClasses(element)" data-breakpoint-index="@breakpoint.BreakPointIndex" data-breakpoint-offset="@breakpoint.StartingPointOffset"></span>
+                <span class="@GetElementClasses(element)" @attributes="GetElementAttributes(element)" data-breakpoint-index="@breakpoint.BreakPointIndex" data-breakpoint-offset="@breakpoint.StartingPointOffset"></span>
                 break;
-
+                
             // case SheetDisplayLineTabBarLine barLine:
             //     <span @key="GetKey(element)" class="@SheetRenderer.GetElementClasses(barLine)"><span class="bar-line-content">@element.ToString()</span></span>
             //     break;
@@ -235,6 +252,26 @@
             classes += " attachment";
 
         return classes;
+    }
+
+    public static IEnumerable<KeyValuePair<string, object?>> GetElementAttributes(SheetDisplayLineElement element)
+    {
+        /*var styles = string.Join("; ", GetElementStyles(element));
+        if (styles.Length > 0)
+            yield return new KeyValuePair<string, object?>("style", styles);*/
+        return [];
+    }
+
+    private static IEnumerable<string> GetElementStyles(SheetDisplayLineElement element)
+    {
+        // if (element is SheetDisplayLineTabNoteBase tabNote)
+        // {
+        //     if (tabNote.Width != 1)
+        //         yield return $"--tab-note-width: {tabNote.Width}";
+
+        //     if (tabNote.)
+        // }
+        return [];
     }
 
     public static string? GetElementBaseClass(SheetDisplayLineElement element)

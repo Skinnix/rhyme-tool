@@ -21,35 +21,33 @@ public record SheetDisplayLineTabBarLine() : SheetDisplayLineTabElement
 	public override string ToString(ISheetFormatter? formatter = null) => "|";
 }
 
-public abstract record SheetDisplayLineTabNoteBase() : SheetDisplayLineTabElement
+public abstract record SheetDisplayLineTabNoteBase : SheetDisplayLineTabElement
 {
+	public TabNote Note { get; }
 	public virtual int Width { get; internal set; } = 1;
 
-	public override int GetLength(ISheetFormatter? formatter) => Width;
-}
+	public SheetDisplayLineTabNoteBase(TabNote note)
+	{
+		Note = note;
+		Width = note.ToString().Length;
+	}
 
-public record SheetDisplayLineTabEmptyNote() : SheetDisplayLineTabNoteBase
-{
 	public override string ToString(ISheetFormatter? formatter = null)
 	{
-		if (Width == 1)
-			return "-";
+		if (formatter is not null)
+			return formatter.ToString(Note, Width);
 
-		var widthAfter = Width / 2;
-		var widthBefore = Width - widthAfter - 1;
-		return new string(' ', widthBefore) + "-" + new string(' ', widthAfter);
+		var noteText = Note.ToString();
+		if (Width <= noteText.Length)
+			return noteText;
+
+		var padding = Width - noteText.Length;
+		var widthBefore = padding / 2;
+		var widthAfter = padding - widthBefore;
+		return new string(' ', widthBefore) + noteText + new string(' ', widthAfter);
 	}
 }
 
-public record SheetDisplayLineTabNote : SheetDisplayLineTabNoteBase
-{
-	public string Text { get; }
+public record SheetDisplayLineTabEmptyNote() : SheetDisplayLineTabNoteBase(TabNote.Empty);
 
-	public SheetDisplayLineTabNote(string text)
-	{
-		Text = text;
-		Width = text.Length;
-	}
-
-	public override string ToString(ISheetFormatter? formatter = null) => Text;
-}
+public record SheetDisplayLineTabNote(TabNote Note): SheetDisplayLineTabNoteBase(Note);

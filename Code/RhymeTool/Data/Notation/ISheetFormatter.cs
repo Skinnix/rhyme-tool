@@ -26,12 +26,16 @@ public readonly record struct RhythmPatternFormat(string LeftDelimiter, string R
 	public override string ToString() => LeftDelimiter + string.Join(null, Strokes) + RightDelimiter;
 }
 
-public record struct StrokeFormat(string Stroke, StrokeType Type)
+public readonly record struct StrokeFormat(string Stroke, StrokeType Type, int? Length = null, NoteLength? NoteLength = default)
 {
-	public int? Length { get; set; }
-	public NoteLength? NoteLength { get; set; }
-
 	public override string ToString() => Stroke;
+}
+
+public readonly record struct TabNoteFormat(string Text, int Width, string? Prefix = null, string? Suffix = null)
+{
+	public int TotalTextLength => Text.Length + (Prefix?.Length ?? 0) + (Suffix?.Length ?? 0);
+
+	public override string ToString() => Text;
 }
 
 public interface ISheetFormatter
@@ -54,6 +58,9 @@ public interface ISheetFormatter
 	string ToString(Stroke stroke);
 	string ToString(RhythmPattern pattern);
 	RhythmPatternFormat Format(RhythmPattern pattern);
+
+	string ToString(TabNote note, int width);
+	TabNoteFormat Format(TabNote note, int width);
 }
 
 public interface ISheetBuilderFormatter : ISheetFormatter
@@ -162,6 +169,8 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 	public string[] NoteLengths { get; init; } = [" ", "𝅝", "𝅗𝅥", "𝅘𝅥", "𝅘𝅥𝅮", "𝅘𝅥𝅯", "𝅘𝅥𝅰", "𝅘𝅥𝅱", "𝅘𝅥𝅲"];
 	public string[] RestLengths { get; init; } = [" ", "𝄻", "𝄼", "𝄽", "𝄾", "𝄿", "𝅀", "𝅁", "𝅂"];
 	public char NoteLengthDot { get; init; } = '·';
+
+	public bool CondenseTabNotes { get; init; } = true;
 
 	public GermanNoteMode GermanMode { get; init; } = GermanNoteMode.AlwaysB;
 
@@ -370,6 +379,35 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 
 		return noteValue;
 	}
+
+	public string ToString(TabNote note, int width)
+		=> Format(note, width).ToString();
+
+	public TabNoteFormat Format(TabNote note, int width)
+	{
+		var text = note.ToString();
+
+		if (CondenseTabNotes)
+		{
+			if (text.Length <= 1)
+				return new(text, width);
+
+			var suffix = text[1..];
+			text = text[0].ToString();
+			return new(text, width, Suffix: suffix);
+		}
+
+		var padding = width - text.Length;
+		if (padding > 0)
+		{
+			var paddingLeft = padding / 2;
+			var paddingRight = padding - paddingLeft;
+			text = new string(' ', paddingLeft) + text + new string(' ', paddingRight);
+		}
+
+		return new(text, width);
+	}
+
 
 	public IEnumerable<int> GetLineIndentations() => LineIndentations;
 
