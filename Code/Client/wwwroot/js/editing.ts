@@ -1016,7 +1016,13 @@ class SelectionHelper {
 		let current = iterator.nextNode();
 		while (current && currentOffset + current.textContent.length < offset) {
 			currentOffset += current.textContent.length;
-			current = iterator.nextNode();
+			let next = iterator.nextNode();
+			if (!next)
+				return {
+					node: current,
+					offset: current.textContent.length,
+				};
+			current = next;
 		}
 
 		return {

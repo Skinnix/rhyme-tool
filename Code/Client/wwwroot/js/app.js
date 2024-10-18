@@ -1142,7 +1142,13 @@ var SelectionHelper = (function () {
         var current = iterator.nextNode();
         while (current && currentOffset + current.textContent.length < offset) {
             currentOffset += current.textContent.length;
-            current = iterator.nextNode();
+            var next = iterator.nextNode();
+            if (!next)
+                return {
+                    node: current,
+                    offset: current.textContent.length,
+                };
+            current = next;
         }
         return {
             node: current !== null && current !== void 0 ? current : node,
