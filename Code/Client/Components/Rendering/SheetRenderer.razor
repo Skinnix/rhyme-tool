@@ -62,14 +62,26 @@
 
     void RenderRhythmPattern(RhythmPattern rhythm)
     {
-        var format = Formatter?.Format(rhythm)
-            ?? new RhythmPatternFormat(RhythmPattern.LEFT_DELIMITER.ToString(), RhythmPattern.RIGHT_DELIMITER.ToString(), rhythm.Select(s => new StrokeFormat(s.ToString(), s.Type)).ToArray());
+        var format = rhythm.Format(Formatter);
 
         <span class="rhythm-pattern-delimiter">@format.LeftDelimiter</span>
 
-        @foreach (var stroke in format.Strokes)
+        var isFirst = true;
+        @foreach (var bar in format.Bars)
         {
-            <span class="rhythm-pattern-stroke" data-stroke="@stroke.Type"><span class="stroke-note" style="--note-content: '@(stroke.NoteLength?.ToString(Formatter) ?? " ")'"></span>@stroke.Stroke<span class="stroke-length" style="--stroke-length: '@(stroke.Length?.ToString() ?? " ")'"></span></span>
+            if (isFirst)
+            {
+                isFirst = false;
+            }
+            else
+            {
+                <span class="rhythm-pattern-delimiter">@format.MiddleDelimiter</span>
+            }
+
+            @foreach (var stroke in bar.Strokes)
+            {
+                <span class="rhythm-pattern-stroke" data-stroke="@stroke.Type"><span class="stroke-note" style="--note-content: '@(stroke.NoteLength?.ToString(Formatter) ?? " ")'"></span>@stroke.Stroke<span class="stroke-length" style="--stroke-length: '@(stroke.Length?.ToString() ?? " ")'"></span></span>
+            }
         }
 
         <span class="rhythm-pattern-delimiter">@format.RightDelimiter</span>

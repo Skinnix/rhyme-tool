@@ -239,8 +239,8 @@ $separatorColor: #6c757d;
 			}
 
 			.rhythm-pattern-stroke {
-				display: inline-block;
-				width: 1ch;
+				//display: inline-block;
+				//width: 1ch;
 				text-align: center;
 				vertical-align: middle;
 				color: $rhythmStrokeColor;
@@ -258,9 +258,15 @@ $separatorColor: #6c757d;
 				}
 
 				.stroke-note {
+					line-height: 3em;
+
 					&::before {
 						content: var(--note-content, ' ');
-						display: block;
+						position: relative;
+						display: inline-block;
+						width: 0;
+						top: -1em;
+						left: -1ch;
 					}
 
 					&[data-note='1']::before {
@@ -290,7 +296,11 @@ $separatorColor: #6c757d;
 
 				.stroke-length::after {
 					content: '' var(--stroke-length);
-					display: block;
+					display: inline-block;
+					width: 0;
+					position: relative;
+					top: 1em;
+					left: -1ch;
 				}
 			}
 		}

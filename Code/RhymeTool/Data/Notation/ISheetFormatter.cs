@@ -21,9 +21,14 @@ public readonly record struct AlterationFormat(string Type, string Degree, strin
 	public override string ToString() => Type + (ModifierAfter ? Degree + Modifier : Modifier + Degree);
 }
 
-public readonly record struct RhythmPatternFormat(string LeftDelimiter, string RightDelimiter, StrokeFormat[] Strokes)
+public readonly record struct RhythmPatternFormat(string LeftDelimiter, string MiddleDelimiter, string RightDelimiter, RhythmPatternBarFormat[] Bars)
 {
-	public override string ToString() => LeftDelimiter + string.Join(null, Strokes) + RightDelimiter;
+	public override string ToString() => LeftDelimiter + string.Join(MiddleDelimiter, Bars) + RightDelimiter;
+}
+
+public readonly record struct RhythmPatternBarFormat(StrokeFormat[] Strokes)
+{
+	public override string ToString() => string.Join(null, Strokes);
 }
 
 public readonly record struct StrokeFormat(string Stroke, StrokeType Type, int? Length = null, NoteLength? NoteLength = default)
@@ -56,6 +61,7 @@ public interface ISheetFormatter
 	string ToString(NoteLength noteLength);
 
 	string ToString(Stroke stroke);
+	string ToString(RhythmPattern.Bar bar);
 	string ToString(RhythmPattern pattern);
 	RhythmPatternFormat Format(RhythmPattern pattern);
 
@@ -143,9 +149,11 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 	public string TextMajorSeventhDegreeModifier { get; init; } = "Δ";
 
 	public string RhythmPatternLeftDelimiter { get; init; } = "|";
+	public string RhythmPatternMiddleDelimiter { get; init; } = "|";
 	public string RhythmPatternRightDelimiter { get; init; } = "|";
 
 	public string TextRhythmPatternLeftDelimiter { get; init; } = "|";
+	public string TextRhythmPatternMiddleDelimiter { get; init; } = "|";
 	public string TextRhythmPatternRightDelimiter { get; init; } = "|";
 
 	public IReadOnlyList<string> StrokeTypes { get; init; } = new List<string>(Enum.GetNames<StrokeType>())
@@ -346,19 +354,27 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 	public string ToString(Stroke stroke)
 		=> TextStrokeTypes[(int)stroke.Type];
 
+	public string ToString(RhythmPattern.Bar bar)
+		=> string.Join(null, bar.Select(ToString));
+
 	public string ToString(RhythmPattern pattern)
-		=> TextRhythmPatternLeftDelimiter + string.Join(null, pattern.Select(ToString)) + TextRhythmPatternRightDelimiter;
+		=> TextRhythmPatternLeftDelimiter
+		+ string.Join(TextRhythmPatternMiddleDelimiter, pattern.Select(ToString))
+		+ TextRhythmPatternRightDelimiter;
 
 	public RhythmPatternFormat Format(RhythmPattern pattern)
+		=> new(RhythmPatternLeftDelimiter, RhythmPatternMiddleDelimiter, RhythmPatternRightDelimiter, pattern.Select(Format).ToArray());
+
+	private RhythmPatternBarFormat Format(RhythmPattern.Bar bar)
 	{
 		//Taktlänge
-		var noteLength = TryCalculateBarLength(pattern) ?? NoteValue.Eighth;
+		var noteLength = TryCalculateBarLength(bar) ?? NoteValue.Eighth;
 
-		var strokes = new StrokeFormat[pattern.Count];
+		var strokes = new StrokeFormat[bar.Count];
 		var nextLength = 1;
-		for (var i = pattern.Count - 1; i >= 0; i--)
+		for (var i = bar.Count - 1; i >= 0; i--)
 		{
-			var stroke = pattern[i];
+			var stroke = bar[i];
 			var strokeString = StrokeTypes[(int)stroke.Type];
 			if (stroke.Type is StrokeType.Hold or StrokeType.None)
 			{
@@ -375,18 +391,18 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 			nextLength = 1;
 		}
 
-		return new(RhythmPatternLeftDelimiter, RhythmPatternRightDelimiter, strokes);
+		return new(strokes);
 	}
 
-	private NoteValue? TryCalculateBarLength(RhythmPattern pattern)
+	private NoteValue? TryCalculateBarLength(RhythmPattern.Bar bar)
 	{
-		if (pattern.Count <= 1)
+		if (bar.Count <= 1)
 			return NoteValue.Whole;
-		if (pattern.Count == 2)
+		if (bar.Count == 2)
 			return NoteValue.Half;
 
 		var noteValue = NoteValue.Whole;
-		for (var value = pattern.Count - 1; value != 0; value >>= 1)
+		for (var value = bar.Count - 1; value != 0; value >>= 1)
 			noteValue += 1;
 
 		return noteValue;
