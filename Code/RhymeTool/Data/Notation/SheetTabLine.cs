@@ -347,7 +347,7 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 
 			//Keine Veränderung?
 			if (lineResults.Count == 0)
-				return NoEdit(context);
+				return NoEditMultiLine(multilineContext, range);
 
 			//Führe die Bearbeitungen aus
 			return new DelayedMetalineEditResult(() =>
@@ -378,18 +378,19 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 			DeleteDirection direction, DeleteType type, bool raiseEvent, out bool willChange, ISheetEditorFormatter? formatter = null)
 		{
 			//Erweitere leere Ranges in Richtung der Löschung
-			if (range.Length == 0)
+			var editRange = range;
+			if (editRange.Length == 0)
 			{
 				if (direction == DeleteDirection.Backward)
-					range = new(range.Start - 1, range.Start);
+					editRange = new(editRange.Start - 1, editRange.Start);
 				else
-					range = new(range.Start, range.Start + 1);
+					editRange = new(editRange.Start, editRange.Start + 1);
 			}
 
 			//Finde Komponenten
 			var hasBarLine = false;
 			var hasInvalid = false;
-			var components = Enumerable.Range(range.Start, range.Length)
+			var components = Enumerable.Range(editRange.Start, editRange.Length)
 				.Select(GetBarAndNoteIndex)
 				.Where(c =>
 				{
@@ -404,7 +405,7 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 
 			//Nur Taktstrich/ungültig?
 			willChange = components.Count != 0;
-			if (range.Length == 1 && components.Count == 0)
+			if (editRange.Length == 1 && components.Count == 0)
 			{
 				if (hasInvalid)
 					return DelayedMetalineEditResult.Fail(InvalidPosition);
@@ -416,17 +417,21 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 			if (!willChange)
 			{
 				//Sonderfall: wird nach dem letzten Taktstrich gelöscht?
-				if (owner.barLineEditIndexes.Count != 0 && range.Start == owner.barLineEditIndexes[^1] + 1)
+				if (owner.barLineEditIndexes.Count != 0 && editRange.Start == owner.barLineEditIndexes[^1] + 1)
 				{
 					//Füge hier ein Null-Element ein
-					var index = GetBarAndNoteIndex(range.Start);
+					var index = GetBarAndNoteIndex(editRange.Start);
 					willChange = true;
 					return new DelayedMetalineEditResult(() =>
 					{
 						owner.Components.EnsureCreated(index.BarIndex * owner.BarLength + index.NoteIndex);
 						if (raiseEvent)
 							owner.RaiseModifiedAndInvalidateCache();
-						return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAt(range.Start)));
+
+						if (formatter?.KeepTabLineSelection == false)
+							return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAt(editRange.Start)));
+						else
+							return new MetalineEditResult(new MetalineSelectionRange(this, range));
 					});
 				}
 
@@ -439,11 +444,15 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 						owner.Components[owner.Components.Count - 1] = null;
 						if (raiseEvent)
 							owner.RaiseModifiedAndInvalidateCache();
-						return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAt(range.Start)));
+
+						if (formatter?.KeepTabLineSelection == false)
+							return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAt(editRange.Start)));
+						else
+							return new MetalineEditResult(new MetalineSelectionRange(this, range));
 					});
 				}
 
-				return NoEdit(context);
+				return NoEditSingleLine(context);
 			}
 
 			//Lösche die Noten
@@ -458,7 +467,11 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 
 				if (raiseEvent)
 					owner.RaiseModifiedAndInvalidateCache();
-				return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAt(range.Start)));
+
+				if (formatter?.KeepTabLineSelection == false)
+					return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAt(editRange.Start)));
+				else
+					return new MetalineEditResult(new MetalineSelectionRange(this, range));
 			});
 		}
 
@@ -474,8 +487,8 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 				//Keine Auswahl?
 				if (context.SelectionRange.Length == 0)
 				{
-					//Bewege den Cursor danach um eins nach rechts
-					if (deleteResult.Success)
+					//Bewege den Cursor danach ggf. um eins nach rechts
+					if (deleteResult.Success && formatter?.KeepTabLineSelection == false)
 					{
 						return new DelayedMetalineEditResult(() =>
 						{
@@ -556,53 +569,20 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 
 			//Bearbeite alle betroffenen Zeilen
 			return TryInsertContent(context, range, value, lineIndexes, formatter);
-
-			//var lineResults = new List<DelayedMetalineEditResult>();
-			//foreach (var line in owner.Lines.SkipWhile(l => l != multilineContext.StartLine))
-			//{
-			//	//Bereite die Bearbeitung vor
-			//	var lineResult = line.TryInsertContent(context, range, value, false, formatter);
-			//	if (!lineResult.Success)
-			//		return lineResult;
-
-			//	//Speichere die Bearbeitung
-			//	lineResults.Add(lineResult);
-			//	if (line == multilineContext.EndLine)
-			//		break;
-			//}
-
-			////Keine Veränderung?
-			//if (lineResults.Count == 0)
-			//	return NoEdit(context);
-
-			////Führe die Bearbeitungen aus
-			//return new DelayedMetalineEditResult(() =>
-			//{
-			//	//Führe aus und speichere die erste Bearbeitung
-			//	MetalineEditResult? firstResult = null;
-			//	foreach (var lineResult in lineResults)
-			//	{
-			//		var result = lineResult.Execute!();
-			//		firstResult ??= result;
-			//	}
-
-			//	//Modified-Event
-			//	owner.RaiseModifiedAndInvalidateCache();
-			//	return firstResult!;
-			//});
 		}
 
 		private DelayedMetalineEditResult TryInsertContent(SheetDisplayLineEditingContext context, SimpleRange range,
 			int value, List<int> lineIndexes, ISheetEditorFormatter? formatter = null)
 		{
 			//Leere Range?
-			if (range.Length == 0)
-				range = new(range.Start, range.Start + 1);
+			var editRange = range;
+			if (editRange.Length == 0)
+				editRange = new(editRange.Start, editRange.Start + 1);
 
 			//Taktstrich?
 			var invalid = false;
 			var barLine = false;
-			for (var i = range.Start; i < range.End; i++)
+			for (var i = editRange.Start; i < editRange.End; i++)
 			{
 				var note = GetBarAndNoteIndex(i);
 				if (note.NoteIndex == INDEX_INVALID)
@@ -623,7 +603,7 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 			return new(() =>
 			{
 				//Finde Komponenten
-				var components = Enumerable.Range(range.Start, range.Length)
+				var components = Enumerable.Range(editRange.Start, editRange.Length)
 					.Select(i => (EditIndex: i, Data: GetBarAndNoteIndex(i)))
 					.ToList();
 
@@ -654,8 +634,18 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 				//Modified-Event
 				owner.RaiseModifiedAndInvalidateCache();
 
+				//Kein Auto-Advance?
+				if (formatter?.KeepTabLineSelection != false)
+				{
+					//Mehrzeilige Selektion
+					return new MetalineEditResult(new MetalineSelectionRange(this, range) with
+					{
+						EndLineId = lineIndexes[^1],
+					});
+				}
+
 				//Nächste Position auf Taktstrich?
-				var nextPosition = range.Start + 1;
+				var nextPosition = editRange.Start + 1;
 				while (GetBarAndNoteIndex(nextPosition).NoteIndex < 0)
 					nextPosition++;
 
@@ -676,8 +666,14 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 			return new(multilineContext.SelectionStart, multilineContext.SelectionEnd);
 		}
 
-		private DelayedMetalineEditResult NoEdit(SheetDisplayLineEditingContext context)
+		private DelayedMetalineEditResult NoEditSingleLine(SheetDisplayLineEditingContext context)
 			=> new DelayedMetalineEditResult(() => new MetalineEditResult(new MetalineSelectionRange(this, context.SelectionRange)));
+
+		private DelayedMetalineEditResult NoEditMultiLine(SheetDisplayMultiLineEditingContext context, SimpleRange range)
+			=> new DelayedMetalineEditResult(() => new MetalineEditResult(new MetalineSelectionRange(this, range)
+			{
+				EndLineId = context.EndLine.LineId,
+			}));
 
 		private (int ComponentIndex, int BarIndex, int NoteIndex, Component? Component) GetBarAndNoteIndex(int editIndex)
 		{

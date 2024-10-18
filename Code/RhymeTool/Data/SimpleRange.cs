@@ -35,7 +35,7 @@ public readonly struct SimpleRange
 
 	public SimpleRange(int start, int end)
 	{
-		if (start > end)
+		if (end < start && end >= 0)
 		{
 			Start = end;
 			End = start;
@@ -49,7 +49,7 @@ public readonly struct SimpleRange
 
 	public static SimpleRange CursorAt(int offset) => new(offset, offset);
 
-	public static SimpleRange AllFromStart(int start) => new(start, int.MaxValue);
+	public static SimpleRange AllFromStart(int start) => new(start, -1);
 	public static SimpleRange AllToEnd(int end) => new(0, end);
 
 	public RangeOverlap CheckOverlap(int offset, int length)

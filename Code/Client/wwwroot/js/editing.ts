@@ -484,49 +484,72 @@ class ModificationEditor implements Destructible {
 				: findLine(endMetaline, metalineLineSelection.end.line);
 		}
 
-		if (lineSelection.start.offset < 0 || lineSelection.start.offset >= startLine.textContent.length) {
-			let current = startLine;
-			while (current.lastChild)
-				current = current.lastChild;
-			range.setStart(current, current.textContent.length);
-			range.collapse(true);
+		//Setze die Range
+		let start = SelectionHelper.getNodeAndOffset(startLine, lineSelection.start.offset);
+		range.setStart(start.node, start.offset);
+		let end = startLine === endLine && lineSelection.end.offset == lineSelection.start.offset ? start
+			: SelectionHelper.getNodeAndOffset(endLine, lineSelection.end.offset);
+		range.setEnd(end.node, end.offset);
 
-			for (let i = -1; i > lineSelection.start.offset; i--)
-				documentSelection.modify('move', 'backward', 'character');
-		} else {
-			range.setStart(startLine, 0);
-			range.collapse(true);
+		//if (lineSelection.start.offset < 0 || lineSelection.start.offset >= startLine.textContent.length) {
+		//	/*let current = startLine;
+		//	while (current.lastChild)
+		//		current = current.lastChild;
+		//	range.setStart(current, current.textContent.length);
+		//	range.setEnd(current, current.textContent.length);*/
+		//	range.setStartAfter(getLastTextNode(startLine));
+		//	range.setEnd(range.startContainer, range.startOffset);
 
-			for (var i = 0; i < lineSelection.start.offset; i++)
-				documentSelection.modify('move', 'forward', 'character');
-		}
+		//	for (let i = -1; i > lineSelection.start.offset; i--)
+		//		documentSelection.modify('move', 'backward', 'character');
+		//} else {
+		//	range.setStartBefore(getFirstTextNode(startLine));
+		//	range.setEnd(range.startContainer, range.startOffset);
 
-		if (startLine === endLine) {
-			if (lineSelection.start.offset == lineSelection.end.offset) {
-				return;
-			} else if (lineSelection.end.offset >= 0) {
-				for (var i = lineSelection.start.offset; i < lineSelection.end.offset; i++)
-					documentSelection.modify('extend', 'forward', 'character');
-				return;
-			}
-		}
+		//	for (var i = 0; i < lineSelection.start.offset; i++)
+		//		documentSelection.modify('move', 'forward', 'character');
+		//}
 
-		if (lineSelection.end.offset < 0 || lineSelection.end.offset >= endLine.textContent.length) {
-			let current = endLine;
-			while (current.lastChild)
-				current = current.lastChild;
-			range.setEnd(current, current.textContent.length);
+		//if (startLine === endLine) {
+		//	if (lineSelection.start.offset == lineSelection.end.offset) {
+		//		return;
+		//	} else if (lineSelection.end.offset >= 0) {
+		//		for (var i = lineSelection.start.offset; i < lineSelection.end.offset; i++)
+		//			documentSelection.modify('extend', 'forward', 'character');
+		//		return;
+		//	}
+		//}
 
-			for (let i = -1; i > lineSelection.end.offset; i--)
-				documentSelection.modify('extend', 'backward', 'character');
-		} else {
-			range.setEnd(endLine, 0);
+		//if (lineSelection.end.offset < 0 || lineSelection.end.offset >= endLine.textContent.length) {
+		//	/*let current = endLine;
+		//	while (current.lastChild)
+		//		current = current.lastChild;
+		//	range.setEnd(current, current.textContent.length);*/
+		//	range.setEndAfter(getLastTextNode(endLine));
 
-			for (var i = 0; i < lineSelection.end.offset; i++)
-				documentSelection.modify('extend', 'forward', 'character');
-		}
+		//	for (let i = -1; i > lineSelection.end.offset; i--)
+		//		documentSelection.modify('extend', 'backward', 'character');
+		//} else {
+		//	range.setEndBefore(getFirstTextNode(endLine));
 
-		
+		//	for (var i = 0; i < lineSelection.end.offset; i++)
+		//		documentSelection.modify('extend', 'forward', 'character');
+		//}
+
+
+		//function getFirstTextNode(node: Node): Text | null {
+		//	let iterator = document.createNodeIterator(node, NodeFilter.SHOW_TEXT);
+		//	return <Text>iterator.nextNode();
+		//}
+
+		//function getLastTextNode(node: Node): Text | null {
+		//	let iterator = document.createNodeIterator(node, NodeFilter.SHOW_TEXT);
+		//	let last = <Text>iterator.nextNode();
+		//	let next: Node | null;
+		//	while (next = iterator.nextNode())
+		//		last = <Text>next;
+		//	return last;
+		//}
 
 
 
@@ -946,5 +969,56 @@ class SelectionObserver implements Destructible {
 				return false;
 			}
 		}
+	}
+}
+
+class SelectionHelper {
+	static getNodeAndOffset(node: Node, offset: number) {
+		if (offset < 0)
+			return SelectionHelper.getNodeAndOffsetFromEnd(node, offset);
+
+		let iterator = document.createNodeIterator(node, NodeFilter.SHOW_TEXT);
+		let currentOffset = 0;
+		let current = iterator.nextNode();
+		while (current && currentOffset + current.textContent.length < offset) {
+			currentOffset += current.textContent.length;
+			current = iterator.nextNode();
+		}
+
+		return {
+			node: current ?? node,
+			offset: offset - currentOffset,
+		};
+	}
+
+	private static getNodeAndOffsetFromEnd(node: Node, offset: number) {
+		let iterator = document.createNodeIterator(node, NodeFilter.SHOW_TEXT);
+		let allNodes = [];
+		let current = iterator.nextNode();
+		if (!current)
+			return {
+				node: node,
+				offset: 0,
+			};
+
+		while (current) {
+			allNodes.push(current);
+			current = iterator.nextNode();
+		}
+
+		offset = -offset - 1;
+		let currentOffset = 0;
+		for (let i = allNodes.length - 1; i >= 0; i--) {
+			current = allNodes[i];
+			if (currentOffset + current.textContent.length >= offset)
+				break;
+
+			currentOffset += current.textContent.length;
+		}
+
+		return {
+			node: current,
+			offset: current.textContent.length - (offset - currentOffset),
+		};
 	}
 }

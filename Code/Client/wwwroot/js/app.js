@@ -766,44 +766,11 @@ var ModificationEditor = (function () {
             endLine !== null && endLine !== void 0 ? endLine : (endLine = metalineLineSelection.end.metaline == metalineLineSelection.start.metaline && metalineLineSelection.end.line == metalineLineSelection.start.line ? startLine
                 : findLine(endMetaline, metalineLineSelection.end.line));
         }
-        if (lineSelection.start.offset < 0 || lineSelection.start.offset >= startLine.textContent.length) {
-            var current = startLine;
-            while (current.lastChild)
-                current = current.lastChild;
-            range.setStart(current, current.textContent.length);
-            range.collapse(true);
-            for (var i_1 = -1; i_1 > lineSelection.start.offset; i_1--)
-                documentSelection.modify('move', 'backward', 'character');
-        }
-        else {
-            range.setStart(startLine, 0);
-            range.collapse(true);
-            for (var i = 0; i < lineSelection.start.offset; i++)
-                documentSelection.modify('move', 'forward', 'character');
-        }
-        if (startLine === endLine) {
-            if (lineSelection.start.offset == lineSelection.end.offset) {
-                return;
-            }
-            else if (lineSelection.end.offset >= 0) {
-                for (var i = lineSelection.start.offset; i < lineSelection.end.offset; i++)
-                    documentSelection.modify('extend', 'forward', 'character');
-                return;
-            }
-        }
-        if (lineSelection.end.offset < 0 || lineSelection.end.offset >= endLine.textContent.length) {
-            var current = endLine;
-            while (current.lastChild)
-                current = current.lastChild;
-            range.setEnd(current, current.textContent.length);
-            for (var i_2 = -1; i_2 > lineSelection.end.offset; i_2--)
-                documentSelection.modify('extend', 'backward', 'character');
-        }
-        else {
-            range.setEnd(endLine, 0);
-            for (var i = 0; i < lineSelection.end.offset; i++)
-                documentSelection.modify('extend', 'forward', 'character');
-        }
+        var start = SelectionHelper.getNodeAndOffset(startLine, lineSelection.start.offset);
+        range.setStart(start.node, start.offset);
+        var end = startLine === endLine && lineSelection.end.offset == lineSelection.start.offset ? start
+            : SelectionHelper.getNodeAndOffset(endLine, lineSelection.end.offset);
+        range.setEnd(end.node, end.offset);
         function findLine(metaline, line) {
             if (line === ModificationEditor.FIRST_LINE_ID) {
                 return metaline.querySelector('.line[data-line]');
@@ -1126,6 +1093,52 @@ var SelectionObserver = (function () {
         }
     };
     return SelectionObserver;
+}());
+var SelectionHelper = (function () {
+    function SelectionHelper() {
+    }
+    SelectionHelper.getNodeAndOffset = function (node, offset) {
+        if (offset < 0)
+            return SelectionHelper.getNodeAndOffsetFromEnd(node, offset);
+        var iterator = document.createNodeIterator(node, NodeFilter.SHOW_TEXT);
+        var currentOffset = 0;
+        var current = iterator.nextNode();
+        while (current && currentOffset + current.textContent.length < offset) {
+            currentOffset += current.textContent.length;
+            current = iterator.nextNode();
+        }
+        return {
+            node: current !== null && current !== void 0 ? current : node,
+            offset: offset - currentOffset,
+        };
+    };
+    SelectionHelper.getNodeAndOffsetFromEnd = function (node, offset) {
+        var iterator = document.createNodeIterator(node, NodeFilter.SHOW_TEXT);
+        var allNodes = [];
+        var current = iterator.nextNode();
+        if (!current)
+            return {
+                node: node,
+                offset: 0,
+            };
+        while (current) {
+            allNodes.push(current);
+            current = iterator.nextNode();
+        }
+        offset = -offset - 1;
+        var currentOffset = 0;
+        for (var i = allNodes.length - 1; i >= 0; i--) {
+            current = allNodes[i];
+            if (currentOffset + current.textContent.length >= offset)
+                break;
+            currentOffset += current.textContent.length;
+        }
+        return {
+            node: current,
+            offset: current.textContent.length - (offset - currentOffset),
+        };
+    };
+    return SelectionHelper;
 }());
 var ActionQueue = (function () {
     function ActionQueue() {

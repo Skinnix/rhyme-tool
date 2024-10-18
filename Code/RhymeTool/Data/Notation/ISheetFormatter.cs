@@ -74,6 +74,8 @@ public interface ISheetBuilderFormatter : ISheetFormatter
 
 public interface ISheetEditorFormatter : ISheetBuilderFormatter
 {
+	bool KeepTabLineSelection { get; }
+
 	int TryReadChord(ReadOnlySpan<char> s, out Chord? chord);
 	int TryReadFingering(ReadOnlySpan<char> s, out Fingering? fingering, int minLength = 1);
 	int TryReadRhythm(ReadOnlySpan<char> s, out RhythmPattern? rhythm);
@@ -178,6 +180,8 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 	public int SpaceBetweenChordsOnChordLine { get; init; } = 1;
 	public bool ExtendAttachmentLines { get; init; } = true;
 	public bool ShowEmptyAttachmentLines { get; init; } = false;
+
+	public bool KeepTabLineSelection { get; init; } = true;
 
 	public List<int> LineIndentations { get; init; } = [0, 2];
 
