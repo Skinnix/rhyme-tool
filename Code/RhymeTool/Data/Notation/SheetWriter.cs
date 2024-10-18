@@ -5,7 +5,7 @@ public class SheetWriter
 	private readonly TextWriter writer;
 	private readonly SheetDocument document;
 
-	public ISheetBuilderFormatter? Formatter { get; set; } = DefaultSheetFormatter.Instance;
+	public ISheetBuilderFormatter? Formatter { get; set; } = DefaultWriterFormatter.Instance;
 
 	private SheetWriter(TextWriter writer, SheetDocument document)
 	{
@@ -60,6 +60,16 @@ public class SheetWriter
 
 			cancellation.ThrowIfCancellationRequested();
 			await writer.WriteLineAsync();
+		}
+	}
+
+	private record DefaultWriterFormatter : DefaultSheetFormatter
+	{
+		public static readonly new DefaultWriterFormatter Instance = new();
+
+		public DefaultWriterFormatter()
+		{
+			CondenseTabNotes = false;
 		}
 	}
 }
