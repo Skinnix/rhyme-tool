@@ -264,7 +264,7 @@ function registerChordEditor(wrapper: HTMLElement, reference: BlazorDotNetRefere
 	};
 
     function createEditor() {
-        let afterRender: () => void;
+		let afterRender: () => void;
         const callback: EditorCallback = (editor, data, selectionRange, expectRender) => {
             let result: MetalineEditResult;
             actionQueue.then(() => {
@@ -278,7 +278,8 @@ function registerChordEditor(wrapper: HTMLElement, reference: BlazorDotNetRefere
                 };
 
                 //hide caret
-                wrapper.classList.add('refreshing');
+				wrapper.classList.add('refreshing');
+				selectionObserver.pauseObservation();
                 selectionRange.collapse(false);
 
                 //a new render is coming
@@ -312,6 +313,8 @@ function registerChordEditor(wrapper: HTMLElement, reference: BlazorDotNetRefere
                 //rendered
                 afterRender();
 
+				//update selection
+				selectionObserver.pauseObservation();
 				let selection: Selection;
 				if (result.selection && data.inputType != 'deleteByDrag') {
                     //set new selection range
@@ -331,7 +334,7 @@ function registerChordEditor(wrapper: HTMLElement, reference: BlazorDotNetRefere
                         selection.addRange(selectionRange);
                     }
 				}
-
+				
 				//scroll the selection into view
 				for (var focusElement = selection.focusNode; focusElement && !('scrollIntoView' in focusElement); focusElement = focusElement.parentElement) { }
 				if (focusElement) {

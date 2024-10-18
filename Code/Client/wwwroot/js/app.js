@@ -191,6 +191,7 @@ function registerChordEditor(wrapper, reference, callbackName) {
                 var selection = editor.getCurrentSelection();
                 var eventData = __assign({ selection: selection, editRange: data.editRange, justSelected: selectionObserver.triggerJustSelected() }, data);
                 wrapper.classList.add('refreshing');
+                selectionObserver.pauseObservation();
                 selectionRange.collapse(false);
                 actionQueue.prepareForNextRender();
                 afterRender = expectRender();
@@ -210,6 +211,7 @@ function registerChordEditor(wrapper, reference, callbackName) {
             }).then(function () {
                 console.log("after render");
                 afterRender();
+                selectionObserver.pauseObservation();
                 var selection;
                 if (result.selection && data.inputType != 'deleteByDrag') {
                     selection = editor.setCurrentSelection(result.selection);
@@ -923,7 +925,17 @@ var SelectionObserver = (function () {
     SelectionObserver.prototype.refreshSelection = function () {
         this.processSelectionChange();
     };
+    SelectionObserver.prototype.pauseObservation = function () {
+        this.isPaused = true;
+    };
     SelectionObserver.prototype.handleSelectionChange = function () {
+        var _this = this;
+        if (this.isPaused) {
+            requestAnimationFrame((function () {
+                _this.isPaused = false;
+            }).bind(this));
+            return;
+        }
         this.justSelected = true;
         this.processSelectionChange();
     };
@@ -1034,11 +1046,16 @@ var SelectionObserver = (function () {
                 }
             }
             var beforeEndCell = false;
+            var insideEndCell = false;
             var endCell = range.endContainer;
-            if (endCell.nodeType != Node.TEXT_NODE)
+            if (endCell.nodeType != Node.TEXT_NODE) {
                 beforeEndCell = true;
-            else
+            }
+            else {
+                if (range.endOffset < range.endContainer.textContent.length)
+                    insideEndCell = true;
                 endCell = endCell.parentElement;
+            }
             var startRect = startCell.getBoundingClientRect();
             if (behindStartCell)
                 startRect = new DOMRect(startRect.right, startRect.top, 0, startRect.height);
@@ -1055,13 +1072,15 @@ var SelectionObserver = (function () {
                 width = endRect.right - x;
             }
             else {
-                if ((_a = endCell.nextSibling) === null || _a === void 0 ? void 0 : _a.getBoundingClientRect) {
-                    endCell = endCell.nextSibling;
-                    endRect = endCell.getBoundingClientRect();
-                    endRect = new DOMRect(endRect.left, endRect.top, 0, endRect.height);
-                }
-                else {
-                    endRect = new DOMRect(endRect.right, endRect.top, 0, endRect.height);
+                if (!insideEndCell) {
+                    if ((_a = endCell.nextSibling) === null || _a === void 0 ? void 0 : _a.getBoundingClientRect) {
+                        endCell = endCell.nextSibling;
+                        endRect = endCell.getBoundingClientRect();
+                        endRect = new DOMRect(endRect.left, endRect.top, 0, endRect.height);
+                    }
+                    else {
+                        endRect = new DOMRect(endRect.right, endRect.top, 0, endRect.height);
+                    }
                 }
                 if (!behindStartCell) {
                     if ((_b = startCell.previousSibling) === null || _b === void 0 ? void 0 : _b.getBoundingClientRect) {
@@ -1084,26 +1103,6 @@ var SelectionObserver = (function () {
             self.customSelection.style.width = width + 'px';
             self.customSelection.style.height = height + 'px';
             self.customSelection.className = 'custom-selection custom-selection-box';
-        }
-        function extendRangeByOne(container, offset) {
-            if (offset < container.textContent.length)
-                return offset + 1;
-            do {
-                while (!container.nextSibling) {
-                    container = container.parentElement;
-                    if (container.nodeType == Node.ELEMENT_NODE && container.classList.contains('line')) {
-                        return null;
-                    }
-                }
-                container = container.nextSibling;
-            } while (container.textContent.length == 0);
-            do {
-                if (container.nodeType != Node.TEXT_NODE)
-                    container = container.firstChild;
-                while (container.textContent.length == 0)
-                    container = container.nextSibling;
-            } while (container.nodeType != Node.TEXT_NODE);
-            return container;
         }
     };
     SelectionObserver.prototype.handleDragStart = function (event) {

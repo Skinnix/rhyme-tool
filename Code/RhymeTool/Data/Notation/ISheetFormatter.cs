@@ -179,7 +179,7 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 	public string[] RestLengths { get; init; } = [" ", "𝄻", "𝄼", "𝄽", "𝄾", "𝄿", "𝅀", "𝅁", "𝅂"];
 	public char NoteLengthDot { get; init; } = '·';
 
-	public bool CondenseTabNotes { get; init; } = true;
+	public bool CondenseTabNotes { get; init; } = false;
 
 	public GermanNoteMode GermanMode { get; init; } = GermanNoteMode.AlwaysB;
 

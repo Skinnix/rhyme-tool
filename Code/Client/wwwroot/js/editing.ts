@@ -723,6 +723,8 @@ class SelectionObserver implements Destructible {
 	private customSelection: HTMLElement;
 	private editor: HTMLElement;
 	private editorWrapper: HTMLElement;
+
+	private isPaused: boolean;
 	private justSelected: boolean;
 
 	constructor(private modificationEditor: ModificationEditor) {
@@ -752,7 +754,18 @@ class SelectionObserver implements Destructible {
 		this.processSelectionChange();
 	}
 
+	public pauseObservation() {
+		this.isPaused = true;
+	}
+
 	private handleSelectionChange() {
+		if (this.isPaused) {
+			requestAnimationFrame((() => {
+				this.isPaused = false;
+			}).bind(this));
+			return;
+		}
+
 		this.justSelected = true;
 		this.processSelectionChange();
 	}
@@ -817,30 +830,6 @@ class SelectionObserver implements Destructible {
 	}
 
 	private adjustBoxSelection(documentSelection: Selection, range: Range, lineSelection: AnchorSelection<MetalineLineAnchor>) {
-		//Nur eine Zeile?
-		/*if (lineSelection.start.line == lineSelection.end.line)
-			return this.resetCustomSelections();*/
-
-		//Nichts ausgewählt?
-		/*if (range.collapsed) {
-			let newEnd = extendRangeByOne(range.startContainer, range.startOffset);
-			if (typeof newEnd === 'number') {
-				let newRange = document.createRange();
-				newRange.setStart(range.endContainer, range.endOffset);
-				newRange.setEnd(range.endContainer, newEnd);
-				range = newRange;
-			} else if (newEnd) {
-				let newRange = document.createRange();
-				newRange.setStart(newEnd, 0);
-				newRange.setEnd(newEnd, 1);
-				range = newRange;
-			}
-		}*/
-
-		////Nichts ausgewählt?
-		//if (range.collapsed)
-		//	return this.resetCustomSelections();
-
 		//Nicht unterstützt?
 		if (!this.supportsMultipleRanges)
 			return emulateBoxSelection(this, documentSelection, range);
@@ -901,23 +890,6 @@ class SelectionObserver implements Destructible {
 		}
 
 		function emulateBoxSelection(self: SelectionObserver, documentSelection: Selection, range: Range) {
-			//Lese LineSelection
-			/*let lineSelection = self.modificationEditor.getLineSelection(range, false);
-			if (lineSelection.start.offset == lineSelection.end.offset) {
-				let newEnd = extendRangeByOne(range.endContainer, range.endOffset);
-				if (typeof newEnd === 'number') {
-					let newRange = document.createRange();
-					newRange.setStart(range.startContainer, range.startOffset);
-					newRange.setEnd(range.endContainer, newEnd);
-					range = newRange;
-				} else if (newEnd) {
-					let newRange = document.createRange();
-					newRange.setStart(range.startContainer, range.startOffset);
-					newRange.setEnd(newEnd, 1);
-					range = newRange;
-				}
-			}*/
-
 			//Startzelle
 			let startCell = range.startContainer;
 			let behindStartCell = false;
@@ -936,11 +908,15 @@ class SelectionObserver implements Destructible {
 
 			//Endzelle
 			let beforeEndCell = false;
+			let insideEndCell = false;
 			let endCell = range.endContainer;
-			if (endCell.nodeType != Node.TEXT_NODE)
+			if (endCell.nodeType != Node.TEXT_NODE) {
 				beforeEndCell = true;
-			else
+			} else {
+				if (range.endOffset < range.endContainer.textContent.length)
+					insideEndCell = true;
 				endCell = endCell.parentElement;
+			}
 
 			//Hole die Rechtecke
 			let startRect = (<Element>startCell).getBoundingClientRect();
@@ -962,12 +938,14 @@ class SelectionObserver implements Destructible {
 				x = startRect.left;
 				width = endRect.right - x;
 			} else {
-				if ((<any>endCell.nextSibling)?.getBoundingClientRect) {
-					endCell = endCell.nextSibling;
-					endRect = (<Element>endCell).getBoundingClientRect();
-					endRect = new DOMRect(endRect.left, endRect.top, 0, endRect.height);
-				} else {
-					endRect = new DOMRect(endRect.right, endRect.top, 0, endRect.height);
+				if (!insideEndCell) {
+					if ((<any>endCell.nextSibling)?.getBoundingClientRect) {
+						endCell = endCell.nextSibling;
+						endRect = (<Element>endCell).getBoundingClientRect();
+						endRect = new DOMRect(endRect.left, endRect.top, 0, endRect.height);
+					} else {
+						endRect = new DOMRect(endRect.right, endRect.top, 0, endRect.height);
+					}
 				}
 
 				if (!behindStartCell) {
@@ -987,25 +965,6 @@ class SelectionObserver implements Destructible {
 			let y = startRect.top;
 			let height = endRect.bottom - y;
 
-			//let rects = range.getClientRects();
-			//let startRect = rects[0];
-			//let endRect = rects[rects.length - 1];
-			//if (startRect.top > endRect.top) {
-			//	let temp = startRect;
-			//	startRect = endRect;
-			//	endRect = temp;
-			//}
-			//let x = startRect.left;
-			//if (lineSelection.end.offset < lineSelection.start.offset)
-			//	x = endRect.right;
-			///*else if (lineSelection.end.offset == lineSelection.start.offset && endRect.left < x)
-			//	x = endRect.left;*/
-			//let y = startRect.top;
-			//let width = +(startRect.left - endRect.right);
-			//if (width < 0)
-			//	width = -width;
-			//let height = endRect.bottom - startRect.top;
-
 			//Positioniere die Box
 			let wrapperRect = self.editorWrapper.getBoundingClientRect();
 			self.customSelection.style.top = (y - wrapperRect.top) + 'px';
@@ -1015,30 +974,6 @@ class SelectionObserver implements Destructible {
 			
 			//Mache die Box sichtbar
 			self.customSelection.className = 'custom-selection custom-selection-box';
-		}
-
-		function extendRangeByOne(container: Node, offset: number) {
-			if (offset < container.textContent.length)
-				return offset + 1;
-			do {
-				while (!container.nextSibling) {
-					container = container.parentElement;
-					if (container.nodeType == Node.ELEMENT_NODE && (<Element>container).classList.contains('line')) {
-						return null;
-					}
-				}
-				container = container.nextSibling;
-			} while (container.textContent.length == 0);
-
-			do {
-				if (container.nodeType != Node.TEXT_NODE)
-					container = container.firstChild;
-
-				while (container.textContent.length == 0)
-					container = container.nextSibling;
-			} while (container.nodeType != Node.TEXT_NODE);
-
-			return container;
 		}
     }
 
