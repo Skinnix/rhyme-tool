@@ -803,7 +803,7 @@ class SelectionObserver implements Destructible {
 			return this.resetCustomSelections();*/
 
 		//Nichts ausgewählt?
-		if (range.collapsed) {
+		/*if (range.collapsed) {
 			let newEnd = extendRangeByOne(range.startContainer, range.startOffset);
 			if (typeof newEnd === 'number') {
 				let newRange = document.createRange();
@@ -816,11 +816,11 @@ class SelectionObserver implements Destructible {
 				newRange.setEnd(newEnd, 1);
 				range = newRange;
 			}
-		}
+		}*/
 
-		//Nichts ausgewählt?
-		if (range.collapsed)
-			return this.resetCustomSelections();
+		////Nichts ausgewählt?
+		//if (range.collapsed)
+		//	return this.resetCustomSelections();
 
 		//Nicht unterstützt?
 		if (!this.supportsMultipleRanges)
@@ -883,7 +883,7 @@ class SelectionObserver implements Destructible {
 
 		function emulateBoxSelection(self: SelectionObserver, documentSelection: Selection, range: Range) {
 			//Lese LineSelection
-			let lineSelection = self.modificationEditor.getLineSelection(range, false);
+			/*let lineSelection = self.modificationEditor.getLineSelection(range, false);
 			if (lineSelection.start.offset == lineSelection.end.offset) {
 				let newEnd = extendRangeByOne(range.endContainer, range.endOffset);
 				if (typeof newEnd === 'number') {
@@ -897,29 +897,98 @@ class SelectionObserver implements Destructible {
 					newRange.setEnd(newEnd, 1);
 					range = newRange;
 				}
+			}*/
+
+			//Startzelle
+			let startCell = range.startContainer;
+			let behindStartCell = false;
+			if (startCell.nodeType == Node.TEXT_NODE) {
+				if (range.startOffset >= startCell.textContent.length) {
+					startCell = startCell.parentElement;
+					if (startCell.nextSibling) {
+						startCell = startCell.nextSibling;
+					} else {
+						behindStartCell = true;
+					}
+				} else {
+					startCell = startCell.parentElement;
+				}
 			}
+
+			//Endzelle
+			let beforeEndCell = false;
+			let endCell = range.endContainer;
+			if (endCell.nodeType != Node.TEXT_NODE)
+				beforeEndCell = true;
+			else
+				endCell = endCell.parentElement;
+
+			//Hole die Rechtecke
+			let startRect = (<Element>startCell).getBoundingClientRect();
+			if (behindStartCell)
+				startRect = new DOMRect(startRect.right, startRect.top, 0, startRect.height);
+			let endRect = (<Element>endCell).getBoundingClientRect();
+			if (beforeEndCell)
+				endRect = new DOMRect(endRect.left, endRect.top, 0, endRect.height);
+
+			//Nichts ausgewählt?
+			if (range.collapsed) {
+				endCell = startCell;
+				endRect = startRect;
+			}
+
+			//Finde die Grenzen
+			let x, width: number;
+			if (endRect.left >= startRect.left) {
+				x = startRect.left;
+				width = endRect.right - x;
+			} else {
+				if ((<any>endCell.nextSibling)?.getBoundingClientRect) {
+					endCell = endCell.nextSibling;
+					endRect = (<Element>endCell).getBoundingClientRect();
+					endRect = new DOMRect(endRect.left, endRect.top, 0, endRect.height);
+				} else {
+					endRect = new DOMRect(endRect.right, endRect.top, 0, endRect.height);
+				}
+
+				if (!behindStartCell) {
+					if ((<any>startCell.previousSibling)?.getBoundingClientRect) {
+						startCell = startCell.previousSibling;
+						startRect = (<Element>startCell).getBoundingClientRect();
+						startRect = new DOMRect(startRect.right, startRect.top, 0, startRect.height);
+					} else {
+						startRect = new DOMRect(startRect.left, startRect.top, 0, startRect.height);
+					}
+				}
+
+				x = endRect.left;
+				width = startRect.right - x;
+			}
+
+			let y = startRect.top;
+			let height = endRect.bottom - y;
+
+			//let rects = range.getClientRects();
+			//let startRect = rects[0];
+			//let endRect = rects[rects.length - 1];
+			//if (startRect.top > endRect.top) {
+			//	let temp = startRect;
+			//	startRect = endRect;
+			//	endRect = temp;
+			//}
+			//let x = startRect.left;
+			//if (lineSelection.end.offset < lineSelection.start.offset)
+			//	x = endRect.right;
+			///*else if (lineSelection.end.offset == lineSelection.start.offset && endRect.left < x)
+			//	x = endRect.left;*/
+			//let y = startRect.top;
+			//let width = +(startRect.left - endRect.right);
+			//if (width < 0)
+			//	width = -width;
+			//let height = endRect.bottom - startRect.top;
 
 			//Positioniere die Box
-			let rects = range.getClientRects();
-			let startRect = rects[0];
-			let endRect = rects[rects.length - 1];
-			if (startRect.top > endRect.top) {
-				let temp = startRect;
-				startRect = endRect;
-				endRect = temp;
-			}
-			let x = startRect.left;
-			if (lineSelection.end.offset < lineSelection.start.offset)
-				x = endRect.right;
-			/*else if (lineSelection.end.offset == lineSelection.start.offset && endRect.left < x)
-				x = endRect.left;*/
-			let y = startRect.top;
-			let width = +(startRect.left - endRect.right);
-			if (width < 0)
-				width = -width;
-			let height = endRect.bottom - startRect.top;
 			let wrapperRect = self.editorWrapper.getBoundingClientRect();
-
 			self.customSelection.style.top = (y - wrapperRect.top) + 'px';
 			self.customSelection.style.left = (x - wrapperRect.left) + 'px';
 			self.customSelection.style.width = width + 'px';

@@ -310,9 +310,10 @@ $separatorColor: #6c757d;
 			//display: inline-block;
 			//width: calc(var(--tab-note-width)* 1ch);
 			//letter-spacing: calc(var(--tab-note-width) * 0.5ch);
+			margin: 0 0.2em;
 			padding: 0 calc(var(--tab-note-padding) * 0.5ch);
 
-			&.note {
+			&.tab-note {
 				letter-spacing: calc(var(--tab-note-suffix-length, 0) * 1ch);
 				position: relative;
 
@@ -328,9 +329,6 @@ $separatorColor: #6c757d;
 					left: 1ch;
 				}
 			}
-		}
-
-		.note {
 		}
 
 		.bar-line {

@@ -959,23 +959,6 @@ var SelectionObserver = (function () {
         this.customSelection.className = 'custom-selection';
     };
     SelectionObserver.prototype.adjustBoxSelection = function (documentSelection, range, lineSelection) {
-        if (range.collapsed) {
-            var newEnd = extendRangeByOne(range.startContainer, range.startOffset);
-            if (typeof newEnd === 'number') {
-                var newRange = document.createRange();
-                newRange.setStart(range.endContainer, range.endOffset);
-                newRange.setEnd(range.endContainer, newEnd);
-                range = newRange;
-            }
-            else if (newEnd) {
-                var newRange = document.createRange();
-                newRange.setStart(newEnd, 0);
-                newRange.setEnd(newEnd, 1);
-                range = newRange;
-            }
-        }
-        if (range.collapsed)
-            return this.resetCustomSelections();
         if (!this.supportsMultipleRanges)
             return emulateBoxSelection(this, documentSelection, range);
         if (lineSelection.end.lineNode.compareDocumentPosition(lineSelection.start.lineNode) & Node.DOCUMENT_POSITION_FOLLOWING) {
@@ -1018,38 +1001,68 @@ var SelectionObserver = (function () {
             emulateBoxSelection(this, documentSelection, range);
         }
         function emulateBoxSelection(self, documentSelection, range) {
-            var lineSelection = self.modificationEditor.getLineSelection(range, false);
-            if (lineSelection.start.offset == lineSelection.end.offset) {
-                var newEnd = extendRangeByOne(range.endContainer, range.endOffset);
-                if (typeof newEnd === 'number') {
-                    var newRange = document.createRange();
-                    newRange.setStart(range.startContainer, range.startOffset);
-                    newRange.setEnd(range.endContainer, newEnd);
-                    range = newRange;
+            var _a, _b;
+            var startCell = range.startContainer;
+            var behindStartCell = false;
+            if (startCell.nodeType == Node.TEXT_NODE) {
+                if (range.startOffset >= startCell.textContent.length) {
+                    startCell = startCell.parentElement;
+                    if (startCell.nextSibling) {
+                        startCell = startCell.nextSibling;
+                    }
+                    else {
+                        behindStartCell = true;
+                    }
                 }
-                else if (newEnd) {
-                    var newRange = document.createRange();
-                    newRange.setStart(range.startContainer, range.startOffset);
-                    newRange.setEnd(newEnd, 1);
-                    range = newRange;
+                else {
+                    startCell = startCell.parentElement;
                 }
             }
-            var rects = range.getClientRects();
-            var startRect = rects[0];
-            var endRect = rects[rects.length - 1];
-            if (startRect.top > endRect.top) {
-                var temp = startRect;
-                startRect = endRect;
-                endRect = temp;
+            var beforeEndCell = false;
+            var endCell = range.endContainer;
+            if (endCell.nodeType != Node.TEXT_NODE)
+                beforeEndCell = true;
+            else
+                endCell = endCell.parentElement;
+            var startRect = startCell.getBoundingClientRect();
+            if (behindStartCell)
+                startRect = new DOMRect(startRect.right, startRect.top, 0, startRect.height);
+            var endRect = endCell.getBoundingClientRect();
+            if (beforeEndCell)
+                endRect = new DOMRect(endRect.left, endRect.top, 0, endRect.height);
+            if (range.collapsed) {
+                endCell = startCell;
+                endRect = startRect;
             }
-            var x = startRect.left;
-            if (lineSelection.end.offset < lineSelection.start.offset)
-                x = endRect.right;
+            var x, width;
+            if (endRect.left >= startRect.left) {
+                x = startRect.left;
+                width = endRect.right - x;
+            }
+            else {
+                if ((_a = endCell.nextSibling) === null || _a === void 0 ? void 0 : _a.getBoundingClientRect) {
+                    endCell = endCell.nextSibling;
+                    endRect = endCell.getBoundingClientRect();
+                    endRect = new DOMRect(endRect.left, endRect.top, 0, endRect.height);
+                }
+                else {
+                    endRect = new DOMRect(endRect.right, endRect.top, 0, endRect.height);
+                }
+                if (!behindStartCell) {
+                    if ((_b = startCell.previousSibling) === null || _b === void 0 ? void 0 : _b.getBoundingClientRect) {
+                        startCell = startCell.previousSibling;
+                        startRect = startCell.getBoundingClientRect();
+                        startRect = new DOMRect(startRect.right, startRect.top, 0, startRect.height);
+                    }
+                    else {
+                        startRect = new DOMRect(startRect.left, startRect.top, 0, startRect.height);
+                    }
+                }
+                x = endRect.left;
+                width = startRect.right - x;
+            }
             var y = startRect.top;
-            var width = +(startRect.left - endRect.right);
-            if (width < 0)
-                width = -width;
-            var height = endRect.bottom - startRect.top;
+            var height = endRect.bottom - y;
             var wrapperRect = self.editorWrapper.getBoundingClientRect();
             self.customSelection.style.top = (y - wrapperRect.top) + 'px';
             self.customSelection.style.left = (x - wrapperRect.left) + 'px';
