@@ -11,7 +11,7 @@ public enum ChordQuality : byte
     [EnumName("")]
     Major,
 
-    [EnumName("m", "min", "-", Blacklist = ["ma"])]
+    [EnumName("min", "m", "-", PreferredName = "m", Blacklist = ["ma"])]
     Minor,
 
     [EnumName("0", "o", "dim")]

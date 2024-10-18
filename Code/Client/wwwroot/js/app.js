@@ -923,7 +923,7 @@ var SelectionObserver = (function () {
     };
     SelectionObserver.prototype.refreshSelection = function () {
         this.isPaused = false;
-        this.processSelectionChange();
+        requestAnimationFrame(this.processSelectionChange.bind(this));
     };
     SelectionObserver.prototype.pauseObservation = function () {
         this.isPaused = true;
@@ -1047,6 +1047,7 @@ var SelectionObserver = (function () {
             }
             var beforeEndCell = false;
             var insideEndCell = false;
+            var behindEndCell = false;
             var endCell = range.endContainer;
             if (endCell.nodeType != Node.TEXT_NODE) {
                 beforeEndCell = true;
@@ -1054,6 +1055,8 @@ var SelectionObserver = (function () {
             else {
                 if (range.endOffset < range.endContainer.textContent.length)
                     insideEndCell = true;
+                else if (range.endOffset == range.endContainer.textContent.length)
+                    behindEndCell = true;
                 endCell = endCell.parentElement;
             }
             var startRect = startCell.getBoundingClientRect();
@@ -1076,38 +1079,45 @@ var SelectionObserver = (function () {
                     if ((_a = endCell.nextSibling) === null || _a === void 0 ? void 0 : _a.getBoundingClientRect) {
                         endCell = endCell.nextSibling;
                         endRect = endCell.getBoundingClientRect();
-                        endRect = new DOMRect(endRect.left, endRect.top, 0, endRect.height);
                     }
                     else {
                         endRect = new DOMRect(endRect.right, endRect.top, 0, endRect.height);
                     }
                 }
-                if (!behindStartCell) {
-                    if ((_b = startCell.previousSibling) === null || _b === void 0 ? void 0 : _b.getBoundingClientRect) {
-                        startCell = startCell.previousSibling;
-                        startRect = startCell.getBoundingClientRect();
-                        startRect = new DOMRect(startRect.right, startRect.top, 0, startRect.height);
-                    }
-                    else {
-                        startRect = new DOMRect(startRect.left, startRect.top, 0, startRect.height);
-                    }
+                if (endRect.left >= startRect.left) {
+                    x = startRect.left;
+                    width = endRect.right - x;
                 }
-                x = endRect.left;
-                width = startRect.right - x;
+                else {
+                    if (!behindStartCell) {
+                        if ((_b = startCell.previousSibling) === null || _b === void 0 ? void 0 : _b.getBoundingClientRect) {
+                            startCell = startCell.previousSibling;
+                            startRect = startCell.getBoundingClientRect();
+                        }
+                        else {
+                            startRect = new DOMRect(startRect.left, startRect.top, 0, startRect.height);
+                        }
+                    }
+                    x = endRect.left;
+                    width = startRect.right - x;
+                }
             }
             var y = startRect.top;
             var height = endRect.bottom - y;
             var wrapperRect = self.editorWrapper.getBoundingClientRect();
             var top = y - wrapperRect.top;
             var left = x - wrapperRect.left;
-            var newPosition = top.toFixed(2) + ';' + left.toFixed(2) + ';' + width.toFixed(2) + ';' + height.toFixed(2);
-            if (self.customSelection['data-position'] != newPosition) {
+            var newPosition = top.toFixed(0) + ';' + left.toFixed(0) + ';' + documentSelection.toString().length;
+            var newPositionFull = newPosition + ';' + width.toFixed(0) + ';' + height.toFixed(0);
+            var currentPosition = self.customSelection['data-position'];
+            if (currentPosition != newPositionFull) {
                 self.customSelection.style.top = top + 'px';
                 self.customSelection.style.left = left + 'px';
                 self.customSelection.style.width = width + 'px';
                 self.customSelection.style.height = height + 'px';
-                self.customSelection['data-position'] = newPosition;
-                self.justSelected = true;
+                self.customSelection['data-position'] = newPositionFull;
+                if (!(currentPosition === null || currentPosition === void 0 ? void 0 : currentPosition.startsWith(newPosition)))
+                    self.justSelected = true;
             }
             if (self.customSelection.className != 'custom-selection custom-selection-box') {
                 self.customSelection.className = 'custom-selection custom-selection-box';

@@ -1,4 +1,4 @@
-﻿@page "/editor-test"
+﻿@* @page "/editor-test"
 @page "/chords/editor-test"
 
 @using Microsoft.JSInterop
@@ -121,3 +121,4 @@
     public record JsMetalineSelection(JsMetalineSelectionAnchor Start, JsMetalineSelectionAnchor End);
     public record JsMetalineSelectionAnchor(Guid Metaline, int? Line, int Offset);
 }
+ *@

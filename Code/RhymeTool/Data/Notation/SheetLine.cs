@@ -1,5 +1,6 @@
 ﻿using Skinnix.RhymeTool.ComponentModel;
 using Skinnix.RhymeTool.Data.Notation.Display;
+using Skinnix.RhymeTool.Data.Notation.Features;
 
 namespace Skinnix.RhymeTool.Data.Notation;
 
@@ -29,6 +30,11 @@ public interface ISheetTitleLine : ISheetLine
 	bool IsTitleLine(out string? title);
 }
 
+public interface ISheetFeatureLine : ISheetLine
+{
+	IEnumerable<IDocumentFeature> GetFeatures();
+}
+
 public abstract class SheetLine : DeepObservableBase, ISheetLine
 {
 	public static readonly Reason NoLineAfter = new("Keine Zeile danach");
@@ -45,7 +51,7 @@ public abstract class SheetLine : DeepObservableBase, ISheetLine
 		this.Type = type;
 	}
 
-    public abstract IEnumerable<SheetDisplayLine> CreateDisplayLines(ISheetBuilderFormatter? formatter = null);
+    public abstract IEnumerable<SheetDisplayLine> CreateDisplayLines(SheetLineContext context, ISheetBuilderFormatter? formatter = null);
 
 	public abstract IEnumerable<SheetLineConversion> GetPossibleConversions(ISheetBuilderFormatter? formatter = null);
 }
@@ -69,7 +75,7 @@ public class SheetEmptyLine() : SheetLine(LineType), ISelectableSheetLine, IShee
 	public override IEnumerable<SheetLineConversion> GetPossibleConversions(ISheetBuilderFormatter? formatter = null)
 		=> [SheetLineConversion.Simple<SheetTabLine>.Instance];
 
-	public override IEnumerable<SheetDisplayLine> CreateDisplayLines(ISheetBuilderFormatter? formatter = null)
+	public override IEnumerable<SheetDisplayLine> CreateDisplayLines(SheetLineContext context, ISheetBuilderFormatter? formatter = null)
     {
         for (int i = 0; i < Count; i++)
 		{

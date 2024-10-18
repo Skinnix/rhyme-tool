@@ -79,7 +79,7 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 	#endregion
 
 	#region Display
-	public override IEnumerable<SheetDisplayLine> CreateDisplayLines(ISheetBuilderFormatter? formatter = null)
+	public override IEnumerable<SheetDisplayLine> CreateDisplayLines(SheetLineContext context, ISheetBuilderFormatter? formatter = null)
 	{
 		//Prüfe Cache
 		if (cachedFormatter == formatter && cachedLines is not null)

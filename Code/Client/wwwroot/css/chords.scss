@@ -418,23 +418,26 @@ $separatorColor: #6c757d;
 	.chord-sheet {
 		.line.line-text {
 			.anchor-text, .text, .chord, .fingering, .rhythm-pattern {
-				border-left: 1px dotted red;
+				box-shadow: -0.5px 0 0 0px red, 0.5px 0 0 0px green;
+				/*border-left: 1px dotted red;
 				border-right: 1px dotted green;
 				margin-left: -1px;
-				margin-right: -1px;
+				margin-right: -1px;*/
 			}
 
 			.word {
-				border-left: 1px solid black;
+				box-shadow: 0 0 0 1px black;
+				/*border-left: 1px solid black;
 				border-right: 1px solid black;
 				margin-left: -1px;
-				margin-right: -1px;
+				margin-right: -1px;*/
 
 				.word-component {
-					border-left: 1px dotted red;
+					box-shadow: -0.5px 0 0 0px red, 0.5px 0 0 0px green;
+					/*border-left: 1px dotted red;
 					border-right: 1px dotted green;
 					margin-left: -1px;
-					margin-right: -1px;
+					margin-right: -1px;*/
 				}
 			}
 		}

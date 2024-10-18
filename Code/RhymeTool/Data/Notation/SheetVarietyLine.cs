@@ -67,7 +67,7 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 	}
 
 	#region Display
-	public override IEnumerable<SheetDisplayLine> CreateDisplayLines(ISheetBuilderFormatter? formatter = null)
+	public override IEnumerable<SheetDisplayLine> CreateDisplayLines(SheetLineContext context, ISheetBuilderFormatter? formatter = null)
 	{
 		//Prüfe Cache
 		if (cachedFormatter == formatter && cachedLines is not null)
@@ -297,7 +297,7 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 						if (specialCursorPosition is not null)
 						{
 							//Erzeuge Displayelemente, damit die Cursorposition berechnet werden kann
-							varietyBefore.CreateDisplayLines(formatter);
+							varietyBefore.CreateDisplayLines(context.LineContext.Previous ?? throw new InvalidOperationException("Kontext nicht gefunden"), formatter);
 
 							//Berechne Cursorposition
 							cursorPosition = specialCursorPosition.Value.Calculate(varietyBefore, formatter);
@@ -374,7 +374,7 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 						if (specialCursorPosition is not null)
 						{
 							//Erzeuge Displayelemente, damit die Cursorposition berechnet werden kann
-							Line.CreateDisplayLines(formatter);
+							Line.CreateDisplayLines(context.LineContext, formatter);
 
 							//Berechne Cursorposition
 							cursorPosition = specialCursorPosition.Value.Calculate(Line, formatter);
@@ -1071,7 +1071,7 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 			if (specialCursorPosition is not null)
 			{
 				//Erzeuge Displayelemente, damit die Cursorposition berechnet werden kann
-				Line.CreateDisplayLines(formatter);
+				Line.CreateDisplayLines(context.LineContext, formatter);
 
 				//Berechne Cursorposition
 				cursorPosition = specialCursorPosition.Value.Calculate(Line, formatter);
@@ -1199,7 +1199,7 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 
 						//Erzeuge die Displayelemente der Zeile neu
 						Line.RaiseModifiedAndInvalidateCache();
-						Line.CreateDisplayLines(formatter);
+						Line.CreateDisplayLines(context.LineContext, formatter);
 
 						//Setze den Cursor an die Stelle des gelöschten Attachments
 						if (direction == DeleteDirection.Forward)
@@ -1223,7 +1223,7 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 			if (attachments.Count == 1)
 			{
 				//Bearbeite das Attachment
-				return TryEditAttachment(attachments[0].Component, attachments[0].Attachment, context.SelectionRange, null, formatter);
+				return TryEditAttachment(context, attachments[0].Component, attachments[0].Attachment, context.SelectionRange, null, formatter);
 			}
 
 			//Liegen mehrere Attachments im Bereich?
@@ -1260,7 +1260,7 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 			if (attachments.Count == 1)
 			{
 				//Bearbeite das Attachment
-				return TryEditAttachment(attachments[0].Component, attachments[0].Attachment, context.SelectionRange, content, formatter);
+				return TryEditAttachment(context, attachments[0].Component, attachments[0].Attachment, context.SelectionRange, content, formatter);
 			}
 
 			//Liegt mehr als ein Attachment im Bereich?
@@ -1300,7 +1300,7 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 
 					//Erzeuge die Displayelemente der Zeile neu
 					Line.RaiseModifiedAndInvalidateCache();
-					Line.CreateDisplayLines(formatter);
+					Line.CreateDisplayLines(context.LineContext, formatter);
 
 					//Setze den Cursor hinter das Attachment
 					var cursorPosition = before.RenderBounds.AfterOffset;
@@ -1317,7 +1317,7 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 
 					//Erzeuge die Displayelemente der Zeile neu
 					Line.RaiseModifiedAndInvalidateCache();
-					Line.CreateDisplayLines(formatter);
+					Line.CreateDisplayLines(context.LineContext, formatter);
 
 					//Setze den Cursor hinter den eingefügten Text
 					var cursorPosition = after.RenderBounds.StartOffset + content.Length;
@@ -1336,7 +1336,7 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 
 					//Erzeuge die Displayelemente der Zeile neu
 					Line.RaiseModifiedAndInvalidateCache();
-					Line.CreateDisplayLines(formatter);
+					Line.CreateDisplayLines(context.LineContext, formatter);
 
 					//Setze den Cursor hinter das eingefügte Attachment
 					var cursorPosition = newAttachment.RenderBounds.AfterOffset;
@@ -1382,7 +1382,7 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 			}
 		}
 
-		private DelayedMetalineEditResult TryEditAttachment(VarietyComponent component, VarietyComponent.VarietyAttachment attachment,
+		private DelayedMetalineEditResult TryEditAttachment(SheetDisplayLineEditingContext context, VarietyComponent component, VarietyComponent.VarietyAttachment attachment,
 			SimpleRange selectionRange, string? content, ISheetEditorFormatter? formatter)
 		{
 			//Werden Whitespaces am Anfang des Attachments eingefügt oder gelöscht?
@@ -1430,7 +1430,7 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 
 				//Erzeuge die Displayelemente der Zeile neu
 				Line.RaiseModifiedAndInvalidateCache();
-				Line.CreateDisplayLines(formatter);
+				Line.CreateDisplayLines(context.LineContext, formatter);
 
 				//TODO: Cursorposition beim Bearbeiten von Attachments optimieren
 				//Berechne die Cursorposition

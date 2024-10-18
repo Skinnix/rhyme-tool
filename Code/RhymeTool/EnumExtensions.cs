@@ -24,7 +24,7 @@ public static class EnumExtensions
 		{
 			var member = memberInfo[0];
 
-			return member.GetCustomAttribute<EnumNameAttribute>(false)?.Name
+			return member.GetCustomAttribute<EnumNameAttribute>(false)?.PreferredName
 				?? member.GetCustomAttribute<DisplayAttribute>(false)?.Name
 				?? value.ToString();
 		}

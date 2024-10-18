@@ -20,19 +20,19 @@ public class SheetWriter
 
 	private void WriteSheet()
 	{
-		foreach (var line in document.Lines)
-			WriteTextLine(line);
+		foreach (var lineContext in document.Lines.GetLinesWithContext())
+			WriteTextLine(lineContext);
 	}
 
 	private async Task WriteSheetAsync(CancellationToken cancellation = default)
 	{
-		foreach (var line in document.Lines)
-			await WriteTextLineAsync(line, cancellation);
+		foreach (var lineContext in document.Lines.GetLinesWithContext())
+			await WriteTextLineAsync(lineContext, cancellation);
 	}
 
-	private void WriteTextLine(SheetLine line)
+	private void WriteTextLine(SheetLineContext lineContext)
 	{
-		var displayLines = line.CreateDisplayLines();
+		var displayLines = lineContext.CreateDisplayLines();
 		foreach (var displayLine in displayLines)
 		{
 			foreach (var element in displayLine.GetElements())
@@ -45,10 +45,10 @@ public class SheetWriter
 		}
 	}
 
-	private async Task WriteTextLineAsync(SheetLine line, CancellationToken cancellation = default)
+	private async Task WriteTextLineAsync(SheetLineContext lineContext, CancellationToken cancellation = default)
 	{
 		cancellation.ThrowIfCancellationRequested();
-		var displayLines = line.CreateDisplayLines(Formatter);
+		var displayLines = lineContext.CreateDisplayLines(Formatter);
 		foreach (var displayLine in displayLines)
 		{
 			foreach (var element in displayLine.GetElements())

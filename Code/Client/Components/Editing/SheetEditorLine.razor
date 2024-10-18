@@ -139,7 +139,7 @@
                 break;
 
             case SheetDisplayLineSegmentTitleBracket titleBracket when titleBracket.IsTitleStart:
-                <span class="scroll-anchor" id="sheetSegment-@(Line.Guid)"></span><span @key="GetKey(element)" class="@SheetRenderer.GetElementClasses(element)">@titleBracket.ToString(Formatter)</span>
+                <span class="scroll-anchor" id="sheetSegment-@(Line!.Guid)"></span><span @key="GetKey(element)" class="@SheetRenderer.GetElementClasses(element)">@titleBracket.ToString(Formatter)</span>
                 break;
 
             case SheetDisplayLineWidthElement tabElement:
@@ -190,11 +190,11 @@
     }
 }
 
-@if (Line is not null)
+@if (LineContext is not null)
 {
-    <span class="metaline" data-metaline="@Line.Guid" data-type="@Line.GetType()?.Name" data-render-key="@(renderKey++)" @attributes="GetAdditionalAttributes()">
+    <span class="metaline" data-metaline="@Line!.Guid" data-type="@Line.GetType()?.Name" data-render-key="@(renderKey++)" @attributes="GetAdditionalAttributes()">
         <span class="metaline-controls" contenteditable="false"><div class="metaline-bracket"></div><MetalineTypeButton Line="Line" /></span><span class="metaline-lines">
-            @foreach (var display in (renderedLines = Line.CreateDisplayLines(Formatter).ToArray()))
+            @foreach (var display in (renderedLines = LineContext.CreateDisplayLines(Formatter).ToArray()))
             {
                 <span class="line-controls" contenteditable="false"><LineTypeButton Line="display" /></span>
                 RenderLine(display);
@@ -207,9 +207,10 @@
     [CascadingParameter] public SheetDocument? Document { get; set; }
     [CascadingParameter] public ISheetEditorFormatter? Formatter { get; set; }
 
-    [Parameter] public SheetLine? Line { get; set; }
-
+    [Parameter] public SheetLineContext? LineContext { get; set; }
     [Parameter] public EventCallback<SheetDisplayLine[]> OnLinesRendered { get; set; }
+
+    public SheetLine? Line => LineContext?.Line;
 
     private SheetLine? loadedLine;
     private ISheetEditorFormatter? loadedFormatter;
@@ -274,10 +275,10 @@
 
     public SheetDisplayLine? TryGetLine(int lineId)
     {
-        if (Line is null || Document is null) throw new InvalidOperationException("Editor not initialized");
+        if (LineContext is null || Document is null) throw new InvalidOperationException("Editor not initialized");
 
         //Finde die Zeile
-        var lines = Line.CreateDisplayLines(Formatter);
+        var lines = LineContext.CreateDisplayLines(Formatter);
         return lines.FirstOrDefault(l => l.Id == lineId);
     }
 

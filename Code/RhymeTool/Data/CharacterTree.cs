@@ -86,6 +86,8 @@ public class CharacterTree<TValue>
 
 	public int TryRead(ReadOnlySpan<char> key, [MaybeNull] out TValue value, bool ignoreEmpty = true)
 	{
+		var bestLength = -1;
+		var bestValue = default(TValue);
 		if (hasValue && !ignoreEmpty)
 		{
 			//Prüfe Blacklist
@@ -98,25 +100,27 @@ public class CharacterTree<TValue>
 				}
 			}
 
-			value = this.value!;
-			return 0;
+			bestLength = 0;
+			bestValue = this.value!;
 		}
-		else if (key.Length == 0)
+
+		if (key.Length == 0)
 		{
-			value = default;
-			return -1;
+			value = bestValue;
+			return bestLength;
 		}
 
 		if (!children.TryGetValue(key[0], out var child))
 		{
-			value = default;
-			return -1;
+			value = bestValue;
+			return bestLength;
 		}
 
 		var length = child.TryRead(key[1..], out value, ignoreEmpty: false);
-		if (length == -1)
-			return -1;
+		if (length != -1)
+			return length + 1;
 
-		return length + 1;
+		value = bestValue;
+		return bestLength;
 	}
 }

@@ -99,7 +99,7 @@
         <span @key="element.Slice" class="@GetElementClasses(element)" style="@style" @attributes="GetElementAttributes(element)">@format.Text</span>
     }
 
-    void RenderElement(SheetLine line, SheetDisplayLineElement element)
+    void RenderElement(SheetLineContext lineContext, SheetDisplayLineElement element)
     {
         switch (element)
         {
@@ -116,7 +116,7 @@
                 break;
 
             case SheetDisplayLineSegmentTitleBracket titleBracket when titleBracket.IsTitleStart:
-                <span class="scroll-anchor" id="sheetSegment-@(line.Guid)"></span><span @key="titleBracket.Slice" class="@SheetRenderer.GetElementClasses(element)">@titleBracket.ToString(Formatter)</span>
+                <span class="scroll-anchor" id="sheetSegment-@(lineContext.Line.Guid)"></span><span @key="titleBracket.Slice" class="@SheetRenderer.GetElementClasses(element)">@titleBracket.ToString(Formatter)</span>
                 break;
 
             case SheetDisplayLineBreakPoint breakpoint:
@@ -133,13 +133,13 @@
         }
     }
 
-    void RenderElements(SheetLine line, IEnumerable<SheetDisplayLineElement> elements)
+    void RenderElements(SheetLineContext lineContext, IEnumerable<SheetDisplayLineElement> elements)
     {
         foreach (var element in elements)
-            RenderElement(line, element);
+            RenderElement(lineContext, element);
     }
 
-    void RenderLine(SheetLine line, SheetDisplayLine display, IEnumerable<SheetDisplayLineElement> elements, int blockIndex, int indentation)
+    void RenderLine(SheetLineContext lineContext, SheetDisplayLine display, IEnumerable<SheetDisplayLineElement> elements, int blockIndex, int indentation)
     {
         switch (display)
         {
@@ -148,15 +148,15 @@
                 break;
 
             case SheetDisplayChordLine chords:
-                <div class="line line-chords@(blockIndex != 0 ? " continuation" : null)" data-block-index="@blockIndex" style="--line-indentation: @(indentation)">@{ RenderElements(line, elements); }</div>
+                <div class="line line-chords@(blockIndex != 0 ? " continuation" : null)" data-block-index="@blockIndex" style="--line-indentation: @(indentation)">@{ RenderElements(lineContext, elements); }</div>
                 break;
 
             case SheetDisplayTextLine text:
-                <div class="line line-text@(blockIndex != 0 ? " continuation" : null)" data-block-index="@blockIndex" style="--line-indentation: @(indentation)">@{ RenderElements(line, elements); }</div>
+                <div class="line line-text@(blockIndex != 0 ? " continuation" : null)" data-block-index="@blockIndex" style="--line-indentation: @(indentation)">@{ RenderElements(lineContext, elements); }</div>
                 break;
 
             case SheetDisplayTabLine tab:
-                <div class="line line-tab@(blockIndex != 0 ? " continuation" : null)" data-block-index="@blockIndex" style="--line-indentation: @(indentation)">@{ RenderElements(line, elements); }</div>
+                <div class="line line-tab@(blockIndex != 0 ? " continuation" : null)" data-block-index="@blockIndex" style="--line-indentation: @(indentation)">@{ RenderElements(lineContext, elements); }</div>
                 break;
         }
     }
@@ -167,15 +167,15 @@
     {
         @if (DisplayMode == SheetDisplayMode.Lines)
         {
-            @foreach (var line in Document.Lines)
+            @foreach (var lineContext in Document.Lines.GetLinesWithContext())
             {
                 <div class="metaline">
                     <div class="metaline-lines">
                         @if (BreakWidth is null)
                         {
-                            @foreach (var display in line.CreateDisplayLines(Formatter))
+                            @foreach (var display in lineContext.CreateDisplayLines(Formatter))
                             {
-                                RenderLine(line, display, display.GetElements(), 0, 0);
+                                RenderLine(lineContext, display, display.GetElements(), 0, 0);
                             }   
                         }
                         else
@@ -184,11 +184,11 @@
                             IEnumerable<int> indentations = Formatter?.GetLineIndentations().ToArray() ?? [0, 2];
                             var indentationEnumerator = indentations.GetEnumerator();
                             var indentation = indentationEnumerator.MoveNext() ? indentationEnumerator.Current : 0;
-                            @foreach (var block in SheetBlock.Create(line.CreateDisplayLines(Formatter).ToArray(), indentations.Select(i => BreakWidth.Value - i)))
+                            @foreach (var block in SheetBlock.Create(lineContext.CreateDisplayLines(Formatter).ToArray(), indentations.Select(i => BreakWidth.Value - i)))
                             {
                                 foreach (var blockLine in block.Lines)
                                 {
-                                    RenderLine(line, blockLine.Line, blockLine.GetElements(), blockIndex, indentation);
+                                    RenderLine(lineContext, blockLine.Line, blockLine.GetElements(), blockIndex, indentation);
                                 }
 
                                 if (indentationEnumerator?.MoveNext() == true)

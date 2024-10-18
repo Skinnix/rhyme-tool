@@ -672,7 +672,7 @@ class SelectionObserver implements Destructible {
 
 	public refreshSelection() {
 		this.isPaused = false;
-		this.processSelectionChange();
+		requestAnimationFrame(this.processSelectionChange.bind(this));
 	}
 
 	public pauseObservation() {
@@ -830,12 +830,16 @@ class SelectionObserver implements Destructible {
 			//Endzelle
 			let beforeEndCell = false;
 			let insideEndCell = false;
+			let behindEndCell = false;
 			let endCell = range.endContainer;
 			if (endCell.nodeType != Node.TEXT_NODE) {
 				beforeEndCell = true;
 			} else {
 				if (range.endOffset < range.endContainer.textContent.length)
 					insideEndCell = true;
+				else if (range.endOffset == range.endContainer.textContent.length)
+					behindEndCell = true;
+
 				endCell = endCell.parentElement;
 			}
 
@@ -863,24 +867,41 @@ class SelectionObserver implements Destructible {
 					if ((<any>endCell.nextSibling)?.getBoundingClientRect) {
 						endCell = endCell.nextSibling;
 						endRect = (<Element>endCell).getBoundingClientRect();
-						endRect = new DOMRect(endRect.left, endRect.top, 0, endRect.height);
+						//endRect = new DOMRect(endRect.left, endRect.top, 0, endRect.height);
 					} else {
 						endRect = new DOMRect(endRect.right, endRect.top, 0, endRect.height);
 					}
 				}
 
-				if (!behindStartCell) {
-					if ((<any>startCell.previousSibling)?.getBoundingClientRect) {
-						startCell = startCell.previousSibling;
-						startRect = (<Element>startCell).getBoundingClientRect();
-						startRect = new DOMRect(startRect.right, startRect.top, 0, startRect.height);
-					} else {
-						startRect = new DOMRect(startRect.left, startRect.top, 0, startRect.height);
+				if (endRect.left >= startRect.left) {
+					x = startRect.left;
+					width = endRect.right - x;
+				} else {
+					if (!behindStartCell) {
+						if ((<any>startCell.previousSibling)?.getBoundingClientRect) {
+							startCell = startCell.previousSibling;
+							startRect = (<Element>startCell).getBoundingClientRect();
+							//startRect = new DOMRect(startRect.right, startRect.top, 0, startRect.height);
+						} else {
+							startRect = new DOMRect(startRect.left, startRect.top, 0, startRect.height);
+						}
 					}
+
+					x = endRect.left;
+					width = startRect.right - x;
 				}
 
-				x = endRect.left;
-				width = startRect.right - x;
+				/*if (width < 0) {
+					if (!insideEndCell) {
+						if ((<any>endCell.nextSibling)?.getBoundingClientRect) {
+							endCell = endCell.nextSibling;
+							endRect = (<Element>endCell).getBoundingClientRect();
+							endRect = new DOMRect(endRect.left, endRect.top, 0, endRect.height);
+						} else {
+							endRect = new DOMRect(endRect.right, endRect.top, 0, endRect.height);
+						}
+					}
+				}*/
 			}
 
 			let y = startRect.top;
@@ -890,14 +911,18 @@ class SelectionObserver implements Destructible {
 			let wrapperRect = self.editorWrapper.getBoundingClientRect();
 			let top = y - wrapperRect.top;
 			let left = x - wrapperRect.left;
-			let newPosition = top.toFixed(2) + ';' + left.toFixed(2) + ';' + width.toFixed(2) + ';' + height.toFixed(2);
-			if ((<any>self.customSelection)['data-position'] != newPosition) {
+			let newPosition = top.toFixed(0) + ';' + left.toFixed(0) + ';' + documentSelection.toString().length;
+			let newPositionFull = newPosition + ';' + width.toFixed(0) + ';' + height.toFixed(0);
+			let currentPosition = (<any>self.customSelection)['data-position'];
+			if (currentPosition != newPositionFull) {
 				self.customSelection.style.top = top + 'px';
 				self.customSelection.style.left = left + 'px';
 				self.customSelection.style.width = width + 'px';
 				self.customSelection.style.height = height + 'px';
-				(<any>self.customSelection)['data-position'] = newPosition;
-				self.justSelected = true;
+				(<any>self.customSelection)['data-position'] = newPositionFull;
+
+				if (!currentPosition?.startsWith(newPosition))
+					self.justSelected = true;
 			}
 			
 			//Mache die Box sichtbar

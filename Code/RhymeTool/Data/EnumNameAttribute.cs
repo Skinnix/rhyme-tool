@@ -13,14 +13,14 @@ public class EnumNameAttribute : Attribute
 {
 	private static ConcurrentDictionary<Type, CharacterTree<object>> parseCache = new();
 
-	public string Name { get; }
+	public string PreferredName { get; set; }
 	public string[] AlternativeNames { get; }
 	public string[] Blacklist { get; set; } = Array.Empty<string>();
 
 	public EnumNameAttribute(string name, params string[] alternativeNames)
 	{
-		Name = name;
-		AlternativeNames = alternativeNames;
+		PreferredName = name;
+		AlternativeNames = alternativeNames.Prepend(name).ToArray();
 	}
 
 	public static string GetDisplayName<T>(T value)
@@ -33,7 +33,7 @@ public class EnumNameAttribute : Attribute
 			throw new ArgumentException($"Enum {type.Name} has no field {name}");
 
 		var attribute = field.GetCustomAttribute<EnumNameAttribute>(false);
-		return attribute?.Name ?? name;
+		return attribute?.PreferredName ?? name;
 	}
 
 	public static bool TryParse<T>(string s, out T value)
@@ -80,7 +80,7 @@ public class EnumNameAttribute : Attribute
 					continue;
 
 				var fieldValue = field.GetValue(null)!;
-				cache.Set(attribute.Name, fieldValue, attribute.Blacklist);
+				cache.Set(attribute.PreferredName, fieldValue, attribute.Blacklist);
 				foreach (var alternativeName in attribute.AlternativeNames)
 					cache.Set(alternativeName, fieldValue, attribute.Blacklist);
 			}

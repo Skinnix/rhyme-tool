@@ -12,7 +12,7 @@ public class SheetLineCache : DeepObservableBase
 {
 	public SheetLine Line { get; }
 
-	private ImmutableList<SheetDisplayLine>? displayLines;
+	private SheetDisplayLine[]? displayLines;
 	private ISheetFormatter? formatter;
 
 	public SheetLineCache(SheetLine line)
@@ -27,17 +27,17 @@ public class SheetLineCache : DeepObservableBase
 		displayLines = null;
 	}
 
-	public IReadOnlyList<SheetDisplayLine> GetDisplayLines(ISheetEditorFormatter? formatter = null)
+	public IReadOnlyList<SheetDisplayLine> GetDisplayLines(SheetLineContext context, ISheetEditorFormatter? formatter = null)
 	{
 		if (this.formatter != formatter)
 			displayLines = null;
 
 		if (displayLines == null)
 		{
-			displayLines = ImmutableList.CreateRange(Line.CreateDisplayLines(formatter));
+			displayLines = Line.CreateDisplayLines(context, formatter).ToArray();
 			this.formatter = formatter;
 		}
 
-		return displayLines.AsReadOnly();
+		return displayLines;
 	}
 }

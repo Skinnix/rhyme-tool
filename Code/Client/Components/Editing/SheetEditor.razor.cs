@@ -161,8 +161,10 @@ partial class SheetEditor
 			return MetalineEditResult.Fail(LineNotFound);
 
 		//Auswahl
+		var lineContext = Document.Lines.GetContextFor(line.Editing.Line)
+			?? throw new InvalidOperationException("Kein Kontext");
 		var editRange = new SimpleRange(range.Start.Offset, range.End.Offset);
-		var context = new SheetDisplayLineEditingContext(editRange, data.JustSelected)
+		var context = new SheetDisplayLineEditingContext(lineContext, editRange, data.JustSelected)
 		{
 			GetLineBefore = () => Document.Lines.GetLineBefore(line.Editing.Line),
 			GetLineAfter = () => Document.Lines.GetLineAfter(line.Editing.Line),

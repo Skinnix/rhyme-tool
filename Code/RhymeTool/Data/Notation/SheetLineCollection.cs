@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Linq.Expressions;
 using Skinnix.RhymeTool.ComponentModel;
+using Skinnix.RhymeTool.Data.Notation.Features;
 
 namespace Skinnix.RhymeTool.Data.Notation;
 
@@ -36,6 +37,34 @@ public class SheetLineCollection : IReadOnlyList<SheetLine>, IModifiable
 	{
 		TitlesChanged?.Invoke(this, EventArgs.Empty);
 	}
+
+	public IEnumerable<SheetLineContext> GetLinesWithContext()
+	{
+		var currentFeatures = document.GlobalFeatures.ToArray();
+		SheetLineContext? previous = null;
+		foreach (var line in lines)
+		{
+			if (line is ISheetFeatureLine featureLine)
+			{
+				var features = featureLine.GetFeatures();
+				List<IDocumentFeature>? newFeatures = null;
+				foreach (var feature in features)
+				{
+					newFeatures ??= new(currentFeatures);
+					newFeatures.RemoveAll(feature.Overrides);
+					newFeatures.Add(feature);
+				}
+				if (newFeatures is not null)
+					currentFeatures = newFeatures.ToArray();
+			}
+
+			previous = new SheetLineContext(document, line, previous, currentFeatures);
+			yield return previous;
+		}
+	}
+
+	public SheetLineContext? GetContextFor(SheetLine line)
+		=> GetLinesWithContext().FirstOrDefault(l => l.Line == line);
 
 	#region ReadOnlyCollection Members
 	public int IndexOf(SheetLine line) => lines.IndexOf(line);

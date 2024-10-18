@@ -16,7 +16,10 @@
         <CascadingValue TValue="ISheetEditorFormatter" Value="Formatter">
             <CascadingValue TValue="SheetDocument" Value="Document">
 
-                @foreach (var line in Document.Lines){<SheetEditorLine Line="line" @key="line" OnLinesRendered="OnLinesRendered" />}
+                @foreach (var lineContext in Document.Lines.GetLinesWithContext())
+                {
+                    <SheetEditorLine LineContext="lineContext" @key="lineContext.Line" OnLinesRendered="OnLinesRendered" />
+                }
 
             </CascadingValue>
         </CascadingValue>
