@@ -11,7 +11,7 @@ using Skinnix.RhymeTool.Data.Notation.Display;
 
 namespace Skinnix.RhymeTool.Data.Notation;
 
-public readonly record struct NoteFormat(string Type, string? Accidental = null)
+public readonly record struct NoteFormat(string Type, string? Accidental = null, AccidentalType AccidentalType = AccidentalType.None)
 {
 	public override string ToString() => Type.ToString() + Accidental?.ToString();
 }
@@ -61,6 +61,9 @@ public interface ISheetFormatter
 
 	string ToString(TabNote note, int width);
 	TabNoteFormat Format(TabNote note, int width);
+
+	string ToString(Note tuning, int width);
+	TabNoteFormat Format(Note tuning, int width);
 }
 
 public interface ISheetBuilderFormatter : ISheetFormatter
@@ -76,6 +79,10 @@ public interface ISheetEditorFormatter : ISheetBuilderFormatter
 {
 	bool KeepTabLineSelection { get; }
 
+	SheetTransformation? Transformation { get; }
+
+	int TryReadNote(ReadOnlySpan<char> s, out Note note);
+	int TryReadAccidental(ReadOnlySpan<char> s, out AccidentalType accidental);
 	int TryReadChord(ReadOnlySpan<char> s, out Chord? chord);
 	int TryReadFingering(ReadOnlySpan<char> s, out Fingering? fingering, int minLength = 1);
 	int TryReadRhythm(ReadOnlySpan<char> s, out RhythmPattern? rhythm);
@@ -292,37 +299,37 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 			switch (GermanMode)
 			{
 				case GermanNoteMode.AlwaysH:
-					return new("H", ToString(note.Accidental, inDocument, transform));
+					return new("H", ToString(note.Accidental, inDocument, transform), note.Accidental);
 				case GermanNoteMode.German:
 					if (note.Accidental == AccidentalType.Flat)
-						return new("B");
+						return new("B", null, AccidentalType.None);
 					else
-						return new("H", ToString(note.Accidental, inDocument, transform));
+						return new("H", ToString(note.Accidental, inDocument, transform), note.Accidental);
 				case GermanNoteMode.Descriptive:
 					if (note.Accidental == AccidentalType.Flat)
-						return new("B", ToString(note.Accidental, inDocument, transform));
+						return new("B", ToString(note.Accidental, inDocument, transform), note.Accidental);
 					else
-						return new("H", ToString(note.Accidental, inDocument, transform));
+						return new("H", ToString(note.Accidental, inDocument, transform), note.Accidental);
 				case GermanNoteMode.ExplicitB:
 					return note.Accidental switch
 					{
-						AccidentalType.None => new("B", inDocument ? ExplicitNaturalAccidentalModifier : TextExplicitNaturalAccidentalModifier),
-						AccidentalType.Sharp => new("B", inDocument ? SharpAccidentalModifier : TextSharpAccidentalModifier),
-						AccidentalType.Flat => new("B", inDocument ? FlatAccidentalModifier : TextFlatAccidentalModifier),
+						AccidentalType.None => new("B", inDocument ? ExplicitNaturalAccidentalModifier : TextExplicitNaturalAccidentalModifier, note.Accidental),
+						AccidentalType.Sharp => new("B", inDocument ? SharpAccidentalModifier : TextSharpAccidentalModifier, note.Accidental),
+						AccidentalType.Flat => new("B", inDocument ? FlatAccidentalModifier : TextFlatAccidentalModifier, note.Accidental),
 						_ => throw new NotImplementedException("unknown accidental type"),
 					};
 				case GermanNoteMode.ExplicitH:
 					return note.Accidental switch
 					{
-						AccidentalType.None => new("H", inDocument ? ExplicitNaturalAccidentalModifier : TextExplicitNaturalAccidentalModifier),
-						AccidentalType.Sharp => new("H", inDocument ? SharpAccidentalModifier : TextSharpAccidentalModifier),
-						AccidentalType.Flat => new("H", inDocument ? FlatAccidentalModifier : TextFlatAccidentalModifier),
+						AccidentalType.None => new("H", inDocument ? ExplicitNaturalAccidentalModifier : TextExplicitNaturalAccidentalModifier, note.Accidental),
+						AccidentalType.Sharp => new("H", inDocument ? SharpAccidentalModifier : TextSharpAccidentalModifier, note.Accidental),
+						AccidentalType.Flat => new("H", inDocument ? FlatAccidentalModifier : TextFlatAccidentalModifier, note.Accidental),
 						_ => throw new NotImplementedException("unknown accidental type"),
 					};
 
 			}
 
-		return new(note.Type.GetDisplayName(), ToString(note.Accidental, inDocument, transform));
+		return new(note.Type.GetDisplayName(), ToString(note.Accidental, inDocument, transform), note.Accidental);
 	}
 
 	public string ToString(Fingering fingering)
@@ -412,6 +419,32 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 		return new(text, width);
 	}
 
+	public string ToString(Note tuning, int width) => ToString(tuning, width, true);
+	private string ToString(Note tuning, int width, bool transform)
+		=> Format(tuning, width, transform).ToString();
+
+	public TabNoteFormat Format(Note tuning, int width) => Format(tuning, width, true);
+	private TabNoteFormat Format(Note tuning, int width, bool transform)
+	{
+		var text = ToString(tuning);
+
+		if (CondenseTabNotes)
+		{
+			if (text.Length <= 1)
+				return new(text, width);
+
+			var suffix = text[1..];
+			text = text[0].ToString();
+			return new(text, width, Suffix: suffix);
+		}
+
+		var padding = width - text.Length;
+		if (padding > 0)
+			text = text + new string(' ', padding);
+
+		return new(text, width);
+	}
+
 
 	public IEnumerable<int> GetLineIndentations() => LineIndentations;
 
@@ -445,6 +478,32 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 
 		return true;
 	}
+
+	public int TryReadNote(ReadOnlySpan<char> s, out Note note) => TryReadNote(s, out note, true);
+	private int TryReadNote(ReadOnlySpan<char> s, out Note note, bool transform)
+	{
+		var length = Note.TryRead(s, out note);
+		if (length <= 0)
+			return 0;
+
+		if (note.Type == NoteType.B)
+			switch (GermanMode)
+			{
+				case GermanNoteMode.German:
+					if (note.Accidental == AccidentalType.None && s.StartsWith("B", StringComparison.OrdinalIgnoreCase))
+						note = Note.BFlat;
+					break;
+			}
+
+		if (transform && Transformation is not null)
+			note = Transformation.UntransformNote(note);
+
+		return length;
+	}
+
+	public int TryReadAccidental(ReadOnlySpan<char> s, out AccidentalType accidental) => TryReadAccidental(s, out accidental, true);
+	private int TryReadAccidental(ReadOnlySpan<char> s, out AccidentalType accidental, bool transform)
+		=> EnumNameAttribute.TryRead(s, out accidental);
 
 	public int TryReadChord(ReadOnlySpan<char> s, out Chord? chord) => TryReadChord(s, out chord, true);
 	public int TryReadChord(ReadOnlySpan<char> s, out Chord? chord, bool transform)

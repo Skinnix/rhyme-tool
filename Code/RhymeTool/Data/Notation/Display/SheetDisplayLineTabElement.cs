@@ -2,12 +2,6 @@
 
 public abstract record SheetDisplayLineTabElement : SheetDisplayLineElement
 {
-	public override int GetLength(ISheetFormatter? formatter) => 1;
-}
-
-public record SheetDisplayLineTabLineNote(Note Note) : SheetDisplayLineTabElement
-{
-	public override string ToString(ISheetFormatter? formatter = null) => Note.ToString(formatter);
 }
 
 public record SheetDisplayTabLineFormatSpace(int Length) : SheetDisplayLineTabElement
@@ -18,19 +12,65 @@ public record SheetDisplayTabLineFormatSpace(int Length) : SheetDisplayLineTabEl
 
 public record SheetDisplayLineTabBarLine() : SheetDisplayLineTabElement
 {
+	public override int GetLength(ISheetFormatter? formatter) => 1;
 	public override string ToString(ISheetFormatter? formatter = null) => "|";
 }
 
-public abstract record SheetDisplayLineTabNoteBase : SheetDisplayLineTabElement
+public abstract record SheetDisplayLineWidthElement : SheetDisplayLineTabElement
 {
-	public TabNote Note { get; }
 	public virtual int Width { get; internal set; } = 1;
 
+	protected SheetDisplayLineWidthElement(int width)
+	{
+		Width = width;
+	}
+
+	public override int GetLength(ISheetFormatter? formatter) => Format(formatter).Text.Length;
+
+	public abstract TabNoteFormat Format(ISheetFormatter? formatter);
+}
+
+public record SheetDisplayLineTabTuning : SheetDisplayLineWidthElement
+{
+	public Note Tuning { get; }
+
+	public SheetDisplayLineTabTuning(Note tuning)
+		: base(tuning.ToString().Length)
+	{
+		Tuning = tuning;
+	}
+
+	public override TabNoteFormat Format(ISheetFormatter? formatter)
+		=> formatter?.Format(Tuning, Width)
+		?? new TabNoteFormat(Tuning.ToString(), Width);
+
+	public override string ToString(ISheetFormatter? formatter = null)
+	{
+		if (formatter is not null)
+			return formatter.ToString(Tuning, Width);
+
+		var tuningText = Tuning.ToString();
+		if (Width <= tuningText.Length)
+			return tuningText;
+
+		var padding = Width - tuningText.Length;
+		return tuningText + new string(' ', padding);
+	}
+}
+
+public abstract record SheetDisplayLineTabNoteBase : SheetDisplayLineWidthElement
+{
+	public TabNote Note { get; }
+
 	public SheetDisplayLineTabNoteBase(TabNote note)
+		: base(note.ToString().Length)
 	{
 		Note = note;
-		Width = note.ToString().Length;
 	}
+
+	public override TabNoteFormat Format(ISheetFormatter? formatter)
+		=> formatter?.Format(Note, Width)
+		?? new TabNoteFormat(Note.ToString(), Width);
 
 	public override string ToString(ISheetFormatter? formatter = null)
 	{
@@ -42,9 +82,9 @@ public abstract record SheetDisplayLineTabNoteBase : SheetDisplayLineTabElement
 			return noteText;
 
 		var padding = Width - noteText.Length;
-		var widthBefore = padding / 2;
-		var widthAfter = padding - widthBefore;
-		return new string(' ', widthBefore) + noteText + new string(' ', widthAfter);
+		var paddingBefore = padding / 2;
+		var paddingAfter = padding - paddingBefore;
+		return new string(' ', paddingBefore) + noteText + new string(' ', paddingAfter);
 	}
 }
 

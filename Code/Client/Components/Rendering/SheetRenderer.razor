@@ -75,17 +75,16 @@
         <span class="rhythm-pattern-delimiter">@format.RightDelimiter</span>
     }
 
-    void RenderTabNote(SheetDisplayLineTabNoteBase tabNote)
+    void RenderTabElement(SheetDisplayLineWidthElement element)
     {
-        var format = Formatter?.Format(tabNote.Note, tabNote.Width)
-            ?? new(tabNote.Note.ToString(), tabNote.Width);
+        var format = element.Format(Formatter);
 
         var style = format.Width == 1 && format.Prefix is null && format.Suffix is null ? null
-            : (format.Width == 1 ? null : $"--tab-note-width: {format.Width};--tab-note-padding: {format.Width - format.TotalTextLength};")
-            + (format.Prefix is null ? null : $"--tab-note-prefix: '{format.Prefix}';--tab-note-prefix-length: {format.Prefix.Length}")
-            + (format.Suffix is null ? null : $"--tab-note-suffix: '{format.Suffix}';--tab-note-suffix-length: {format.Suffix.Length}");
+            : (format.Width == 1 ? null : $"--tab-width: {format.Width};--tab-padding: {format.Width - format.TotalTextLength};")
+            + (format.Prefix is null ? null : $"--tab-prefix: '{format.Prefix}';--tab-prefix-length: {format.Prefix.Length};")
+            + (format.Suffix is null ? null : $"--tab-suffix: '{format.Suffix}';--tab-suffix-length: {format.Suffix.Length};");
 
-        <span @key="tabNote.Slice" class="@GetElementClasses(tabNote)" style="@style" @attributes="GetElementAttributes(tabNote)">@format.Text</span>
+        <span @key="element.Slice" class="@GetElementClasses(element)" style="@style" @attributes="GetElementAttributes(element)">@format.Text</span>
     }
 
     void RenderElement(SheetLine line, SheetDisplayLineElement element)
@@ -100,8 +99,8 @@
                 <span @key="element.Slice" class="@GetElementClasses(element)" @attributes="GetElementAttributes(element)">@{ RenderRhythmPattern(rhythm.Rhythm); }</span>
                 break;
 
-            case SheetDisplayLineTabNoteBase tabNote:
-                RenderTabNote(tabNote);
+            case SheetDisplayLineWidthElement tabElement:
+                RenderTabElement(tabElement);
                 break;
 
             case SheetDisplayLineSegmentTitleBracket titleBracket when titleBracket.IsTitleStart:
@@ -290,7 +289,7 @@
         SheetDisplayLineSegmentTitleBracket => "segment-title-bracket",
         SheetDisplayLineSegmentTitleText => "segment-title",
 
-        SheetDisplayLineTabLineNote => "tuning-note",
+        SheetDisplayLineTabTuning => "tab-tuning-note",
         SheetDisplayLineTabNote => "tab-note",
         SheetDisplayLineTabBarLine => "bar-line",
 

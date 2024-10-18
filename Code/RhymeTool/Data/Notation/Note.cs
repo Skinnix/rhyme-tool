@@ -63,6 +63,10 @@ public readonly record struct Note(NoteType Type, AccidentalType Accidental)
 	public static readonly Note BFlat = new(NoteType.B, AccidentalType.Flat);
 	public static readonly Note B = new(NoteType.B, AccidentalType.None);
 
+	public NoteFormat Format(ISheetFormatter? formatter)
+		=> formatter?.Format(this) ?? Format();
+	public NoteFormat Format() => new(Type.GetDisplayName(), Accidental == AccidentalType.None ? null : Accidental.GetDisplayName(), Accidental);
+
     public override string ToString()
         => Accidental == AccidentalType.None
         ? Type.GetDisplayName()
@@ -71,7 +75,9 @@ public readonly record struct Note(NoteType Type, AccidentalType Accidental)
     public string ToString(ISheetFormatter? formatter)
         => formatter?.ToString(this) ?? ToString();
 
-    public static int TryRead(ReadOnlySpan<char> s, out Note note)
+	public static int TryRead(ReadOnlySpan<char> s, out Note note, ISheetEditorFormatter? formatter)
+		=> formatter is not null ? formatter.TryReadNote(s, out note) : TryRead(s, out note);
+	public static int TryRead(ReadOnlySpan<char> s, out Note note)
     {
         note = default;
         if (s.IsEmpty)

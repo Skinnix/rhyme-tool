@@ -85,17 +85,16 @@
         <span class="rhythm-pattern-delimiter">@format.RightDelimiter</span>
     }
 
-    void RenderTabNote(SheetDisplayLineTabNoteBase tabNote)
+    void RenderTabElement(SheetDisplayLineWidthElement element)
     {
-        var format = Formatter?.Format(tabNote.Note, tabNote.Width)
-            ?? new(tabNote.Note.ToString(), tabNote.Width);
+        var format = element.Format(Formatter);
 
         var style = format.Width == 1 && format.Prefix is null && format.Suffix is null ? null
-            : (format.Width == 1 ? null : $"--tab-note-width: {format.Width};--tab-note-padding: {format.Width - format.TotalTextLength};")
-            + (format.Prefix is null ? null : $"--tab-note-prefix: '{format.Prefix}';--tab-note-prefix-length: {format.Prefix.Length}")
-            + (format.Suffix is null ? null : $"--tab-note-suffix: '{format.Suffix}';--tab-note-suffix-length: {format.Suffix.Length}");
+            : (format.Width == 1 ? null : $"--tab-width: {format.Width};--tab-padding: {format.Width - format.TotalTextLength};")
+            + (format.Prefix is null ? null : $"--tab-prefix: '{format.Prefix}';--tab-prefix-length: {format.Prefix.Length};")
+            + (format.Suffix is null ? null : $"--tab-suffix: '{format.Suffix}';--tab-suffix-length: {format.Suffix.Length};");
 
-        <span @key="tabNote.Slice" class="@SheetRenderer.GetElementClasses(tabNote)" style="@style" @attributes="SheetRenderer.GetElementAttributes(tabNote)">@format.Text</span>
+        <span @key="element.Slice" class="@SheetRenderer.GetElementClasses(element)" style="@style" @attributes="SheetRenderer.GetElementAttributes(element)">@format.Text</span>
     }
 
     void RenderSpan(SheetDisplayLineElement element)
@@ -130,8 +129,8 @@
                 <span class="scroll-anchor" id="sheetSegment-@(Line.Guid)"></span><span @key="GetKey(element)" class="@SheetRenderer.GetElementClasses(element)">@titleBracket.ToString(Formatter)</span>
                 break;
 
-            case SheetDisplayLineTabNoteBase tabNote:
-                RenderTabNote(tabNote);
+            case SheetDisplayLineWidthElement tabElement:
+                RenderTabElement(tabElement);
                 break;
 
             // case SheetDisplayLineTabBarLine barLine:

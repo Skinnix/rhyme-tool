@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using Skinnix.RhymeTool.ComponentModel;
 using Skinnix.RhymeTool.Data.Notation.Display;
 
@@ -16,6 +17,7 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 	public static readonly Reason CannotMultilineEdit = new("Tabulaturzeilen können nicht mehrzeilig bearbeitet werden");
 	public static readonly Reason CannotEditMultipleNotes = new("Mehrere Noten können nicht gleichzeitig bearbeitet werden");
 	public static readonly Reason NotANumber = new("Der Inhalt muss eine Zahl sein");
+	public static readonly Reason NotANote = new("Der Inhalt muss eine Note sein");
 	public static readonly Reason CannotEditBarLines = new("Taktstriche können nicht bearbeitet werden");
 	public static readonly Reason InvalidPosition = new("Ungültige Position");
 
@@ -120,15 +122,28 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 		var totalNotes = bars * BarLength;
 		indexBounds = new(totalNotes + 1);
 
-		//Notenwerte
+		//Stimmung
 		var i = 0;
-		foreach (var line in Lines)
+		var tunings = new SheetDisplayLineTabTuning[Lines.Count];
+		var tuningWidth = 1;
+		for (i = 0; i < Lines.Count; i++)
 		{
-			builder.Builders[i++].Append(new SheetDisplayLineTabLineNote(line.Note)
+			var tuning = tunings[i] = new SheetDisplayLineTabTuning(Lines[i].Tuning)
 			{
 				Slice = null,
-			}, formatter);
+			};
+			if (tuning.Width > tuningWidth)
+				tuningWidth = tuning.Width;
 		}
+
+		//Breitere Tunings?
+		if (tuningWidth > 1)
+			foreach (var tuning in tunings)
+				tuning.Width = tuningWidth;
+
+		//Füge Tunings hinzu
+		foreach ((var line, var tuning) in builder.Builders.Zip(tunings))
+			line.Append(tuning, formatter);
 
 		//Setze alle Zeilen auf die gleiche Länge
 		var maxLength = builder.Builders.Max(b => b.CurrentLength);
@@ -282,17 +297,18 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 	#endregion
 
 	#region Definition/Editing
-	public class TabLineDefinition(SheetTabLine owner, int lineIndex, Note note) : ISheetDisplayLineEditing
+	public class TabLineDefinition(SheetTabLine owner, int lineIndex, Note tuning) : ISheetDisplayLineEditing
 	{
-		private const int INDEX_BAR_LINE = -1;
-		private const int INDEX_INVALID = -2;
+		private const int INDEX_INVALID = -1;
+		private const int INDEX_BAR_LINE = -2;
+		private const int INDEX_TUNING_NOTE = -3;
 
 		private readonly int lineIndex = lineIndex;
 
 		public SheetLine Line => owner;
 		public int LineId => lineIndex;
 
-		public Note Note { get; } = note;
+		public Note Tuning { get; set; } = tuning;
 
 		public ReasonBase? SupportsEdit(SheetDisplayMultiLineEditingContext context)
 		{
@@ -516,37 +532,9 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 				return deleteResult;
 			}
 
-			//Keine Zahl?
-			if (!int.TryParse(content, out var value))
-			{
-				switch (content)
-				{
-					case "a" or "A":
-						value = 10;
-						break;
-					case "b" or "B":
-						value = 11;
-						break;
-					case "c" or "C":
-						value = 12;
-						break;
-					case "d" or "D":
-						value = 13;
-						break;
-					case "e" or "E":
-						value = 14;
-						break;
-					case "f" or "F":
-						value = 15;
-						break;
-					default:
-						return DelayedMetalineEditResult.Fail(NotANumber);
-				}
-			}
-
 			//Einzeilige Bearbeitung?
 			if (multilineContext is null)
-				return TryInsertContent(context, context.SelectionRange, value, [lineIndex], formatter);
+				return TryInsertContent(context, context.SelectionRange, content, [lineIndex], formatter);
 
 			//Die StartLine kümmert sich um alles
 			if (multilineContext.StartLine != this)
@@ -568,11 +556,11 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 			}
 
 			//Bearbeite alle betroffenen Zeilen
-			return TryInsertContent(context, range, value, lineIndexes, formatter);
+			return TryInsertContent(context, range, content, lineIndexes, formatter);
 		}
 
 		private DelayedMetalineEditResult TryInsertContent(SheetDisplayLineEditingContext context, SimpleRange range,
-			int value, List<int> lineIndexes, ISheetEditorFormatter? formatter = null)
+			string content, List<int> lineIndexes, ISheetEditorFormatter? formatter = null)
 		{
 			//Leere Range?
 			var editRange = range;
@@ -582,6 +570,8 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 			//Taktstrich?
 			var invalid = false;
 			var barLine = false;
+			var tuningNote = false;
+			var tabNote = false;
 			for (var i = editRange.Start; i < editRange.End; i++)
 			{
 				var note = GetBarAndNoteIndex(i);
@@ -593,11 +583,27 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 
 				if (note.NoteIndex == INDEX_BAR_LINE)
 					barLine = true;
+				else if (note.NoteIndex == INDEX_TUNING_NOTE)
+					tuningNote = true;
+				else
+					tabNote = true;
 			}
 			if (invalid)
 				return DelayedMetalineEditResult.Fail(InvalidPosition);
 			if (barLine)
 				return DelayedMetalineEditResult.Fail(CannotEditBarLines);
+
+			//Stimmung und Noten (oder gar nichts)?
+			if (tuningNote == tabNote)
+				return DelayedMetalineEditResult.Fail(InvalidPosition);
+
+			//Stimmung?
+			if (tuningNote)
+				return TryEditTuning(context, range, editRange, content, lineIndexes, formatter);
+
+			//Lese Notenwert
+			if (!int.TryParse(content, out var value))
+				return DelayedMetalineEditResult.Fail(NotANumber);
 
 			//Füge Werte ein
 			return new(() =>
@@ -675,6 +681,60 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 			});
 		}
 
+		private DelayedMetalineEditResult TryEditTuning(SheetDisplayLineEditingContext context, SimpleRange range, SimpleRange editRange,
+			string content, List<int> lineIndexes, ISheetEditorFormatter? formatter = null)
+		{
+			//Lese Note
+			var read = Note.TryRead(content, out var note, formatter);
+			if (read == content.Length)
+			{
+				return new(() =>
+				{
+					//Passe Tunings an
+					foreach (var lineIndex in lineIndexes)
+					{
+						owner.Lines[lineIndex].Tuning = note;
+					}
+
+					owner.RaiseModifiedAndInvalidateCache();
+					return new MetalineEditResult(new MetalineSelectionRange(this, range)
+					{
+						EndLineId = lineIndexes[^1],
+					});
+				});
+			}
+
+			//Lese Vorzeichen
+			read = formatter?.TryReadAccidental(content, out var accidental) ?? EnumNameAttribute.TryRead(content, out accidental);
+			if (read == content.Length)
+			{
+				//Formatiere die Töne
+				var tunings = lineIndexes
+					.Select(i => owner.Lines[i].Tuning)
+					.Select(n => formatter?.Transformation?.TransformNote(n) ?? n)
+					.Select(n => n.Accidental == accidental ? new Note(n.Type, AccidentalType.None) : new Note(n.Type, accidental))
+					.Select(n => formatter?.Transformation?.UntransformNote(n) ?? n)
+					.ToArray();
+
+				return new(() =>
+				{
+					//Passe Tunings an
+					foreach ((var lineIndex, var newTuning) in lineIndexes.Zip(tunings))
+					{
+						owner.Lines[lineIndex].Tuning = newTuning;
+					}
+
+					owner.RaiseModifiedAndInvalidateCache();
+					return new MetalineEditResult(new MetalineSelectionRange(this, range)
+					{
+						EndLineId = lineIndexes[^1],
+					});
+				});
+			}
+
+			return DelayedMetalineEditResult.Fail(NotANote);
+		}
+
 		private static SimpleRange GetActualEditRange(SheetDisplayLineEditingContext context, SheetDisplayMultiLineEditingContext? multilineContext)
 		{
 			if (multilineContext is null)
@@ -695,6 +755,10 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 
 		private (int ComponentIndex, int BarIndex, int NoteIndex, Component? Component) GetBarAndNoteIndex(int editIndex)
 		{
+			//Vor dem ersten Taktstrich?
+			if (editIndex < owner.barLineEditIndexes[0])
+				return (0, 0, INDEX_TUNING_NOTE, null);
+
 			//Finde passende RenderBounds
 			var index = owner.indexBounds.BinarySearch(new RenderBounds(editIndex, editIndex + 1), RenderBounds.PositionInsideComparer);
 			if (index >= 0)
@@ -712,89 +776,6 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 			//Erste Note im nächsten Takt
 			index = (owner.barLineEditIndexes.Count - 1) * owner.BarLength;
 			return (index, owner.barLineEditIndexes.Count - 1, 0, null);
-
-			//Component? last = null;
-			//int lastIndex = -1;
-			//var index = -1;
-			//foreach (var component in owner.Components)
-			//{
-			//	//Vor dem editIndex?
-			//	index++;
-			//	if (component is null || component.RenderBounds.AfterOffset <= editIndex)
-			//	{
-			//		if (component is not null)
-			//		{
-			//			last = component;
-			//			lastIndex = index;
-			//		}
-			//		continue;
-			//	}
-
-			//	//Taktindex und Notenindex berechnen
-			//	var barNoteIndex = Math.DivRem(index, owner.BarLength);
-
-			//	//Genau den Taktstrich getroffen?
-			//	if (barNoteIndex.Remainder == 0 && owner.barLineEditIndexes.Contains(editIndex))
-			//		return (barNoteIndex.Quotient, INDEX_BAR_LINE, null);
-
-			//	//Komponente an der aktuellen Position?
-			//	if (component is not null && component.RenderBounds.StartOffset <= editIndex && component.RenderBounds.AfterOffset > editIndex)
-			//		return (barNoteIndex.Quotient, barNoteIndex.Remainder, component);
-
-			//	//Keine Komponente
-			//	break;
-			//}
-
-			////Keine Komponenten?
-			//if (last is null)
-			//{
-			//	//Taktindex und Notenindex berechnen
-			//	var barNoteIndex = owner.barLineEditIndexes.Count == 0 ? Math.DivRem(editIndex, owner.BarLength + 1)
-			//		: Math.DivRem(editIndex - owner.barLineEditIndexes[0], owner.BarLength + 1);
-
-			//	//Genau den Taktstrich getroffen?
-			//	if (barNoteIndex.Remainder == 0 && owner.barLineEditIndexes.Contains(editIndex))
-			//		return (barNoteIndex.Quotient, INDEX_BAR_LINE, null);
-
-			//	//Ungültige Position?
-			//	if (barNoteIndex.Remainder < 1)
-			//		return (barNoteIndex.Quotient, INDEX_INVALID, null);
-
-			//	//Keine Komponente
-			//	return (barNoteIndex.Quotient, barNoteIndex.Remainder - 1, null);
-			//}
-
-			////Berechne Abstand zur letzten Komponente
-			//var distance = editIndex - last.RenderBounds.AfterOffset + 1;
-
-			////Taktindex und Notenindex der letzten Komponente berechnen
-			//var lastBarNoteIndex = Math.DivRem(lastIndex, owner.BarLength);
-
-			////Wie viele Taktstriche liegen dazwischen?
-			//var barLinesInBetween = Math.DivRem(lastBarNoteIndex.Remainder + distance, owner.BarLength + 1).Quotient;
-			//distance -= barLinesInBetween;
-
-			////Index
-			//var componentIndex = lastIndex + distance;
-			//var componentPosition = Math.DivRem(componentIndex, owner.BarLength);
-			//var barIndex = componentPosition.Quotient;
-			//var noteIndex = componentPosition.Remainder;
-
-			////var adjust = Math.DivRem(lastBarNoteIndex.Remainder + distance, owner.BarLength + 1);
-			////var barIndex = lastBarNoteIndex.Quotient + adjust.Quotient;
-			////var noteIndex = adjust.Remainder;
-			////if (noteIndex == owner.barLength)
-			////{
-			////	barIndex++;
-			////	noteIndex = 0;
-			////}
-
-			////Genau den Taktstrich getroffen?
-			//if (owner.barLineEditIndexes.Contains(editIndex))
-			//	return (barIndex, INDEX_BAR_LINE, null);
-
-			////Index am Ende
-			//return (barIndex, noteIndex, null);
 		}
 
 		public class Collection : IReadOnlyList<TabLineDefinition>
