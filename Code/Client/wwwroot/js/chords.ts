@@ -272,7 +272,8 @@ function registerChordEditor(wrapper: HTMLElement, reference: BlazorDotNetRefere
                 var selection = editor.getCurrentSelection();
                 var eventData = {
                     selection: selection,
-                    editRange: data.editRange,
+					editRange: data.editRange,
+					justSelected: selectionObserver.triggerJustSelected(),
                     ...data
                 };
 
@@ -314,7 +315,10 @@ function registerChordEditor(wrapper: HTMLElement, reference: BlazorDotNetRefere
 				let selection: Selection;
 				if (result.selection && data.inputType != 'deleteByDrag') {
                     //set new selection range
-                    selection = editor.setCurrentSelection(result.selection);
+					selection = editor.setCurrentSelection(result.selection);
+
+					//refresh custom selections
+					selectionObserver.refreshSelection();
                 } else if (selectionRange) {
                     //restore old range
                     selection = getSelection();

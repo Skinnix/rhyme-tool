@@ -625,9 +625,27 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 					}
 					else
 					{
-						//Bearbeite die Komponente
-						foreach (var index in lineIndexes)
-							component.Data.Component.SetNote(index, new TabNote(value));
+						//Für Zahlen > 10
+						if (!context.JustSelected)
+						{
+							//Bearbeite die Komponente
+							foreach (var index in lineIndexes)
+							{
+								var note = component.Data.Component.TryGetNote(index);
+								if (note.Value == 1)
+									component.Data.Component.SetNote(index, new TabNote(10 + value));
+								else if (note.Value == 2)
+									component.Data.Component.SetNote(index, new TabNote(20 + value));
+								else
+									component.Data.Component.SetNote(index, new TabNote(value));
+							}
+						}
+						else
+						{
+							//Bearbeite die Komponente
+							foreach (var index in lineIndexes)
+								component.Data.Component.SetNote(index, new TabNote(value));
+						}
 					}
 				}
 

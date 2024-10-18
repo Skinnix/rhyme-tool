@@ -162,7 +162,7 @@ partial class SheetEditor
 
 		//Auswahl
 		var editRange = new SimpleRange(range.Start.Offset, range.End.Offset);
-		var context = new SheetDisplayLineEditingContext(editRange)
+		var context = new SheetDisplayLineEditingContext(editRange, data.JustSelected)
 		{
 			GetLineBefore = () => Document.Lines.GetLineBefore(line.Editing.Line),
 			GetLineAfter = () => Document.Lines.GetLineAfter(line.Editing.Line),
@@ -201,7 +201,7 @@ partial class SheetEditor
 
 		//Erzeuge Kontext
 		var context = new SheetDisplayMultiLineEditingContext(Document, startLine.Editing, data.Selection.Start.Offset,
-			endLine.Editing, data.Selection.End.Offset);
+			endLine.Editing, data.Selection.End.Offset, data.JustSelected);
 
 		//Sind Start- und Endzeile mit dem Kontext kompatibel?
 		var supportsEdit = context.StartLine.SupportsEdit(context);

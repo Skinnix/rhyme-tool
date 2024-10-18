@@ -723,6 +723,7 @@ class SelectionObserver implements Destructible {
 	private customSelection: HTMLElement;
 	private editor: HTMLElement;
 	private editorWrapper: HTMLElement;
+	private justSelected: boolean;
 
 	constructor(private modificationEditor: ModificationEditor) {
 		this.editor = modificationEditor.editor;
@@ -738,7 +739,25 @@ class SelectionObserver implements Destructible {
 		this.editor.removeEventListener('dragstart', this.handleDragStart.bind(this));
 	}
 
-	private handleSelectionChange(event: Event) {
+	public triggerJustSelected() {
+		if (this.justSelected) {
+			this.justSelected = false;
+			return true;
+		}
+
+		return false;
+	}
+
+	public refreshSelection() {
+		this.processSelectionChange();
+	}
+
+	private handleSelectionChange() {
+		this.justSelected = true;
+		this.processSelectionChange();
+	}
+
+	private processSelectionChange() {
 		const documentSelection = getSelection();
 		if (!documentSelection || documentSelection.rangeCount == 0)
 			return this.resetCustomSelections();

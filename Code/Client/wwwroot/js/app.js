@@ -189,7 +189,7 @@ function registerChordEditor(wrapper, reference, callbackName) {
             var result;
             actionQueue.then(function () {
                 var selection = editor.getCurrentSelection();
-                var eventData = __assign({ selection: selection, editRange: data.editRange }, data);
+                var eventData = __assign({ selection: selection, editRange: data.editRange, justSelected: selectionObserver.triggerJustSelected() }, data);
                 wrapper.classList.add('refreshing');
                 selectionRange.collapse(false);
                 actionQueue.prepareForNextRender();
@@ -213,6 +213,7 @@ function registerChordEditor(wrapper, reference, callbackName) {
                 var selection;
                 if (result.selection && data.inputType != 'deleteByDrag') {
                     selection = editor.setCurrentSelection(result.selection);
+                    selectionObserver.refreshSelection();
                 }
                 else if (selectionRange) {
                     selection = getSelection();
@@ -912,7 +913,21 @@ var SelectionObserver = (function () {
         document.removeEventListener('selectionchange', this.handleSelectionChange.bind(this));
         this.editor.removeEventListener('dragstart', this.handleDragStart.bind(this));
     };
-    SelectionObserver.prototype.handleSelectionChange = function (event) {
+    SelectionObserver.prototype.triggerJustSelected = function () {
+        if (this.justSelected) {
+            this.justSelected = false;
+            return true;
+        }
+        return false;
+    };
+    SelectionObserver.prototype.refreshSelection = function () {
+        this.processSelectionChange();
+    };
+    SelectionObserver.prototype.handleSelectionChange = function () {
+        this.justSelected = true;
+        this.processSelectionChange();
+    };
+    SelectionObserver.prototype.processSelectionChange = function () {
         var _a, _b;
         var documentSelection = getSelection();
         if (!documentSelection || documentSelection.rangeCount == 0)

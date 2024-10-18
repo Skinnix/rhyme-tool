@@ -4,14 +4,15 @@ namespace Skinnix.RhymeTool.Data.Notation.Display;
 
 public record SheetDisplayMultiLineEditingContext(SheetDocument Document,
 	ISheetDisplayLineEditing StartLine, int SelectionStart,
-	ISheetDisplayLineEditing EndLine, int SelectionEnd)
+	ISheetDisplayLineEditing EndLine, int SelectionEnd,
+	bool JustSelected)
 {
 	public IReadOnlyList<SheetLine> LinesBetween { get; init; } = [];
 
 	public MultilineEditResult DeleteContent(DeleteDirection direction, ISheetEditorFormatter? formatter = null)
 	{
 		//Trenne das Ende der ersten Zeile ab
-		var firstLineContext = new SheetDisplayLineEditingContext(SimpleRange.AllFromStart(SelectionStart))
+		var firstLineContext = new SheetDisplayLineEditingContext(SimpleRange.AllFromStart(SelectionStart), JustSelected)
 		{
 			GetLineAfter = () => LinesBetween.Count == 0 ? EndLine.Line : LinesBetween[1],
 		};
@@ -20,7 +21,7 @@ public record SheetDisplayMultiLineEditingContext(SheetDocument Document,
 			return MultilineEditResult.Fail(firstLineResult.FailReason);
 
 		//Trenne den Anfang der letzten Zeile ab
-		var lastLineContext = new SheetDisplayLineEditingContext(SimpleRange.AllToEnd(SelectionEnd))
+		var lastLineContext = new SheetDisplayLineEditingContext(SimpleRange.AllToEnd(SelectionEnd), JustSelected)
 		{
 			GetLineBefore = () => LinesBetween.Count == 0 ? StartLine.Line : LinesBetween[^1],
 		};
@@ -44,7 +45,7 @@ public record SheetDisplayMultiLineEditingContext(SheetDocument Document,
 		if (!lastLineExecuteResult.RemoveLine)
 		{
 			//Kombiniere die erste und letzte Zeile, indem am Anfang der letzten Zeile rückwärts gelöscht wird
-			combineResult = EndLine.DeleteContent(new SheetDisplayLineEditingContext(SimpleRange.CursorAtStart)
+			combineResult = EndLine.DeleteContent(new SheetDisplayLineEditingContext(SimpleRange.CursorAtStart, false)
 			{
 				GetLineBefore = () => StartLine.Line,
 			}, this, DeleteDirection.Backward, DeleteType.Character, formatter);
@@ -68,7 +69,7 @@ public record SheetDisplayMultiLineEditingContext(SheetDocument Document,
 	public MultilineEditResult InsertContent(string content, ISheetEditorFormatter? formatter = null)
 	{
 		//Füge den neuen Content in die erste Zeile ein
-		var firstLineContext = new SheetDisplayLineEditingContext(SimpleRange.AllFromStart(SelectionStart))
+		var firstLineContext = new SheetDisplayLineEditingContext(SimpleRange.AllFromStart(SelectionStart), JustSelected)
 		{
 			GetLineAfter = () => LinesBetween.Count == 0 ? EndLine.Line : LinesBetween[1],
 		};
@@ -77,7 +78,7 @@ public record SheetDisplayMultiLineEditingContext(SheetDocument Document,
 			return MultilineEditResult.Fail(firstLineResult.FailReason);
 
 		//Trenne den Anfang der letzten Zeile ab
-		var lastLineContext = new SheetDisplayLineEditingContext(SimpleRange.AllToEnd(SelectionEnd))
+		var lastLineContext = new SheetDisplayLineEditingContext(SimpleRange.AllToEnd(SelectionEnd), JustSelected)
 		{
 			GetLineBefore = () => LinesBetween.Count == 0 ? StartLine.Line : LinesBetween[^1],
 		};
@@ -97,7 +98,7 @@ public record SheetDisplayMultiLineEditingContext(SheetDocument Document,
 			Document.Lines.Remove(lineBetween);
 
 		//Kombiniere die erste und letzte Zeile, indem am Anfang der letzten Zeile rückwärts gelöscht wird
-		var combineResult = EndLine.DeleteContent(new SheetDisplayLineEditingContext(SimpleRange.CursorAtStart)
+		var combineResult = EndLine.DeleteContent(new SheetDisplayLineEditingContext(SimpleRange.CursorAtStart, false)
 		{
 			GetLineBefore = () => StartLine.Line,
 		}, this, DeleteDirection.Backward, DeleteType.Character, formatter);
