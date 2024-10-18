@@ -211,11 +211,9 @@ function registerChordEditor(wrapper, reference, callbackName) {
             }).then(function () {
                 console.log("after render");
                 afterRender();
-                selectionObserver.pauseObservation();
                 var selection;
                 if (result.selection && data.inputType != 'deleteByDrag') {
                     selection = editor.setCurrentSelection(result.selection);
-                    selectionObserver.refreshSelection();
                 }
                 else if (selectionRange) {
                     selection = getSelection();
@@ -229,6 +227,7 @@ function registerChordEditor(wrapper, reference, callbackName) {
                         selection.addRange(selectionRange);
                     }
                 }
+                selectionObserver.refreshSelection();
                 for (var focusElement = selection.focusNode; focusElement && !('scrollIntoView' in focusElement); focusElement = focusElement.parentElement) { }
                 if (focusElement) {
                     focusElement.scrollIntoView({
@@ -923,6 +922,7 @@ var SelectionObserver = (function () {
         return false;
     };
     SelectionObserver.prototype.refreshSelection = function () {
+        this.isPaused = false;
         this.processSelectionChange();
     };
     SelectionObserver.prototype.pauseObservation = function () {
@@ -936,7 +936,6 @@ var SelectionObserver = (function () {
             }).bind(this));
             return;
         }
-        this.justSelected = true;
         this.processSelectionChange();
     };
     SelectionObserver.prototype.processSelectionChange = function () {
@@ -984,6 +983,7 @@ var SelectionObserver = (function () {
     };
     SelectionObserver.prototype.resetCustomSelections = function () {
         this.customSelection.className = 'custom-selection';
+        this.justSelected = true;
     };
     SelectionObserver.prototype.adjustBoxSelection = function (documentSelection, range, lineSelection) {
         if (!this.supportsMultipleRanges)
@@ -1098,11 +1098,21 @@ var SelectionObserver = (function () {
             var y = startRect.top;
             var height = endRect.bottom - y;
             var wrapperRect = self.editorWrapper.getBoundingClientRect();
-            self.customSelection.style.top = (y - wrapperRect.top) + 'px';
-            self.customSelection.style.left = (x - wrapperRect.left) + 'px';
-            self.customSelection.style.width = width + 'px';
-            self.customSelection.style.height = height + 'px';
-            self.customSelection.className = 'custom-selection custom-selection-box';
+            var top = y - wrapperRect.top;
+            var left = x - wrapperRect.left;
+            var newPosition = top.toFixed(2) + ';' + left.toFixed(2) + ';' + width.toFixed(2) + ';' + height.toFixed(2);
+            if (self.customSelection['data-position'] != newPosition) {
+                self.customSelection.style.top = top + 'px';
+                self.customSelection.style.left = left + 'px';
+                self.customSelection.style.width = width + 'px';
+                self.customSelection.style.height = height + 'px';
+                self.customSelection['data-position'] = newPosition;
+                self.justSelected = true;
+            }
+            if (self.customSelection.className != 'custom-selection custom-selection-box') {
+                self.customSelection.className = 'custom-selection custom-selection-box';
+                self.justSelected = true;
+            }
         }
     };
     SelectionObserver.prototype.handleDragStart = function (event) {

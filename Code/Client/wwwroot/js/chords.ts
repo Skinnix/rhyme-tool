@@ -314,14 +314,10 @@ function registerChordEditor(wrapper: HTMLElement, reference: BlazorDotNetRefere
                 afterRender();
 
 				//update selection
-				selectionObserver.pauseObservation();
 				let selection: Selection;
 				if (result.selection && data.inputType != 'deleteByDrag') {
                     //set new selection range
 					selection = editor.setCurrentSelection(result.selection);
-
-					//refresh custom selections
-					selectionObserver.refreshSelection();
                 } else if (selectionRange) {
                     //restore old range
                     selection = getSelection();
@@ -334,6 +330,9 @@ function registerChordEditor(wrapper: HTMLElement, reference: BlazorDotNetRefere
                         selection.addRange(selectionRange);
                     }
 				}
+
+				//refresh custom selections
+				selectionObserver.refreshSelection();
 				
 				//scroll the selection into view
 				for (var focusElement = selection.focusNode; focusElement && !('scrollIntoView' in focusElement); focusElement = focusElement.parentElement) { }

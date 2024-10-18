@@ -321,12 +321,14 @@ $separatorColor: #6c757d;
 					content: var(--tab-prefix);
 					position: absolute;
 					right: 0ch;
+					letter-spacing: 0;
 				}
 
 				&::after {
 					content: var(--tab-suffix);
 					position: absolute;
 					left: 1ch;
+					letter-spacing: 0;
 				}
 			}
 		}

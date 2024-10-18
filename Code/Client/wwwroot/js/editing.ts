@@ -751,6 +751,7 @@ class SelectionObserver implements Destructible {
 	}
 
 	public refreshSelection() {
+		this.isPaused = false;
 		this.processSelectionChange();
 	}
 
@@ -765,8 +766,7 @@ class SelectionObserver implements Destructible {
 			}).bind(this));
 			return;
 		}
-
-		this.justSelected = true;
+		
 		this.processSelectionChange();
 	}
 
@@ -827,6 +827,7 @@ class SelectionObserver implements Destructible {
 	private resetCustomSelections() {
 		//Blende die Box aus
 		this.customSelection.className = 'custom-selection';
+		this.justSelected = true;
 	}
 
 	private adjustBoxSelection(documentSelection: Selection, range: Range, lineSelection: AnchorSelection<MetalineLineAnchor>) {
@@ -967,13 +968,23 @@ class SelectionObserver implements Destructible {
 
 			//Positioniere die Box
 			let wrapperRect = self.editorWrapper.getBoundingClientRect();
-			self.customSelection.style.top = (y - wrapperRect.top) + 'px';
-			self.customSelection.style.left = (x - wrapperRect.left) + 'px';
-			self.customSelection.style.width = width + 'px';
-			self.customSelection.style.height = height + 'px';
+			let top = y - wrapperRect.top;
+			let left = x - wrapperRect.left;
+			let newPosition = top.toFixed(2) + ';' + left.toFixed(2) + ';' + width.toFixed(2) + ';' + height.toFixed(2);
+			if ((<any>self.customSelection)['data-position'] != newPosition) {
+				self.customSelection.style.top = top + 'px';
+				self.customSelection.style.left = left + 'px';
+				self.customSelection.style.width = width + 'px';
+				self.customSelection.style.height = height + 'px';
+				(<any>self.customSelection)['data-position'] = newPosition;
+				self.justSelected = true;
+			}
 			
 			//Mache die Box sichtbar
-			self.customSelection.className = 'custom-selection custom-selection-box';
+			if (self.customSelection.className != 'custom-selection custom-selection-box') {
+				self.customSelection.className = 'custom-selection custom-selection-box';
+				self.justSelected = true;
+			}
 		}
     }
 

@@ -86,6 +86,7 @@ public interface ISheetEditorFormatter : ISheetBuilderFormatter
 	int TryReadChord(ReadOnlySpan<char> s, out Chord? chord);
 	int TryReadFingering(ReadOnlySpan<char> s, out Fingering? fingering, int minLength = 1);
 	int TryReadRhythm(ReadOnlySpan<char> s, out RhythmPattern? rhythm);
+	int TryReadTabNoteModifier(ReadOnlySpan<char> s, out TabNoteModifier modifier);
 }
 
 public enum GermanNoteMode
@@ -179,7 +180,7 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 	public string[] RestLengths { get; init; } = [" ", "𝄻", "𝄼", "𝄽", "𝄾", "𝄿", "𝅀", "𝅁", "𝅂"];
 	public char NoteLengthDot { get; init; } = '·';
 
-	public bool CondenseTabNotes { get; init; } = false;
+	public bool CondenseTabNotes { get; init; } = true;
 
 	public GermanNoteMode GermanMode { get; init; } = GermanNoteMode.AlwaysB;
 
@@ -396,18 +397,19 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 
 	public TabNoteFormat Format(TabNote note, int width)
 	{
-		var text = note.ToString();
-
 		if (CondenseTabNotes)
 		{
-			if (text.Length <= 1)
-				return new(text, width);
+			//var prefix = string.Join(string.Empty, note.Modifier.GetFlagsDisplayName());
+			var noteText = note.ToString();
 
-			var suffix = text[1..];
-			text = text[0].ToString();
-			return new(text, width, Suffix: suffix);
+			var suffix = noteText[1..];
+			if (suffix.Length == 0)
+				suffix = null;
+			noteText = noteText[0].ToString();
+			return new(noteText, width, Suffix: suffix);
 		}
 
+		var text = note.ToString();
 		var padding = width - text.Length;
 		if (padding > 0)
 		{
@@ -550,6 +552,10 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 
 	public int TryReadRhythm(ReadOnlySpan<char> s, out RhythmPattern? rhythm)
 		=> RhythmPattern.TryRead(s, out rhythm);
+
+	public int TryReadTabNoteModifier(ReadOnlySpan<char> s, out TabNoteModifier modifier) => TryReadTabNoteModifier(s, out modifier, true);
+	private int TryReadTabNoteModifier(ReadOnlySpan<char> s, out TabNoteModifier modifier, bool transform)
+		=> EnumNameAttribute.TryRead(s, out modifier);
 }
 
 public static class SheetFormatterExtensions

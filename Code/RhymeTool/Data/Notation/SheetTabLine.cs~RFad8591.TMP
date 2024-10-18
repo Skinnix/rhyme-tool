@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,13 +13,13 @@ namespace Skinnix.RhymeTool.Data.Notation;
 
 public class SheetTabLine : SheetLine, ISelectableSheetLine
 {
-	public static readonly Reason CannotMixTabsWithOthers = new("Tabulaturen können nicht gleichzeitig mit anderen Zeilen bearbeitet werden");
-	public static readonly Reason CannotMultilineEdit = new("Tabulaturzeilen können nicht mehrzeilig bearbeitet werden");
-	public static readonly Reason CannotEditMultipleNotes = new("Mehrere Noten können nicht gleichzeitig bearbeitet werden");
+	public static readonly Reason CannotMixTabsWithOthers = new("Tabulaturen kÃ¶nnen nicht gleichzeitig mit anderen Zeilen bearbeitet werden");
+	public static readonly Reason CannotMultilineEdit = new("Tabulaturzeilen kÃ¶nnen nicht mehrzeilig bearbeitet werden");
+	public static readonly Reason CannotEditMultipleNotes = new("Mehrere Noten kÃ¶nnen nicht gleichzeitig bearbeitet werden");
 	public static readonly Reason NotANumber = new("Der Inhalt muss eine Zahl sein");
 	public static readonly Reason NotANote = new("Der Inhalt muss eine Note sein");
-	public static readonly Reason CannotEditBarLines = new("Taktstriche können nicht bearbeitet werden");
-	public static readonly Reason InvalidPosition = new("Ungültige Position");
+	public static readonly Reason CannotEditBarLines = new("Taktstriche kÃ¶nnen nicht bearbeitet werden");
+	public static readonly Reason InvalidPosition = new("UngÃ¼ltige Position");
 
 	public static SheetLineType LineType { get; } = SheetLineType.Create<SheetTabLine>("Tabulatur");
 
@@ -81,7 +81,7 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 	#region Display
 	public override IEnumerable<SheetDisplayLine> CreateDisplayLines(ISheetBuilderFormatter? formatter = null)
 	{
-		//Prüfe Cache
+		//PrÃ¼fe Cache
 		if (cachedFormatter == formatter && cachedLines is not null)
 			return cachedLines;
 
@@ -141,11 +141,11 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 			foreach (var tuning in tunings)
 				tuning.Width = tuningWidth;
 
-		//Füge Tunings hinzu
+		//FÃ¼ge Tunings hinzu
 		foreach ((var line, var tuning) in builder.Builders.Zip(tunings))
 			line.Append(tuning, formatter);
 
-		//Setze alle Zeilen auf die gleiche Länge
+		//Setze alle Zeilen auf die gleiche LÃ¤nge
 		var maxLength = builder.Builders.Max(b => b.CurrentLength);
 		foreach (var line in builder.Builders)
 		{
@@ -216,7 +216,7 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 				foreach (var element in elements)
 					element.Width = componentWidth;
 
-			//Füge Elemente hinzu
+			//FÃ¼ge Elemente hinzu
 			var renderOffset = builder.Builders[0].CurrentLength;
 			foreach ((var line, var element) in builder.Builders.Zip(elements))
 				line.Append(element, formatter);
@@ -332,14 +332,14 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 			if (multilineContext is null)
 				return TryDeleteContent(context, context.SelectionRange, direction, type, true, out _, formatter);
 
-			//Die StartLine kümmert sich um alles
+			//Die StartLine kÃ¼mmert sich um alles
 			if (multilineContext.StartLine != this)
 			{
-				//Keine Bearbeitung und keine Auswahl nötig
+				//Keine Bearbeitung und keine Auswahl nÃ¶tig
 				return new DelayedMetalineEditResult(MetalineEditResult.SuccessWithoutSelection);
 			}
 
-			//Lese tatsächliche Auswahl
+			//Lese tatsÃ¤chliche Auswahl
 			var range = GetActualEditRange(context, multilineContext);
 
 			//Bearbeite alle betroffenen Zeilen
@@ -361,14 +361,14 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 					break;
 			}
 
-			//Keine Veränderung?
+			//Keine VerÃ¤nderung?
 			if (lineResults.Count == 0)
 				return NoEditMultiLine(multilineContext, range);
 
-			//Führe die Bearbeitungen aus
+			//FÃ¼hre die Bearbeitungen aus
 			return new DelayedMetalineEditResult(() =>
 			{
-				//Führe aus und speichere die erste Bearbeitung
+				//FÃ¼hre aus und speichere die erste Bearbeitung
 				MetalineEditResult? firstResult = null;
 				foreach (var lineResult in lineResults)
 				{
@@ -393,13 +393,13 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 		private DelayedMetalineEditResult TryDeleteContent(SheetDisplayLineEditingContext context, SimpleRange range,
 			DeleteDirection direction, DeleteType type, bool raiseEvent, out bool willChange, ISheetEditorFormatter? formatter = null)
 		{
-			//Erweitere leere Ranges in Richtung der Löschung
+			//Erweitere leere Ranges in Richtung der LÃ¶schung
 			var editRange = range;
 			if (editRange.Length == 0)
 			{
-				//if (direction == DeleteDirection.Backward)
-				//	editRange = new(editRange.Start - 1, editRange.Start);
-				//else
+				if (direction == DeleteDirection.Backward)
+					editRange = new(editRange.Start - 1, editRange.Start);
+				else
 					editRange = new(editRange.Start, editRange.Start + 1);
 			}
 
@@ -419,7 +419,7 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 				})
 				.ToList();
 
-			//Nur Taktstrich/ungültig?
+			//Nur Taktstrich/ungÃ¼ltig?
 			willChange = components.Count != 0;
 			if (editRange.Length == 1 && components.Count == 0)
 			{
@@ -432,10 +432,10 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 			//Nichts gefunden?
 			if (!willChange)
 			{
-				//Sonderfall: wird nach dem letzten Taktstrich gelöscht?
+				//Sonderfall: wird nach dem letzten Taktstrich gelÃ¶scht?
 				if (owner.barLineEditIndexes.Count != 0 && editRange.Start == owner.barLineEditIndexes[^1] + 1)
 				{
-					//Füge hier ein Null-Element ein
+					//FÃ¼ge hier ein Null-Element ein
 					var index = GetBarAndNoteIndex(editRange.Start);
 					willChange = true;
 					return new DelayedMetalineEditResult(() =>
@@ -451,10 +451,10 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 					});
 				}
 
-				//Sonderfall: wird nach dem obigen Szenario wieder irgendwo gelöscht?
+				//Sonderfall: wird nach dem obigen Szenario wieder irgendwo gelÃ¶scht?
 				if (owner.Components.Count != 0 && owner.Components[^1] is null)
 				{
-					//Lösche die leeren Stellen am Ende wieder
+					//LÃ¶sche die leeren Stellen am Ende wieder
 					return new DelayedMetalineEditResult(() =>
 					{
 						owner.Components[owner.Components.Count - 1] = null;
@@ -471,7 +471,7 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 				return NoEditSingleLine(context);
 			}
 
-			//Lösche die Noten
+			//LÃ¶sche die Noten
 			return new(() =>
 			{
 				foreach (var component in components)
@@ -497,7 +497,7 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 			//Minus?
 			if (content == "-")
 			{
-				//Lösche das folgende Zeichen
+				//LÃ¶sche das folgende Zeichen
 				var deleteResult = (this as ISheetDisplayLineEditing).TryDeleteContent(context, multilineContext, DeleteDirection.Forward, DeleteType.Character);
 
 				//Keine Auswahl?
@@ -511,7 +511,7 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 							var result = deleteResult.Execute();
 							if (result.Success && result.NewSelection is not null)
 							{
-								//Nächste Position auf Taktstrich?
+								//NÃ¤chste Position auf Taktstrich?
 								var nextPosition = result.NewSelection.Range.Start + 1;
 								while (GetBarAndNoteIndex(nextPosition).NoteIndex < 0)
 									nextPosition++;
@@ -536,14 +536,14 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 			if (multilineContext is null)
 				return TryInsertContent(context, context.SelectionRange, content, [lineIndex], formatter);
 
-			//Die StartLine kümmert sich um alles
+			//Die StartLine kÃ¼mmert sich um alles
 			if (multilineContext.StartLine != this)
 			{
-				//Keine Bearbeitung und keine Auswahl nötig
+				//Keine Bearbeitung und keine Auswahl nÃ¶tig
 				return new DelayedMetalineEditResult(MetalineEditResult.SuccessWithoutSelection);
 			}
 
-			//Lese tatsächliche Auswahl
+			//Lese tatsÃ¤chliche Auswahl
 			var range = GetActualEditRange(context, multilineContext);
 
 			//Sammle Indizes der betroffenen Zeilen
@@ -613,7 +613,7 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 					return DelayedMetalineEditResult.Fail(NotANumber);
 			}
 
-			//Füge Werte ein
+			//FÃ¼ge Werte ein
 			return new(() =>
 			{
 				//Finde Komponenten
@@ -634,12 +634,12 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 						else
 							owner.indexBounds[component.Data.ComponentIndex] = new(component.EditIndex, component.EditIndex + 1);
 
-						//Füge die Komponente hinzu
+						//FÃ¼ge die Komponente hinzu
 						owner.Components[component.Data.ComponentIndex] = newComponent;
 					}
 					else
 					{
-						//Für Zahlen > 10
+						//FÃ¼r Zahlen > 10
 						if (!context.JustSelected)
 						{
 							//Bearbeite die Komponente
@@ -669,10 +669,6 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 								component.Data.Component.SetNote(index, newNote);
 							}
 						}
-
-						//Ist die Komponente jetzt leer?
-						if (component.Data.Component.IsEmpty)
-							owner.Components[component.Data.ComponentIndex] = null;
 					}
 				}
 
@@ -689,7 +685,7 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 					});
 				}
 
-				//Nächste Position auf Taktstrich?
+				//NÃ¤chste Position auf Taktstrich?
 				var nextPosition = editRange.Start + 1;
 				while (GetBarAndNoteIndex(nextPosition).NoteIndex < 0)
 					nextPosition++;
@@ -729,7 +725,7 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 			read = formatter?.TryReadAccidental(content, out var accidental) ?? EnumNameAttribute.TryRead(content, out accidental);
 			if (read == content.Length)
 			{
-				//Formatiere die Töne
+				//Formatiere die TÃ¶ne
 				var tunings = lineIndexes
 					.Select(i => owner.Lines[i].Tuning)
 					.Select(n => formatter?.Transformation?.TransformNote(n) ?? n)
@@ -794,7 +790,7 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 			if (barLineIndex >= 0)
 				return (0, barLineIndex - 1, INDEX_BAR_LINE, null);
 
-			//Erste Note im nächsten Takt
+			//Erste Note im nÃ¤chsten Takt
 			index = (owner.barLineEditIndexes.Count - 1) * owner.BarLength;
 			return (index, owner.barLineEditIndexes.Count - 1, 0, null);
 		}
