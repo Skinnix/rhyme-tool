@@ -933,18 +933,6 @@ class SelectionObserver implements Destructible {
 					x = endRect.left;
 					width = startRect.right - x;
 				}
-
-				/*if (width < 0) {
-					if (!insideEndCell) {
-						if ((<any>endCell.nextSibling)?.getBoundingClientRect) {
-							endCell = endCell.nextSibling;
-							endRect = (<Element>endCell).getBoundingClientRect();
-							endRect = new DOMRect(endRect.left, endRect.top, 0, endRect.height);
-						} else {
-							endRect = new DOMRect(endRect.right, endRect.top, 0, endRect.height);
-						}
-					}
-				}*/
 			}
 
 			let y = startRect.top;

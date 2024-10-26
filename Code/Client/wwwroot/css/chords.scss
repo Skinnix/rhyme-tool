@@ -260,7 +260,7 @@ $separatorColor: #6c757d;
 					background-position: center;
 				}
 
-				.stroke-note {
+				&.stroke-note, .stroke-note {
 					line-height: 3em;
 
 					&::before {
@@ -297,13 +297,15 @@ $separatorColor: #6c757d;
 					}
 				}
 
-				.stroke-length::after {
-					content: '' var(--stroke-length);
-					display: inline-block;
-					width: 0;
-					position: relative;
-					top: 1em;
-					left: -1ch;
+				&.stroke-length, .stroke-length {
+					&::after {
+						content: '' var(--stroke-length);
+						display: inline-block;
+						width: 0;
+						position: relative;
+						top: 1em;
+						left: -1ch;
+					}
 				}
 			}
 		}

@@ -2686,11 +2686,19 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 
 				//Rhythmen können mit Leerzeichen, Punctuation oder Wörtern kombiniert werden
 				case ContentType.Rhythm:
-					if (offset <= ContentOffset.Zero || offset >= leftLength)
+					if (offset <= ContentOffset.Zero || offset > leftLength)
 						return SpecialContentType.None;
+
+					if (offset == leftLength)
+						return right.Type switch
+						{
+							ContentType.Punctuation or ContentType.Word => SpecialContentType.Rhythm,
+							_ => SpecialContentType.None,
+						};
+
 					return right.Type switch
 					{
-						ContentType.Space or SheetVarietyLine.ContentType.Punctuation or ContentType.Word => SpecialContentType.Rhythm,
+						ContentType.Space or ContentType.Punctuation or ContentType.Word => SpecialContentType.Rhythm,
 						_ => SpecialContentType.None,
 					};
 
