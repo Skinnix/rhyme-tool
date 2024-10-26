@@ -3,7 +3,7 @@
 
 @inject IJSRuntime js
 
-<span class="dropdown line-type" @ref="dropdownWrapper">
+<span class="dropdown inline-dropdown line-type" @ref="dropdownWrapper">
     <a class="btn btn-tiny btn-outline-secondary dropdown-toggle" href="javascript:void(0)" data-bs-toggle="dropdown" aria-expanded="false">
         @switch (Line)
         {
@@ -15,13 +15,13 @@
                 break;
         }
     </a><span class="dropdown-menu">
-        @if (expanded && Document is not null && Line is not null)
+        @if (Document is not null && Line is not null)
         {
             foreach (var conversion in Line.GetPossibleConversions())
             {
-                <button class="dropdown-item" onclick="@(() => conversion.Execute(Document, Line))">@(
+                <a class="dropdown-item pseudo-text" data-text="@(
                     conversion.Type == SheetEmptyLine.LineType ? SheetVarietyLine.LineType.Label : conversion.Type.Label
-                )</button>
+                )" onclick="@(() => conversion.Execute(Document, Line))"></a>
             }
         }
      </span>
