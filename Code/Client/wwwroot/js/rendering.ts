@@ -11,7 +11,7 @@ class ActionQueue<T = void> implements PromiseLike<T> {
 			onfulfilled?: ((value: T) => TResult1 | PromiseLike<TResult1>) | undefined | null,
 			onrejected?: ((reason: any) => TResult2 | PromiseLike<TResult2>) | undefined | null): PromiseLike<TResult1 | TResult2> {
 		let self = this;
-		let promise: Promise<any> = null;
+		let promise: Promise<any> | null = null;
 		function checkRemove(next: Promise<any> | any): Promise<any> | void {
 			if (next && next.then) {
 				return next.then((afterNext: any) => {
@@ -28,13 +28,13 @@ class ActionQueue<T = void> implements PromiseLike<T> {
 
 			return next;
 		};
-		let handler = (value: T) => checkRemove(onfulfilled(value));
+		let handler = (value: T) => checkRemove(onfulfilled ? onfulfilled(value) : undefined);
 
 		if (this.queue) {
 			this.queue = promise = this.queue.then(handler);
 		} else {
 			this.queue = promise = new Promise((resolve, reject) => {
-				resolve(handler(undefined));
+				resolve(handler(undefined!));
 			});
 		}
 
@@ -55,7 +55,7 @@ class ActionQueue<T = void> implements PromiseLike<T> {
 		});
 	}
 
-	public awaitRender(): PromiseLike<void> {
+	public awaitRender(): PromiseLike<void> | undefined {
 		if (!this.awaitRenderPromise)
 			return;
 

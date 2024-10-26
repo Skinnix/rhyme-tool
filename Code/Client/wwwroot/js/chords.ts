@@ -158,8 +158,8 @@ function registerResize(element: HTMLElement, reference: BlazorDotNetReference, 
 		var lineOffsetX = 0;
 		if (line) {
 			//find element's child containing the line
-			let topParent = line;
-			for (; topParent.parentElement != element; topParent = topParent.parentElement);
+			let topParent: Element | null | undefined = line;
+			for (; topParent?.parentElement != element; topParent = topParent?.parentElement);
 
 			//line offset is the difference between the line's width and the parent's width
 			lineOffsetX = topParent.getBoundingClientRect().width - line.getBoundingClientRect().width;
@@ -199,8 +199,8 @@ function registerResize(element: HTMLElement, reference: BlazorDotNetReference, 
 
 
 
-var promiseAfterRender: Promise<any> = null;
-var resolveAfterRender: (arg?: any) => void = null;
+var promiseAfterRender: Promise<any> | null = null;
+var resolveAfterRender: ((arg?: any) => void) | null = null;
 function notifyRenderFinished(componentName?: string) {
 	if (componentName)
 		console.log("rerender: " + componentName);
@@ -213,7 +213,7 @@ function notifyRenderFinished(componentName?: string) {
 	}
 }
 function invokeAfterRender(action: () => any) {
-	if (!resolveAfterRender) {
+	if (!resolveAfterRender || !promiseAfterRender) {
 		promiseAfterRender = new Promise(function (resolve) {
 			resolveAfterRender = resolve;
 		});
@@ -245,8 +245,8 @@ function registerChordEditor(wrapper: HTMLElement, reference: BlazorDotNetRefere
 	
 	//create editor wrapper (delayed)
 	let handler: (event: Event) => void;
-	let editor: ModificationEditor = null;
-	let selectionObserver: SelectionObserver = null;
+	let editor: ModificationEditor | null = null;
+	let selectionObserver: SelectionObserver | null = null;
 	handler = (event) => {
 		wrapper.removeEventListener('focus', handler);
 		createEditor();
@@ -269,18 +269,20 @@ function registerChordEditor(wrapper: HTMLElement, reference: BlazorDotNetRefere
             let result: MetalineEditResult;
             actionQueue.then(() => {
                 //prepare event data
-                var selection = editor.getCurrentSelection();
+				var selection = editor.getCurrentSelection();
+				if (!selection)
+					throw new Error("Keine Auswahl vorhanden.");
                 var eventData = {
                     selection: selection,
 					editRange: data.editRange,
-					justSelected: selectionObserver.triggerJustSelected(),
+					justSelected: selectionObserver!.triggerJustSelected(),
                     ...data
                 };
 
                 //hide caret
 				wrapper.classList.add('refreshing');
-				selectionObserver.pauseObservation();
-                selectionRange.collapse(false);
+				selectionObserver!.pauseObservation();
+                selectionRange!.collapse(false);
 
                 //a new render is coming
                 actionQueue.prepareForNextRender();
@@ -314,28 +316,28 @@ function registerChordEditor(wrapper: HTMLElement, reference: BlazorDotNetRefere
                 afterRender();
 
 				//update selection
-				let selection: Selection;
+				let selection: Selection | null = null;
 				if (result.selection && data.inputType != 'deleteByDrag') {
                     //set new selection range
 					selection = editor.setCurrentSelection(result.selection);
-                } else if (selectionRange) {
+                } else {
                     //restore old range
                     selection = getSelection();
-                    if (selection.rangeCount == 1) {
+                    if (selection?.rangeCount == 1) {
                         var currentSelectionRange = selection.getRangeAt(0);
                         currentSelectionRange.setStart(selectionRange.startContainer, selectionRange.startOffset);
 						currentSelectionRange.setEnd(selectionRange.endContainer, selectionRange.endOffset);
-                    } else {
+                    } else if (selection) {
                         selection.removeAllRanges();
                         selection.addRange(selectionRange);
                     }
 				}
 
 				//refresh custom selections
-				selectionObserver.refreshSelection();
+				selectionObserver!.refreshSelection();
 				
 				//scroll the selection into view
-				for (var focusElement = selection.focusNode; focusElement && !('scrollIntoView' in focusElement); focusElement = focusElement.parentElement) { }
+				for (var focusElement = selection?.focusNode; focusElement && !('scrollIntoView' in focusElement); focusElement = focusElement.parentElement) { }
 				if (focusElement) {
 					(focusElement as HTMLElement).scrollIntoView({
 						block: 'nearest',
@@ -377,7 +379,7 @@ function registerChordEditor(wrapper: HTMLElement, reference: BlazorDotNetRefere
 
 
 
-function attachmentStartDrag(event: DragEvent) {
+/*function attachmentStartDrag(event: DragEvent) {
 	//get the chord's position
 	var attachmentElement = (event.target as HTMLElement).parentElement;
 	var attachmentStart = getLineAndOffset(attachmentElement, 0);
@@ -612,3 +614,4 @@ window.addEventListener('load', function () {
 		document.documentElement.classList.remove('dragover');
 	});
 });
+*/

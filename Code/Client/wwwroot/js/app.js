@@ -106,7 +106,7 @@ function registerResize(element, reference, callbackName) {
         var lineOffsetX = 0;
         if (line) {
             var topParent = line;
-            for (; topParent.parentElement != element; topParent = topParent.parentElement)
+            for (; (topParent === null || topParent === void 0 ? void 0 : topParent.parentElement) != element; topParent = topParent === null || topParent === void 0 ? void 0 : topParent.parentElement)
                 ;
             lineOffsetX = topParent.getBoundingClientRect().width - line.getBoundingClientRect().width;
         }
@@ -146,7 +146,7 @@ function notifyRenderFinished(componentName) {
     }
 }
 function invokeAfterRender(action) {
-    if (!resolveAfterRender) {
+    if (!resolveAfterRender || !promiseAfterRender) {
         promiseAfterRender = new Promise(function (resolve) {
             resolveAfterRender = resolve;
         });
@@ -189,6 +189,8 @@ function registerChordEditor(wrapper, reference, callbackName) {
             var result;
             actionQueue.then(function () {
                 var selection = editor.getCurrentSelection();
+                if (!selection)
+                    throw new Error("Keine Auswahl vorhanden.");
                 var eventData = __assign({ selection: selection, editRange: data.editRange, justSelected: selectionObserver.triggerJustSelected() }, data);
                 wrapper.classList.add('refreshing');
                 selectionObserver.pauseObservation();
@@ -211,24 +213,24 @@ function registerChordEditor(wrapper, reference, callbackName) {
             }).then(function () {
                 console.log("after render");
                 afterRender();
-                var selection;
+                var selection = null;
                 if (result.selection && data.inputType != 'deleteByDrag') {
                     selection = editor.setCurrentSelection(result.selection);
                 }
-                else if (selectionRange) {
+                else {
                     selection = getSelection();
-                    if (selection.rangeCount == 1) {
+                    if ((selection === null || selection === void 0 ? void 0 : selection.rangeCount) == 1) {
                         var currentSelectionRange = selection.getRangeAt(0);
                         currentSelectionRange.setStart(selectionRange.startContainer, selectionRange.startOffset);
                         currentSelectionRange.setEnd(selectionRange.endContainer, selectionRange.endOffset);
                     }
-                    else {
+                    else if (selection) {
                         selection.removeAllRanges();
                         selection.addRange(selectionRange);
                     }
                 }
                 selectionObserver.refreshSelection();
-                for (var focusElement = selection.focusNode; focusElement && !('scrollIntoView' in focusElement); focusElement = focusElement.parentElement) { }
+                for (var focusElement = selection === null || selection === void 0 ? void 0 : selection.focusNode; focusElement && !('scrollIntoView' in focusElement); focusElement = focusElement.parentElement) { }
                 if (focusElement) {
                     focusElement.scrollIntoView({
                         block: 'nearest',
@@ -246,191 +248,6 @@ function registerChordEditor(wrapper, reference, callbackName) {
         }
     }
 }
-function attachmentStartDrag(event) {
-    var attachmentElement = event.target.parentElement;
-    var attachmentStart = getLineAndOffset(attachmentElement, 0);
-    var attachmentLength = attachmentElement.textContent.length;
-    var selection = {
-        start: attachmentStart,
-        end: {
-            metaline: attachmentStart.metaline,
-            line: attachmentStart.line,
-            offset: attachmentStart.offset + attachmentLength
-        }
-    };
-    event.dataTransfer.setData('text/json', JSON.stringify({
-        drag: selection
-    }));
-    event.dataTransfer.setData('text', attachmentElement.textContent);
-}
-function checkIsLine(node) {
-    if (!node || !('classList' in node))
-        return null;
-    var element = node;
-    var lineId = null;
-    if (element.classList.contains('line')) {
-        lineId = parseInt(element.getAttribute('data-line-index'));
-        element = element.parentElement.parentElement;
-    }
-    else if (element.classList.contains('metaline-lines')) {
-        element = element.parentElement;
-    }
-    else if (!element.classList.contains('metaline')) {
-        return null;
-    }
-    if (lineId === null) {
-        var line = element.querySelector('.line');
-        if (line) {
-            lineId = parseInt(line.getAttribute('data-line-index'));
-        }
-        else {
-            lineId = 0;
-        }
-    }
-    var metalineId = element.getAttribute('data-metaline');
-    return {
-        metaline: metalineId,
-        line: lineId
-    };
-}
-function getLineAndOffset(node, offset) {
-    var _a;
-    if (!offset)
-        offset = 0;
-    var lineInfo = checkIsLine(node);
-    for (; !lineInfo; node = node.parentElement, lineInfo = checkIsLine(node)) {
-        for (var current = node.previousSibling; current; current = current.previousSibling) {
-            if (current.nodeType == Node.COMMENT_NODE)
-                continue;
-            offset += ((_a = current.textContent) === null || _a === void 0 ? void 0 : _a.length) || 0;
-        }
-    }
-    return {
-        metaline: lineInfo.metaline,
-        line: lineInfo.line,
-        offset: offset
-    };
-}
-function getSelectionRange(selection, wrapper) {
-    if (selection.rangeCount == 0)
-        return null;
-    var range = selection.getRangeAt(0);
-    if (!wrapper.contains(range.startContainer) || !wrapper.contains(range.endContainer))
-        return null;
-    var start = getLineAndOffset(range.startContainer, range.startOffset);
-    var end = range.endContainer == range.startContainer ? {
-        metaline: start.metaline,
-        line: start.line,
-        offset: start.offset + Math.abs(range.endOffset - range.startOffset)
-    } : getLineAndOffset(range.endContainer, range.endOffset);
-    return {
-        start: start,
-        end: end
-    };
-}
-function setSelectionRange(wrapper, metaline, lineId, lineIndex, selectionRange) {
-    var metalineElement = wrapper.querySelector('.metaline[data-metaline="' + metaline + '"]');
-    var lineElement;
-    if (lineId != null) {
-        lineElement = metalineElement === null || metalineElement === void 0 ? void 0 : metalineElement.querySelector('.line[data-line-index="' + lineId + '"]');
-    }
-    else {
-        var lines = metalineElement === null || metalineElement === void 0 ? void 0 : metalineElement.querySelectorAll('.line');
-        lineElement = lineIndex < 0 ? lines[lines.length + lineIndex] : lines[lineIndex];
-    }
-    if (!lineElement)
-        return false;
-    var start = findNodeAndOffset(lineElement, selectionRange.start);
-    var end = selectionRange.start == selectionRange.end ? start : findNodeAndOffset(lineElement, selectionRange.end);
-    var selection = document.getSelection();
-    var range;
-    if (selection.rangeCount == 1) {
-        var range = selection.getRangeAt(0);
-        range.setStart(start.node, start.offset);
-        range.setEnd(end.node, end.offset);
-    }
-    else {
-        if (selection.rangeCount > 0)
-            selection.removeAllRanges();
-        var range = new Range();
-        range.setStart(start.node, start.offset);
-        range.setEnd(end.node, end.offset);
-        document.getSelection().addRange(range);
-    }
-    for (var focusElement = selection.focusNode; focusElement && !('scrollIntoView' in focusElement); focusElement = focusElement.parentElement) { }
-    if (focusElement)
-        focusElement.scrollIntoView({
-            block: 'nearest',
-            inline: 'nearest'
-        });
-    return true;
-    function findNodeAndOffset(element, offset) {
-        if (offset < 0)
-            return findNodeAndOffsetFromEnd(element, -offset - 1);
-        else
-            return findNodeAndOffsetFromStart(element, offset);
-        function findNodeAndOffsetFromStart(element, offsetFromStart) {
-            var currentOffsetFromStart = 0;
-            for (var i = 0; i < element.childNodes.length; i++) {
-                var child = element.childNodes[i];
-                if (child.nodeType == Node.COMMENT_NODE)
-                    continue;
-                var afterOffset = currentOffsetFromStart + child.textContent.length;
-                if (offsetFromStart < afterOffset)
-                    return findNodeAndOffsetFromStart(child, offsetFromStart - currentOffsetFromStart);
-                if (afterOffset == offsetFromStart && i == element.childNodes.length - 1)
-                    return findNodeAndOffsetFromStart(child, offsetFromStart - currentOffsetFromStart);
-                currentOffsetFromStart = afterOffset;
-            }
-            return {
-                node: element,
-                offset: offsetFromStart
-            };
-        }
-        function findNodeAndOffsetFromEnd(element, offsetFromEnd) {
-            var currentOffsetFromEnd = 0;
-            if (offsetFromEnd == 0) {
-                if (element.childNodes.length > 0)
-                    return findNodeAndOffsetFromEnd(element.childNodes[element.childNodes.length - 1], 0);
-                else
-                    return {
-                        node: element,
-                        offset: element.textContent.length
-                    };
-            }
-            for (var i = element.childNodes.length - 1; i >= 0; i--) {
-                var child = element.childNodes[i];
-                var beforeOffset = currentOffsetFromEnd + child.textContent.length;
-                if (offsetFromEnd > beforeOffset)
-                    return findNodeAndOffsetFromEnd(child, offsetFromEnd - currentOffsetFromEnd);
-                if (beforeOffset == offsetFromEnd && i == 0)
-                    return findNodeAndOffsetFromEnd(child, offsetFromEnd - currentOffsetFromEnd);
-                currentOffsetFromEnd = beforeOffset;
-            }
-            return {
-                node: element,
-                offset: element.textContent.length - offsetFromEnd
-            };
-        }
-    }
-}
-window.addEventListener('load', function () {
-    var dragTargets = new Set();
-    document.documentElement.addEventListener('dragenter', function (e) {
-        document.documentElement.classList.add('dragover');
-        dragTargets.add(e.target);
-    });
-    document.documentElement.addEventListener('dragleave', function (e) {
-        dragTargets.delete(e.target);
-        if (dragTargets.size == 0) {
-            document.documentElement.classList.remove('dragover');
-        }
-    });
-    document.documentElement.addEventListener('drop', function (e) {
-        dragTargets.clear();
-        document.documentElement.classList.remove('dragover');
-    });
-});
 function registerModificationEditor(editor, reference, callbackName) {
     var callback = function (editor, data) {
         var selection = editor.getCurrentSelection();
@@ -449,7 +266,7 @@ var Debouncer = (function () {
     }
     Debouncer.prototype.debounce = function (handler, debounce) {
         var _this = this;
-        if (this.interval) {
+        if (this.interval && this.handler) {
             console.log("debounce: bounced");
             clearInterval(this.interval);
             this.interval = setInterval(this.handler, this.timeout);
@@ -553,7 +370,7 @@ var ModificationEditor = (function () {
     ModificationEditor.prototype.ignoreMutation = function (mutations, editor) {
         for (var i = 0; i < mutations.length; i++) {
             var mutation = mutations[i];
-            for (var current = mutation.target; current != editor; current = current.parentElement) {
+            for (var current = mutation.target; current && current != editor; current = current.parentElement) {
                 if (current instanceof HTMLElement) {
                     if (current.classList.contains('metaline-controls') || current.classList.contains('line-controls')) {
                         return true;
@@ -565,6 +382,7 @@ var ModificationEditor = (function () {
     };
     ModificationEditor.prototype.handleBeforeInput = function (event) {
         var _this = this;
+        var _a;
         event.stopImmediatePropagation();
         var editRange = null;
         if (event.inputType == 'insertCompositionText') {
@@ -582,7 +400,9 @@ var ModificationEditor = (function () {
             data = event.dataTransfer.getData('text');
         }
         console.log(event);
-        var currentRange = getSelection().getRangeAt(0);
+        var currentRange = (_a = getSelection()) === null || _a === void 0 ? void 0 : _a.getRangeAt(0);
+        if (!currentRange)
+            return;
         if (event.inputType == 'deleteContent' || event.inputType == 'deleteContentBackward' || event.inputType == 'deleteContentForward') {
             if (currentRange.endOffset == 0 && currentRange.startContainer !== currentRange.endContainer) {
                 var rangeString = currentRange.toString();
@@ -604,8 +424,11 @@ var ModificationEditor = (function () {
             this.afterModification = function (modification) {
                 var debounce = event.inputType == 'insertCompositionText';
                 _this.debouncer.debounce(function () {
+                    var _a;
                     console.log("callback");
-                    var currentRange = getSelection().getRangeAt(0);
+                    var currentRange = (_a = getSelection()) === null || _a === void 0 ? void 0 : _a.getRangeAt(0);
+                    if (!currentRange)
+                        throw new Error("Keine Auswahl m�glich");
                     _this.callback(_this, {
                         inputType: event.inputType,
                         editRange: editRange,
@@ -653,6 +476,7 @@ var ModificationEditor = (function () {
     };
     ;
     ModificationEditor.prototype.revertModification = function (modification) {
+        var _a;
         console.log("Revert modification", modification);
         console.log(JSON.stringify(modification, null, 2));
         var mutations = Array.from(modification.mutations.reverse());
@@ -689,7 +513,7 @@ var ModificationEditor = (function () {
                             continue;
                         for (var j = 0; j < mutation.addedNodes.length; j++) {
                             var node = mutation.addedNodes[j];
-                            node.parentElement.removeChild(node);
+                            (_a = node.parentElement) === null || _a === void 0 ? void 0 : _a.removeChild(node);
                         }
                     }
                 }
@@ -702,32 +526,41 @@ var ModificationEditor = (function () {
         }
     };
     ModificationEditor.prototype.restoreSelection = function (selection) {
+        var _a, _b, _c, _d;
         console.log("Restore selection", selection);
         var currentSelection = getSelection();
+        if (!currentSelection)
+            throw new Error("Keine Auswahl m�glich");
         if (selection) {
-            if (currentSelection.rangeCount == 1) {
-                var currentRange = currentSelection.getRangeAt(0);
-                currentRange.setStart(selection.startContainer, selection.startOffset);
-                currentRange.setEnd(selection.endContainer, selection.endOffset);
+            var currentRange = void 0;
+            if ((currentSelection === null || currentSelection === void 0 ? void 0 : currentSelection.rangeCount) == 1) {
+                currentRange = currentSelection.getRangeAt(0);
             }
             else {
                 currentSelection.removeAllRanges();
-                var currentRange = document.createRange();
-                currentRange.setStart(selection.startContainer, selection.startOffset);
-                currentRange.setEnd(selection.endContainer, selection.endOffset);
+                currentRange = document.createRange();
                 currentSelection.addRange(currentRange);
             }
+            if (selection.startOffset <= ((_b = (_a = selection.startContainer.textContent) === null || _a === void 0 ? void 0 : _a.length) !== null && _b !== void 0 ? _b : 0))
+                currentRange.setStart(selection.startContainer, selection.startOffset);
+            else
+                currentRange.setStartAfter(selection.startContainer);
+            if (selection.endOffset <= ((_d = (_c = selection.endContainer.textContent) === null || _c === void 0 ? void 0 : _c.length) !== null && _d !== void 0 ? _d : 0))
+                currentRange.setEnd(selection.endContainer, selection.endOffset);
+            else
+                currentRange.setEndAfter(selection.endContainer);
         }
         else {
-            currentSelection.removeAllRanges();
+            currentSelection === null || currentSelection === void 0 ? void 0 : currentSelection.removeAllRanges();
         }
     };
     ModificationEditor.prototype.getCurrentSelection = function (documentSelection) {
+        var _a;
         if (documentSelection === undefined)
-            documentSelection = getSelection();
+            documentSelection = getSelection() || undefined;
         if (!documentSelection || documentSelection.rangeCount == 0)
             return null;
-        var range = getSelection().getRangeAt(0);
+        var range = (_a = getSelection()) === null || _a === void 0 ? void 0 : _a.getRangeAt(0);
         if (!range)
             return null;
         if (!this.editor.contains(range.startContainer) || !this.editor.contains(range.endContainer))
@@ -736,6 +569,8 @@ var ModificationEditor = (function () {
     };
     ModificationEditor.prototype.setCurrentSelection = function (lineSelection) {
         var documentSelection = getSelection();
+        if (!documentSelection)
+            throw new Error("Keine Auswahl m�glich");
         if (!lineSelection) {
             if (documentSelection.rangeCount != 0)
                 documentSelection.removeAllRanges();
@@ -762,11 +597,22 @@ var ModificationEditor = (function () {
             var metalineLineSelection = lineSelection;
             var startMetaline = startLine ? null : this.editor.querySelector(".metaline[data-metaline=\"".concat(metalineLineSelection.start.metaline, "\"]"));
             var endMetaline = metalineLineSelection.end.metaline == metalineLineSelection.start.metaline ? startMetaline
-                : endLine ? null
-                    : this.editor.querySelector(".metaline[data-metaline=\"".concat(metalineLineSelection.end.metaline, "\"]"));
-            startLine !== null && startLine !== void 0 ? startLine : (startLine = findLine(startMetaline, metalineLineSelection.start.line));
-            endLine !== null && endLine !== void 0 ? endLine : (endLine = metalineLineSelection.end.metaline == metalineLineSelection.start.metaline && metalineLineSelection.end.line == metalineLineSelection.start.line ? startLine
-                : findLine(endMetaline, metalineLineSelection.end.line));
+                : endLine ? null : this.editor.querySelector(".metaline[data-metaline=\"".concat(metalineLineSelection.end.metaline, "\"]"));
+            if (!startLine) {
+                if (!startMetaline || metalineLineSelection.start.line === null)
+                    throw new Error("Zeile nicht gefunden");
+                startLine = findLine(startMetaline, metalineLineSelection.start.line);
+                if (!startLine)
+                    throw new Error("Zeile nicht gefunden");
+            }
+            if (!endLine) {
+                if (!endMetaline || metalineLineSelection.end.line === null)
+                    throw new Error("Zeile nicht gefunden");
+                endLine = metalineLineSelection.end.metaline == metalineLineSelection.start.metaline && metalineLineSelection.end.line == metalineLineSelection.start.line ? startLine
+                    : findLine(endMetaline, metalineLineSelection.end.line);
+                if (!endLine)
+                    throw new Error("Zeile nicht gefunden");
+            }
         }
         var start = SelectionHelper.getNodeAndOffset(startLine, lineSelection.start.offset);
         range.setStart(start.node, start.offset);
@@ -786,11 +632,15 @@ var ModificationEditor = (function () {
     };
     ModificationEditor.prototype.getLineSelection = function (range, includeNode) {
         var start = this.getTextIndex(range.startContainer, this.getLineInfo, range.startOffset);
+        if (!start)
+            return null;
         var end = range.endContainer !== range.startContainer ? this.getTextIndex(range.endContainer, this.getLineInfo, range.endOffset) : {
             offset: start.offset + range.endOffset - range.startOffset,
             data: start.data,
             node: start.node,
         };
+        if (!end)
+            return null;
         return {
             start: {
                 metaline: start.data.metaline,
@@ -819,7 +669,7 @@ var ModificationEditor = (function () {
                 offset += ((_a = sibling.textContent) === null || _a === void 0 ? void 0 : _a.length) || 0;
             }
         }
-        if (!data)
+        if (!data || !current)
             return null;
         return {
             node: current,
@@ -833,6 +683,7 @@ var ModificationEditor = (function () {
         else
             return getFromStart(node, offset);
         function getFromStart(node, offset) {
+            var _a, _b;
             if (!(node instanceof HTMLElement))
                 return {
                     node: node,
@@ -843,7 +694,7 @@ var ModificationEditor = (function () {
                 var child = node.childNodes[i];
                 if (child.nodeType == Node.COMMENT_NODE)
                     continue;
-                var offsetAfter = currentOffset + child.textContent.length;
+                var offsetAfter = currentOffset + ((_b = (_a = child.textContent) === null || _a === void 0 ? void 0 : _a.length) !== null && _b !== void 0 ? _b : 0);
                 if (offset < offsetAfter || (offsetAfter == offset && i == node.childNodes.length - 1))
                     return getFromStart(child, offset - currentOffset);
                 currentOffset = offsetAfter;
@@ -854,17 +705,21 @@ var ModificationEditor = (function () {
             };
         }
         function getFromEnd(node, offset) {
-            if (!(node instanceof HTMLElement))
+            var _a, _b;
+            if (!(node instanceof HTMLElement)) {
+                if (!node.textContent)
+                    throw new Error("Kein Textknoten gefunden");
                 return {
                     node: node,
                     offset: node.textContent.length - offset,
                 };
+            }
             var currentEndOffset = 0;
             for (var i = node.childNodes.length - 1; i >= 0; i--) {
                 var child = node.childNodes[i];
                 if (child.nodeType == Node.COMMENT_NODE)
                     continue;
-                var offsetBefore = currentEndOffset + child.textContent.length;
+                var offsetBefore = currentEndOffset + ((_b = (_a = child.textContent) === null || _a === void 0 ? void 0 : _a.length) !== null && _b !== void 0 ? _b : 0);
                 if (offset < offsetBefore || (offsetBefore == offset && i == 0))
                     return getFromEnd(child, offset - currentEndOffset);
                 currentEndOffset = offsetBefore;
@@ -876,13 +731,14 @@ var ModificationEditor = (function () {
         }
     };
     ModificationEditor.prototype.getLineInfo = function (node) {
+        var _a, _b;
         if (!(node instanceof HTMLElement))
             return null;
         var nodeElement = node;
         var lineId = null;
         if (node.classList.contains('line')) {
-            lineId = parseInt(nodeElement.getAttribute('data-line'));
-            nodeElement = nodeElement.parentElement.parentElement;
+            lineId = parseInt((_a = nodeElement.getAttribute('data-line')) !== null && _a !== void 0 ? _a : '');
+            nodeElement = (_b = nodeElement.parentElement) === null || _b === void 0 ? void 0 : _b.parentElement;
         }
         else if (nodeElement.classList.contains('metaline-lines')) {
             nodeElement = nodeElement.parentElement;
@@ -890,7 +746,9 @@ var ModificationEditor = (function () {
         else if (!nodeElement.classList.contains('metaline')) {
             return null;
         }
-        var metalineId = nodeElement.getAttribute('data-metaline');
+        var metalineId = nodeElement === null || nodeElement === void 0 ? void 0 : nodeElement.getAttribute('data-metaline');
+        if (metalineId == null || lineId == null)
+            return null;
         return {
             metaline: metalineId,
             line: lineId
@@ -906,7 +764,11 @@ var SelectionObserver = (function () {
         this.supportsMultipleRanges = false;
         this.editor = modificationEditor.editor;
         this.editorWrapper = this.editor.parentElement;
+        if (!this.editorWrapper)
+            throw new Error("Editor hat kein Elternelement");
         this.customSelection = this.editorWrapper.querySelector('.custom-selection');
+        if (!this.customSelection)
+            throw new Error("Custom-Selection-Element nicht gefunden");
         document.addEventListener('selectionchange', this.handleSelectionChange.bind(this));
         this.editor.addEventListener('dragstart', this.handleDragStart.bind(this));
     }
@@ -964,7 +826,7 @@ var SelectionObserver = (function () {
         if (!this.editor.contains(range.startContainer) || !this.editor.contains(range.endContainer))
             return this.resetCustomSelections();
         var lineSelection = this.modificationEditor.getLineSelection(range, true);
-        if (lineSelection.start.metaline != lineSelection.end.metaline)
+        if (!lineSelection || lineSelection.start.metaline != lineSelection.end.metaline)
             return this.resetCustomSelections();
         var metaline = (_b = (_a = lineSelection.start.lineNode) === null || _a === void 0 ? void 0 : _a.parentElement) === null || _b === void 0 ? void 0 : _b.parentElement;
         if (!metaline)
@@ -988,7 +850,7 @@ var SelectionObserver = (function () {
     SelectionObserver.prototype.adjustBoxSelection = function (documentSelection, range, lineSelection) {
         if (!this.supportsMultipleRanges)
             return emulateBoxSelection(this, documentSelection, range);
-        if (lineSelection.end.lineNode.compareDocumentPosition(lineSelection.start.lineNode) & Node.DOCUMENT_POSITION_FOLLOWING) {
+        if (lineSelection.start.lineNode && lineSelection.end.lineNode && lineSelection.end.lineNode.compareDocumentPosition(lineSelection.start.lineNode) & Node.DOCUMENT_POSITION_FOLLOWING) {
             lineSelection = {
                 start: lineSelection.end,
                 end: lineSelection.start,
@@ -1028,13 +890,13 @@ var SelectionObserver = (function () {
             emulateBoxSelection(this, documentSelection, range);
         }
         function emulateBoxSelection(self, documentSelection, range) {
-            var _a, _b;
+            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
             var startCell = range.startContainer;
             var behindStartCell = false;
             if (startCell.nodeType == Node.TEXT_NODE) {
-                if (range.startOffset >= startCell.textContent.length) {
+                if (range.startOffset >= ((_b = (_a = startCell.textContent) === null || _a === void 0 ? void 0 : _a.length) !== null && _b !== void 0 ? _b : 0)) {
                     startCell = startCell.parentElement;
-                    if (startCell.nextSibling) {
+                    if (startCell === null || startCell === void 0 ? void 0 : startCell.nextSibling) {
                         startCell = startCell.nextSibling;
                     }
                     else {
@@ -1053,9 +915,9 @@ var SelectionObserver = (function () {
                 beforeEndCell = true;
             }
             else {
-                if (range.endOffset < range.endContainer.textContent.length)
+                if (range.endOffset < ((_d = (_c = range.endContainer.textContent) === null || _c === void 0 ? void 0 : _c.length) !== null && _d !== void 0 ? _d : 0))
                     insideEndCell = true;
-                else if (range.endOffset == range.endContainer.textContent.length)
+                else if (range.endOffset == ((_f = (_e = range.endContainer.textContent) === null || _e === void 0 ? void 0 : _e.length) !== null && _f !== void 0 ? _f : 0))
                     behindEndCell = true;
                 endCell = endCell.parentElement;
             }
@@ -1076,8 +938,8 @@ var SelectionObserver = (function () {
             }
             else {
                 if (!insideEndCell) {
-                    if ((_a = endCell.nextSibling) === null || _a === void 0 ? void 0 : _a.getBoundingClientRect) {
-                        endCell = endCell.nextSibling;
+                    if ((_g = endCell === null || endCell === void 0 ? void 0 : endCell.nextSibling) === null || _g === void 0 ? void 0 : _g.getBoundingClientRect) {
+                        endCell = (_h = endCell === null || endCell === void 0 ? void 0 : endCell.nextSibling) !== null && _h !== void 0 ? _h : null;
                         endRect = endCell.getBoundingClientRect();
                     }
                     else {
@@ -1090,8 +952,8 @@ var SelectionObserver = (function () {
                 }
                 else {
                     if (!behindStartCell) {
-                        if ((_b = startCell.previousSibling) === null || _b === void 0 ? void 0 : _b.getBoundingClientRect) {
-                            startCell = startCell.previousSibling;
+                        if ((_j = startCell === null || startCell === void 0 ? void 0 : startCell.previousSibling) === null || _j === void 0 ? void 0 : _j.getBoundingClientRect) {
+                            startCell = (_k = startCell === null || startCell === void 0 ? void 0 : startCell.previousSibling) !== null && _k !== void 0 ? _k : null;
                             startRect = startCell.getBoundingClientRect();
                         }
                         else {
@@ -1104,9 +966,10 @@ var SelectionObserver = (function () {
             }
             var y = startRect.top;
             var height = endRect.bottom - y;
+            var editorRect = self.editor.getBoundingClientRect();
             var wrapperRect = self.editorWrapper.getBoundingClientRect();
-            var top = y - wrapperRect.top;
-            var left = x - wrapperRect.left;
+            var top = y - editorRect.top;
+            var left = x - editorRect.left;
             var newPosition = top.toFixed(0) + ';' + left.toFixed(0) + ';' + documentSelection.toString().length;
             var newPositionFull = newPosition + ';' + width.toFixed(0) + ';' + height.toFixed(0);
             var currentPosition = self.customSelection['data-position'];
@@ -1145,18 +1008,19 @@ var SelectionHelper = (function () {
     function SelectionHelper() {
     }
     SelectionHelper.getNodeAndOffset = function (node, offset) {
+        var _a, _b, _c, _d, _e, _f;
         if (offset < 0)
             return SelectionHelper.getNodeAndOffsetFromEnd(node, offset);
         var iterator = document.createNodeIterator(node, NodeFilter.SHOW_TEXT);
         var currentOffset = 0;
         var current = iterator.nextNode();
-        while (current && currentOffset + current.textContent.length < offset) {
-            currentOffset += current.textContent.length;
+        while (current && currentOffset + ((_b = (_a = current.textContent) === null || _a === void 0 ? void 0 : _a.length) !== null && _b !== void 0 ? _b : 0) < offset) {
+            currentOffset += (_d = (_c = current.textContent) === null || _c === void 0 ? void 0 : _c.length) !== null && _d !== void 0 ? _d : 0;
             var next = iterator.nextNode();
             if (!next)
                 return {
                     node: current,
-                    offset: current.textContent.length,
+                    offset: ((_f = (_e = current.textContent) === null || _e === void 0 ? void 0 : _e.length) !== null && _f !== void 0 ? _f : 0),
                 };
             current = next;
         }
@@ -1166,6 +1030,7 @@ var SelectionHelper = (function () {
         };
     };
     SelectionHelper.getNodeAndOffsetFromEnd = function (node, offset) {
+        var _a, _b, _c, _d;
         var iterator = document.createNodeIterator(node, NodeFilter.SHOW_TEXT);
         var allNodes = [];
         var current = iterator.nextNode();
@@ -1182,10 +1047,13 @@ var SelectionHelper = (function () {
         var currentOffset = 0;
         for (var i = allNodes.length - 1; i >= 0; i--) {
             current = allNodes[i];
-            if (currentOffset + current.textContent.length >= offset)
+            if (currentOffset + ((_b = (_a = current.textContent) === null || _a === void 0 ? void 0 : _a.length) !== null && _b !== void 0 ? _b : 0) >= offset)
                 break;
-            currentOffset += current.textContent.length;
+            currentOffset += (_d = (_c = current.textContent) === null || _c === void 0 ? void 0 : _c.length) !== null && _d !== void 0 ? _d : 0;
         }
+        current !== null && current !== void 0 ? current : (current = node);
+        if (!current.textContent)
+            throw new Error("Kein Textknoten gefunden");
         return {
             node: current,
             offset: current.textContent.length - (offset - currentOffset),
@@ -1224,7 +1092,7 @@ var ActionQueue = (function () {
             return next;
         }
         ;
-        var handler = function (value) { return checkRemove(onfulfilled(value)); };
+        var handler = function (value) { return checkRemove(onfulfilled ? onfulfilled(value) : undefined); };
         if (this.queue) {
             this.queue = promise = this.queue.then(handler);
         }

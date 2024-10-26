@@ -115,7 +115,7 @@ $separatorColor: #6c757d;
 			align-self: stretch;
 			position: sticky;
 			left: 0px;
-			border-right: 0.2em solid var(--bs-body-bg);
+			border-right: calc(0.2em + 1px) solid var(--bs-body-bg);
 			margin-right: -0.2em;
 
 			.metaline-bracket {
@@ -459,7 +459,7 @@ $separatorColor: #6c757d;
 .custom-selection {
 	position: absolute;
 	pointer-events: none;
-	z-index: 10;
+	z-index: 5;
 	background-color: var(--bs-primary);
 	opacity: 0.3;
 	display: none;
