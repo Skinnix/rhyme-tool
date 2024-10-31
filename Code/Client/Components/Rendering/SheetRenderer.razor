@@ -78,9 +78,13 @@
                 <span class="rhythm-pattern-delimiter">@format.MiddleDelimiter</span>
             }
 
-            @foreach (var stroke in bar.Strokes)
+            foreach (var stroke in bar.Strokes)
             {
-                <span class="rhythm-pattern-stroke" data-stroke="@stroke.Type"><span class="stroke-note" style="--note-content: '@(stroke.NoteLength?.ToString(Formatter) ?? " ")'"></span>@stroke.Stroke<span class="stroke-length" style="--stroke-length: '@(stroke.Length?.ToString() ?? " ")'"></span></span>
+                var strokeLength = stroke.Length?.ToString() ?? " ";
+                var strokeNote = stroke.NoteLength?.ToString(Formatter) ?? " ";
+
+                <span class="rhythm-pattern-stroke" data-stroke="@stroke.Type">@stroke.Stroke<span class="stroke-length" style="--stroke-length: '@strokeLength';"></span><span class="stroke-note" style="--note-content: '@strokeNote'"></span></span>
+                @*<span class="rhythm-pattern-stroke" data-stroke="@stroke.Type"><span class="stroke-note" style="--note-content: '@(stroke.NoteLength?.ToString(Formatter) ?? " ")'"></span>@stroke.Stroke<span class="stroke-length" style="--stroke-length: '@(stroke.Length?.ToString() ?? " ")'"></span></span>*@
             }
         }
 

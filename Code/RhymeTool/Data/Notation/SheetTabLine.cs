@@ -68,6 +68,13 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 		Components = new Component.Collection(this);
 	}
 
+	public SheetTabLine(IEnumerable<Note> tunings)
+		: base(LineType)
+	{
+		Lines = new TabLineDefinition.Collection(this, tunings);
+		Components = new Component.Collection(this);
+	}
+
 	#region Conversion
 	public override IEnumerable<SheetLineConversion> GetPossibleConversions(ISheetBuilderFormatter? formatter = null)
 	{
@@ -297,18 +304,27 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 	#endregion
 
 	#region Definition/Editing
-	public class TabLineDefinition(SheetTabLine owner, int lineIndex, Note tuning) : ISheetDisplayLineEditing
+	public class TabLineDefinition : ISheetDisplayLineEditing
 	{
 		private const int INDEX_INVALID = -1;
 		private const int INDEX_BAR_LINE = -2;
 		private const int INDEX_TUNING_NOTE = -3;
 
-		private readonly int lineIndex = lineIndex;
+		private readonly SheetTabLine owner;
+
+		internal int LineIndex { get; set; }
 
 		public SheetLine Line => owner;
-		public int LineId => lineIndex;
+		public int LineId => LineIndex;
 
-		public Note Tuning { get; set; } = tuning;
+		public Note Tuning { get; set; }
+
+		internal TabLineDefinition(SheetTabLine owner, int lineIndex, Note tuning)
+		{
+			this.owner = owner;
+			LineIndex = lineIndex;
+			Tuning = tuning;
+		}
 
 		public ReasonBase? SupportsEdit(SheetDisplayMultiLineEditingContext context)
 		{
@@ -476,7 +492,7 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 			{
 				foreach (var component in components)
 				{
-					component.Component!.SetNote(lineIndex, default);
+					component.Component!.SetNote(LineIndex, default);
 					if (component.Component.IsEmpty)
 						owner.Components[component.BarIndex * owner.BarLength + component.NoteIndex] = null;
 				}
@@ -534,7 +550,7 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 
 			//Einzeilige Bearbeitung?
 			if (multilineContext is null)
-				return TryInsertContent(context, context.SelectionRange, content, [lineIndex], formatter);
+				return TryInsertContent(context, context.SelectionRange, content, [LineIndex], formatter);
 
 			//Die StartLine kümmert sich um alles
 			if (multilineContext.StartLine != this)
@@ -550,7 +566,7 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 			var lineIndexes = new List<int>();
 			foreach (var line in owner.Lines.SkipWhile(l => l != multilineContext.StartLine))
 			{
-				lineIndexes.Add(line.lineIndex);
+				lineIndexes.Add(line.LineIndex);
 				if (line == multilineContext.EndLine)
 					break;
 			}
@@ -818,6 +834,25 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 			{
 				this.owner = owner;
 				this.lines = new List<TabLineDefinition>(lines);
+			}
+
+			public TabLineDefinition Add(Note tuning)
+			{
+				var line = new TabLineDefinition(owner, lines.Count, tuning);
+				lines.Add(line);
+				return line;
+			}
+
+			public bool Remove(TabLineDefinition line)
+			{
+				if (!lines.Remove(line))
+					return false;
+
+				var i = 0;
+				foreach (var currentLine in lines)
+					currentLine.LineIndex = i++;
+
+				return true;
 			}
 
 			public IEnumerator<TabLineDefinition> GetEnumerator() => lines.GetEnumerator();

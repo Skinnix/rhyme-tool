@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Skinnix.RhymeTool.Client.Services.Files;
 using Skinnix.RhymeTool.Data.Notation;
+using Skinnix.RhymeTool.Data.Notation.IO;
 
 namespace Skinnix.RhymeTool.Client.Services;
 
@@ -65,7 +66,7 @@ internal class DefaultDocumentService : IDocumentService
 			using (var stream = await file.ReadAsync(cancellation))
 			using (var reader = new StreamReader(stream))
 			{
-				var document = await SheetReader.ReadSheetAsync(reader, cancellation);
+				var document = await SheetDecoderReader.Default.ReadSheetAsync(reader, cancellation);
 				document.Label = file.Name;
 				return document;
 			}
@@ -78,7 +79,7 @@ internal class DefaultDocumentService : IDocumentService
 			{
 				using (var writer = new StreamWriter(stream))
 				{
-					await SheetWriter.WriteSheetAsync(writer, document, cancellation);
+					await SheetEncoderWriter.Default.WriteSheetAsync(writer, document, cancellation);
 				}
 			}, cancellation);
 
