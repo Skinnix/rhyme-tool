@@ -14,7 +14,7 @@ public class DefaultSheetEncoder(ISheetBuilderFormatter? formatter = null) : She
 	{
 		foreach (var lineContext in document.Lines.GetLinesWithContext())
 		{
-			var displayLines = lineContext.CreateDisplayLines();
+			var displayLines = lineContext.CreateDisplayLines(Formatter);
 			foreach (var displayLine in displayLines)
 			{
 				foreach (var element in displayLine.GetElements())

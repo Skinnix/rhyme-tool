@@ -41,6 +41,8 @@ public enum TabNoteModifier : short
 
 public readonly record struct TabNote
 {
+	public const char EMPTY_CHAR = '-';
+
 	public static readonly TabNote Empty = default;
 
 	private readonly int value;
@@ -65,8 +67,39 @@ public readonly record struct TabNote
 		=> new(Value, Modifier ^ modifier);
 
 	public override string ToString()
-		=> IsEmpty ? "-"
+		=> IsEmpty ? EMPTY_CHAR.ToString()
 		: Value is null ? string.Join(string.Empty, Modifier.GetFlagsDisplayName())
 		: Modifier == TabNoteModifier.None ? Value.Value.ToString()
 		: $"{string.Join(string.Empty, Modifier.GetFlagsDisplayName())}{Value.Value}";
+
+	public static int TryRead(ReadOnlySpan<char> s, out TabNote note, int maxNumberLength = 2, ISheetEditorFormatter? formatter = null)
+	{
+		if (formatter is not null)
+			return formatter.TryReadTabNote(s, out note, maxNumberLength);
+
+		note = Empty;
+		if (s.Length == 0)
+			return -1;
+
+		if (s[0] == EMPTY_CHAR)
+			return 1;
+
+		var modifierLength = EnumNameAttribute.TryRead<TabNoteModifier>(s, out var modifier);
+		if (modifierLength > 0)
+			s = s[modifierLength..];
+
+		//Versuche Zahl zu lesen
+		for (var i = maxNumberLength; i > 0; i--)
+		{
+			if (byte.TryParse(s[0..i], out var noteValue))
+			{
+				note = new TabNote(noteValue, modifier);
+				return modifierLength <= 0 ? i : modifierLength + i;
+			}
+		}
+
+		//Keine Zahl gelesen
+		note = new TabNote(null, modifier);
+		return modifierLength;
+	}
 }

@@ -93,6 +93,7 @@ public interface ISheetEditorFormatter : ISheetBuilderFormatter
 	int TryReadFingering(ReadOnlySpan<char> s, out Fingering? fingering, int minLength = 1);
 	int TryReadRhythm(ReadOnlySpan<char> s, out RhythmPattern? rhythm);
 	int TryReadTabNoteModifier(ReadOnlySpan<char> s, out TabNoteModifier modifier);
+	int TryReadTabNote(ReadOnlySpan<char> s, out TabNote note, int maxNumberLength = 2);
 }
 
 public enum GermanNoteMode
@@ -428,11 +429,7 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 		var text = note.ToString();
 		var padding = width - text.Length;
 		if (padding > 0)
-		{
-			var paddingLeft = padding / 2;
-			var paddingRight = padding - paddingLeft;
-			text = new string(' ', paddingLeft) + text + new string(' ', paddingRight);
-		}
+			text = text + new string(' ', padding);
 
 		return new(text, width);
 	}
@@ -572,6 +569,10 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 	public int TryReadTabNoteModifier(ReadOnlySpan<char> s, out TabNoteModifier modifier) => TryReadTabNoteModifier(s, out modifier, true);
 	private int TryReadTabNoteModifier(ReadOnlySpan<char> s, out TabNoteModifier modifier, bool transform)
 		=> EnumNameAttribute.TryRead(s, out modifier);
+
+	public int TryReadTabNote(ReadOnlySpan<char> s, out TabNote note, int maxNumberLength = 2) => TryReadTabNote(s, out note, maxNumberLength, true);
+	private int TryReadTabNote(ReadOnlySpan<char> s, out TabNote note, int maxNumberLength, bool transform)
+		=> TabNote.TryRead(s, out note, maxNumberLength);
 }
 
 public static class SheetFormatterExtensions
