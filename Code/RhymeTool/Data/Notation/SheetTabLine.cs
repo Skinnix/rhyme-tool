@@ -132,21 +132,14 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 		//Stimmung
 		var i = 0;
 		var tunings = new SheetDisplayLineTabTuning[Lines.Count];
-		var tuningWidth = 1;
+		var tuningWidth = TabColumnWidth.Calculate(Lines.Select(l => l.Tuning.ToString(formatter)));
 		for (i = 0; i < Lines.Count; i++)
 		{
-			var tuning = tunings[i] = new SheetDisplayLineTabTuning(Lines[i].Tuning)
+			var tuning = tunings[i] = new SheetDisplayLineTabTuning(Lines[i].Tuning, tuningWidth)
 			{
 				Slice = null,
 			};
-			if (tuning.Width > tuningWidth)
-				tuningWidth = tuning.Width;
 		}
-
-		//Breitere Tunings?
-		if (tuningWidth > 1)
-			foreach (var tuning in tunings)
-				tuning.Width = tuningWidth;
 
 		//Füge Tunings hinzu
 		foreach ((var line, var tuning) in builder.Builders.Zip(tunings))
@@ -197,31 +190,26 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 				continue;
 			}
 
+			//Berechne Breite
+			var componentWidth = formatter is null ? TabColumnWidth.Calculate(Enumerable.Range(0, Lines.Count).Select(i => component.GetNote(i).ToString()))
+				: formatter.FormatAll(Enumerable.Range(0, Lines.Count).Select(component.GetNote))[0].Width;
+
 			//Erzeuge Elemente
 			var elements = new SheetDisplayLineTabNoteBase[Lines.Count];
-			var componentWidth = 1;
 			for (i = 0; i < Lines.Count; i++)
 			{
 				//Erzeuge Element
-				var note = component.TryGetNote(i);
+				var note = component.GetNote(i);
 				var element = elements[i] = note.IsEmpty
-					? new SheetDisplayLineTabEmptyNote()
+					? new SheetDisplayLineTabEmptyNote(componentWidth)
 					{
 						Slice = new(component, new ContentOffset(index)),
 					}
-					: new SheetDisplayLineTabNote(note)
+					: new SheetDisplayLineTabNote(note, componentWidth)
 					{
 						Slice = new(component, new ContentOffset(index)),
 					};
-
-				if (element.Width > componentWidth)
-					componentWidth = element.Width;
 			}
-
-			//Breitere Elemente?
-			if (componentWidth > 1)
-				foreach (var element in elements)
-					element.Width = componentWidth;
 
 			//Füge Elemente hinzu
 			var renderOffset = builder.Builders[0].CurrentLength;
@@ -284,7 +272,7 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 		public void AddEmpty()
 		{
 			foreach (var line in Builders)
-				line.Append(new SheetDisplayLineTabEmptyNote()
+				line.Append(new SheetDisplayLineTabEmptyNote(TabColumnWidth.One)
 				{
 					Slice = null,
 				}, Formatter);
@@ -661,7 +649,7 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 							//Bearbeite die Komponente
 							foreach (var index in lineIndexes)
 							{
-								var currentNote = component.Data.Component.TryGetNote(index);
+								var currentNote = component.Data.Component.GetNote(index);
 								var noteValue = note;
 								if (noteValue is not null)
 								{
@@ -680,7 +668,7 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 							//Bearbeite die Komponente
 							foreach (var index in lineIndexes)
 							{
-								var currentNote = component.Data.Component.TryGetNote(index);
+								var currentNote = component.Data.Component.GetNote(index);
 								var newNote = new TabNote(note ?? currentNote.Value, currentNote.Modifier).TriggerModifier(modifier);
 								component.Data.Component.SetNote(index, newNote);
 							}
@@ -876,7 +864,7 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 			this.notes = notes.ToArray();
 		}
 
-		public TabNote TryGetNote(int line)
+		public TabNote GetNote(int line)
 		{
 			if (line < 0 || line >= notes.Length)
 				return default;

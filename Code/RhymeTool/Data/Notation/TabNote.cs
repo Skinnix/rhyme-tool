@@ -72,6 +72,10 @@ public readonly record struct TabNote
 		: Modifier == TabNoteModifier.None ? Value.Value.ToString()
 		: $"{string.Join(string.Empty, Modifier.GetFlagsDisplayName())}{Value.Value}";
 
+	public string ToString(ISheetFormatter? formatter, TabColumnWidth width)
+		=> formatter?.ToString(this, width)
+		?? ToString();
+
 	public static int TryRead(ReadOnlySpan<char> s, out TabNote note, int maxNumberLength = 2, ISheetEditorFormatter? formatter = null)
 	{
 		if (formatter is not null)

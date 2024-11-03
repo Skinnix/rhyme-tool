@@ -36,5 +36,14 @@ public class DefaultSheetEncoder(ISheetBuilderFormatter? formatter = null) : She
 		{
 			CondenseTabNotes = false;
 		}
+
+		protected override string ToString(TabNote note, TabColumnWidth width, bool transform)
+		{
+			var result = base.ToString(note, width, transform);
+			if (width.Min > 1)
+				return " " + result + " ";
+
+			return result;
+		}
 	}
 }

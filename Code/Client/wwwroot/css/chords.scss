@@ -340,11 +340,15 @@ $separatorColor: #6c757d;
 				}
 
 				&::after {
-					content: var(--tab-suffix);
+					//content: var(--tab-suffix);
 					position: absolute;
 					left: 1ch;
 					letter-spacing: 0;
 				}
+			}
+
+			*[style*="--tab-suffix"], &.suffix {
+				user-select: all;
 			}
 		}
 

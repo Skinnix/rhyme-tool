@@ -95,8 +95,8 @@
     {
         var format = element.Format(Formatter);
 
-        var style = format.Width == 1 && format.Prefix is null && format.Suffix is null ? null
-            : (format.Width == 1 ? null : $"--tab-width: {format.Width};--tab-padding: {format.Width - format.TotalTextLength};")
+        var style = format.Width.Max == 1 && format.Prefix is null && format.Suffix is null ? null
+            : (format.Width.Max == 1 ? null : $"--tab-width: {format.Width.Max};--tab-padding: {format.Width.Max - format.TotalTextLength};")
             + (format.Prefix is null ? null : $"--tab-prefix: '{format.Prefix}';--tab-prefix-length: {format.Prefix.Length};")
             + (format.Suffix is null ? null : $"--tab-suffix: '{format.Suffix}';--tab-suffix-length: {format.Suffix.Length};");
 

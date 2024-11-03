@@ -18,9 +18,9 @@ public record SheetDisplayLineTabBarLine() : SheetDisplayLineTabElement
 
 public abstract record SheetDisplayLineWidthElement : SheetDisplayLineTabElement
 {
-	public virtual int Width { get; internal set; } = 1;
+	public virtual TabColumnWidth Width { get; internal set; }
 
-	protected SheetDisplayLineWidthElement(int width)
+	protected SheetDisplayLineWidthElement(TabColumnWidth width)
 	{
 		Width = width;
 	}
@@ -34,8 +34,8 @@ public record SheetDisplayLineTabTuning : SheetDisplayLineWidthElement
 {
 	public Note Tuning { get; }
 
-	public SheetDisplayLineTabTuning(Note tuning)
-		: base(tuning.ToString().Length)
+	public SheetDisplayLineTabTuning(Note tuning, TabColumnWidth width)
+		: base(width)
 	{
 		Tuning = tuning;
 	}
@@ -50,10 +50,10 @@ public record SheetDisplayLineTabTuning : SheetDisplayLineWidthElement
 			return formatter.ToString(Tuning, Width);
 
 		var tuningText = Tuning.ToString();
-		if (Width <= tuningText.Length)
+		if (Width.Max <= tuningText.Length)
 			return tuningText;
 
-		var padding = Width - tuningText.Length;
+		var padding = Width.Max - tuningText.Length;
 		return tuningText + new string(' ', padding);
 	}
 }
@@ -62,8 +62,8 @@ public abstract record SheetDisplayLineTabNoteBase : SheetDisplayLineWidthElemen
 {
 	public TabNote Note { get; }
 
-	public SheetDisplayLineTabNoteBase(TabNote note)
-		: base(note.ToString().Length)
+	public SheetDisplayLineTabNoteBase(TabNote note, TabColumnWidth width)
+		: base(width)
 	{
 		Note = note;
 	}
@@ -78,16 +78,16 @@ public abstract record SheetDisplayLineTabNoteBase : SheetDisplayLineWidthElemen
 			return formatter.ToString(Note, Width);
 
 		var noteText = Note.ToString();
-		if (Width <= noteText.Length)
+		if (Width.Max <= noteText.Length)
 			return noteText;
 
-		var padding = Width - noteText.Length;
+		var padding = Width.Max - noteText.Length;
 		var paddingBefore = padding / 2;
 		var paddingAfter = padding - paddingBefore;
 		return new string(' ', paddingBefore) + noteText + new string(' ', paddingAfter);
 	}
 }
 
-public record SheetDisplayLineTabEmptyNote() : SheetDisplayLineTabNoteBase(TabNote.Empty);
+public record SheetDisplayLineTabEmptyNote(TabColumnWidth Width) : SheetDisplayLineTabNoteBase(TabNote.Empty, Width);
 
-public record SheetDisplayLineTabNote(TabNote Note): SheetDisplayLineTabNoteBase(Note);
+public record SheetDisplayLineTabNote(TabNote Note, TabColumnWidth Width) : SheetDisplayLineTabNoteBase(Note, Width);
