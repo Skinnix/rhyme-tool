@@ -825,6 +825,8 @@ var SelectionObserver = (function () {
         }
         if (!this.editor.contains(range.startContainer) || !this.editor.contains(range.endContainer))
             return this.resetCustomSelections();
+        if (SelectionObserver.needsLineFix && this.fixSelection(documentSelection, range))
+            return;
         var lineSelection = this.modificationEditor.getLineSelection(range, true);
         if (!lineSelection || lineSelection.start.metaline != lineSelection.end.metaline)
             return this.resetCustomSelections();
@@ -843,13 +845,66 @@ var SelectionObserver = (function () {
                 break;
         }
     };
+    SelectionObserver.prototype.fixSelection = function (documentSelection, range) {
+        var _a, _b, _c;
+        var modified = false;
+        var collapsed = range.collapsed;
+        var newStart = null;
+        if (!(range.startContainer instanceof Text)) {
+            if (range.startContainer.childNodes.length > range.startOffset) {
+                var node = range.startContainer.childNodes[range.startOffset];
+                while (node.firstChild)
+                    node = node.firstChild;
+                newStart = { node: node, offset: 0 };
+                modified = true;
+            }
+        }
+        if (!collapsed) {
+            if (!(range.endContainer instanceof Text)) {
+                if (range.endContainer.childNodes.length > range.endOffset) {
+                    var node = range.endContainer.childNodes[range.startOffset];
+                    while (node.lastChild)
+                        node = node.lastChild;
+                    range.setEnd(node, (_b = (_a = node.textContent) === null || _a === void 0 ? void 0 : _a.length) !== null && _b !== void 0 ? _b : 0);
+                    modified = true;
+                }
+            }
+            if (newStart)
+                range.setStart(newStart.node, newStart.offset);
+        }
+        else if (newStart) {
+            range.setStart(newStart.node, newStart.offset);
+            range.setEnd(newStart.node, newStart.offset);
+        }
+        var startContainer = range.endContainer;
+        var startNode = startContainer instanceof HTMLElement ? startContainer : startContainer.parentElement;
+        if (startNode === null || startNode === void 0 ? void 0 : startNode.classList.contains('suffix')) {
+            if (((_c = startNode.previousSibling) === null || _c === void 0 ? void 0 : _c.classList.contains('suffix')) === false) {
+                startNode = startNode.previousSibling;
+                var node = SelectionHelper.getNodeAndOffset(startNode, -1);
+                range.setEnd(node.node, node.offset);
+                if (collapsed)
+                    range.setStart(node.node, node.offset);
+                modified = true;
+            }
+            else {
+                range.setEnd(startContainer, 0);
+                if (collapsed)
+                    range.setStart(startContainer, 0);
+                modified = true;
+            }
+        }
+        if (modified)
+            console.log('fixed');
+        return modified;
+    };
     SelectionObserver.prototype.resetCustomSelections = function () {
         this.customSelection.className = 'custom-selection';
         this.justSelected = true;
     };
     SelectionObserver.prototype.adjustBoxSelection = function (documentSelection, range, lineSelection) {
         if (!this.supportsMultipleRanges)
-            return emulateBoxSelection(this, documentSelection, range);
+            return emulateBoxSelection(this, documentSelection, range, lineSelection);
         if (lineSelection.start.lineNode && lineSelection.end.lineNode && lineSelection.end.lineNode.compareDocumentPosition(lineSelection.start.lineNode) & Node.DOCUMENT_POSITION_FOLLOWING) {
             lineSelection = {
                 start: lineSelection.end,
@@ -887,9 +942,80 @@ var SelectionObserver = (function () {
         }
         if (documentSelection.rangeCount != lines.length) {
             this.supportsMultipleRanges = false;
-            emulateBoxSelection(this, documentSelection, range);
+            emulateBoxSelection(this, documentSelection, range, lineSelection);
         }
-        function emulateBoxSelection(self, documentSelection, range) {
+        function emulateBoxSelection(self, documentSelection, range, lineSelection) {
+            var startCell = range.startContainer;
+            var endCell = range.endContainer;
+            if (!startCell || !endCell || lineSelection.start.line == null || lineSelection.end.line == null)
+                return self.resetCustomSelections();
+            console.log(lineSelection.start, lineSelection.end);
+            console.log(range);
+            if (lineSelection.start.line > lineSelection.end.line
+                || (lineSelection.start.line == lineSelection.end.line && lineSelection.start.offset > lineSelection.end.offset)) {
+                startCell = endCell;
+                endCell = range.startContainer;
+            }
+            if (!(startCell instanceof HTMLElement))
+                startCell = startCell === null || startCell === void 0 ? void 0 : startCell.parentNode;
+            if (!(endCell instanceof HTMLElement))
+                endCell = endCell === null || endCell === void 0 ? void 0 : endCell.parentNode;
+            var selectionBox;
+            if (range.collapsed) {
+                if (range.startOffset != 0)
+                    startCell = startCell === null || startCell === void 0 ? void 0 : startCell.nextSibling;
+                if (!(startCell instanceof HTMLElement))
+                    return self.resetCustomSelections();
+                selectionBox = startCell.getBoundingClientRect();
+            }
+            else {
+                if (lineSelection.start.offset == lineSelection.end.offset) {
+                    endCell = endCell === null || endCell === void 0 ? void 0 : endCell.nextSibling;
+                }
+                if (lineSelection.end.offset >= lineSelection.start.offset) {
+                    if (range.startOffset != 0)
+                        startCell = startCell === null || startCell === void 0 ? void 0 : startCell.nextSibling;
+                    if (range.endOffset == 0)
+                        endCell = endCell === null || endCell === void 0 ? void 0 : endCell.previousSibling;
+                }
+                else {
+                    if (range.startOffset == 0)
+                        startCell = startCell === null || startCell === void 0 ? void 0 : startCell.previousSibling;
+                    if (range.endOffset != 0)
+                        endCell = endCell === null || endCell === void 0 ? void 0 : endCell.nextSibling;
+                }
+                if (!(startCell instanceof HTMLElement) || !(endCell instanceof HTMLElement))
+                    return self.resetCustomSelections();
+                var startBox = startCell.getBoundingClientRect();
+                var endBox = endCell.getBoundingClientRect();
+                selectionBox = SelectionObserver.getBoundingBox(startBox, endBox);
+            }
+            setBoxPosition(self, selectionBox);
+            function setBoxPosition(self, box) {
+                var editorRect = self.editor.getBoundingClientRect();
+                var left = box.left - editorRect.left;
+                var top = box.top - editorRect.top;
+                var width = box.width;
+                var height = box.height;
+                var newPosition = top.toFixed(0) + ';' + left.toFixed(0) + ';' + documentSelection.toString().length;
+                var newPositionFull = newPosition + ';' + width.toFixed(0) + ';' + height.toFixed(0);
+                var currentPosition = self.customSelection['data-position'];
+                if (currentPosition != newPositionFull) {
+                    self.customSelection.style.top = top + 'px';
+                    self.customSelection.style.left = left + 'px';
+                    self.customSelection.style.width = width + 'px';
+                    self.customSelection.style.height = height + 'px';
+                    self.customSelection['data-position'] = newPositionFull;
+                    if (!(currentPosition === null || currentPosition === void 0 ? void 0 : currentPosition.startsWith(newPosition)))
+                        self.justSelected = true;
+                }
+                if (self.customSelection.className != 'custom-selection custom-selection-box') {
+                    self.customSelection.className = 'custom-selection custom-selection-box';
+                    self.justSelected = true;
+                }
+            }
+        }
+        function emulateBoxSelection1(self, documentSelection, range) {
             var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
             var startCell = range.startContainer;
             var behindStartCell = false;
@@ -988,6 +1114,28 @@ var SelectionObserver = (function () {
             }
         }
     };
+    SelectionObserver.getBoundingBox = function () {
+        var args = [];
+        for (var _i = 0; _i < arguments.length; _i++) {
+            args[_i] = arguments[_i];
+        }
+        var left = Number.MAX_VALUE;
+        var top = Number.MAX_VALUE;
+        var right = 0;
+        var bottom = 0;
+        for (var _a = 0, args_1 = args; _a < args_1.length; _a++) {
+            var rect = args_1[_a];
+            if (rect.left < left)
+                left = rect.left;
+            if (rect.right > right)
+                right = rect.right;
+            if (rect.top < top)
+                top = rect.top;
+            if (rect.bottom > bottom)
+                bottom = rect.bottom;
+        }
+        return new DOMRect(left, top, right - left, bottom - top);
+    };
     SelectionObserver.prototype.handleDragStart = function (event) {
         if (!(event.target instanceof Node))
             return;
@@ -1002,6 +1150,7 @@ var SelectionObserver = (function () {
             }
         }
     };
+    SelectionObserver.needsLineFix = /Firefox/.test(navigator.userAgent);
     return SelectionObserver;
 }());
 var SelectionHelper = (function () {

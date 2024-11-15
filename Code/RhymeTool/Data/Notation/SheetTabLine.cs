@@ -131,18 +131,14 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 
 		//Stimmung
 		var i = 0;
-		var tunings = new SheetDisplayLineTabTuning[Lines.Count];
-		var tuningWidth = TabColumnWidth.Calculate(Lines.Select(l => l.Tuning.ToString(formatter)));
-		for (i = 0; i < Lines.Count; i++)
+		var tunings = (formatter ?? DefaultSheetFormatter.Instance).FormatAll(Lines.Select(l => l.Tuning));
+		var displayTunings = tunings.Select(t => new SheetDisplayLineTabTuning(t.Note, t, t.Width)
 		{
-			var tuning = tunings[i] = new SheetDisplayLineTabTuning(Lines[i].Tuning, tuningWidth)
-			{
-				Slice = null,
-			};
-		}
+			Slice = null
+		});
 
 		//Füge Tunings hinzu
-		foreach ((var line, var tuning) in builder.Builders.Zip(tunings))
+		foreach ((var line, var tuning) in builder.Builders.Zip(displayTunings))
 			line.Append(tuning, formatter);
 
 		//Setze alle Zeilen auf die gleiche Länge
@@ -200,12 +196,13 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 			{
 				//Erzeuge Element
 				var note = component.GetNote(i);
+				var noteFormat = note.Format(componentWidth);
 				var element = elements[i] = note.IsEmpty
-					? new SheetDisplayLineTabEmptyNote(componentWidth)
+					? new SheetDisplayLineTabEmptyNote(noteFormat, componentWidth)
 					{
 						Slice = new(component, new ContentOffset(index)),
 					}
-					: new SheetDisplayLineTabNote(note, componentWidth)
+					: new SheetDisplayLineTabNote(note, noteFormat, componentWidth)
 					{
 						Slice = new(component, new ContentOffset(index)),
 					};
@@ -271,8 +268,9 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 
 		public void AddEmpty()
 		{
+			var emptyNoteFormat = (Formatter ?? DefaultSheetFormatter.Instance).FormatAll([TabNote.Empty]);
 			foreach (var line in Builders)
-				line.Append(new SheetDisplayLineTabEmptyNote(TabColumnWidth.One)
+				line.Append(new SheetDisplayLineTabEmptyNote(emptyNoteFormat[0], emptyNoteFormat[0].Width)
 				{
 					Slice = null,
 				}, Formatter);

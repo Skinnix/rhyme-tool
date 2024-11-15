@@ -65,7 +65,7 @@ public readonly record struct Note(NoteType Type, AccidentalType Accidental)
 
 	public NoteFormat Format(ISheetFormatter? formatter)
 		=> formatter?.Format(this) ?? Format();
-	public NoteFormat Format() => new(Type.GetDisplayName(), Accidental == AccidentalType.None ? null : Accidental.GetDisplayName(), Accidental);
+	public NoteFormat Format() => new(this, Type.GetDisplayName(), Accidental == AccidentalType.None ? null : Accidental.GetDisplayName());
 
     public override string ToString()
         => Accidental == AccidentalType.None
@@ -96,5 +96,10 @@ public readonly record struct Note(NoteType Type, AccidentalType Accidental)
 
         note = new Note(type, accidental);
         return offset;
-    }
+	}
+
+	public readonly record struct NoteFormat(Note Note, string Type, string? Accidental)
+	{
+		public override string ToString() => Type + Accidental;
+	}
 }

@@ -5,11 +5,8 @@
 @using Skinnix.RhymeTool.Data.Notation.Display
 
 @{
-    void RenderNote(Note note, bool isBassNote = false)
+    void RenderNote(Note.NoteFormat format, bool isBassNote = false)
     {
-        var format = Formatter?.Format(note)
-            ?? new(note.Type.GetDisplayName(), note.Accidental.GetDisplayName());
-
         if (!string.IsNullOrEmpty(format.Accidental))
         {
             @(format.Type)<span class="accidental" data-accidental="@format.Accidental"><span class="accidental-content">@format.Accidental</span></span>
@@ -22,17 +19,16 @@
 
     void RenderChord(Chord chord)
     {
-        <span class="chord-root">@{ RenderNote(chord.Root); }</span><span class="chord-quality">@(Formatter?.ToString(chord.Quality) ?? chord.Quality.ToString())</span>
+        var format = chord.Format(Formatter);
+
+        <span class="chord-root">@{ RenderNote(format.Root); }</span><span class="chord-quality">@format.Quality</span>
 
         @if (chord.Alterations.Count > 0)
         {
             var i = 0;
             <span class="chord-alterations">
-                @foreach (var alteration in chord.Alterations)
+                @foreach (var alterationFormat in format.Alterations)
                 {
-                    var alterationFormat = Formatter?.Format(alteration, i)
-                        ?? new AlterationFormat(alteration.Type.ToString(), alteration.Degree.Value.ToString(), alteration.Degree.Modifier.ToString(), false);
-
                     if (i++ != 0)
                     {
                         <span class="chord-alteration-separator">/</span>
@@ -54,9 +50,9 @@
             </span>
         }
 
-        @if (chord.Bass != null)
+        @if (format.Bass != null)
         {
-            <span class="chord-bass-separator">/</span><span class="chord-bass">@{ RenderNote(chord.Bass.Value, true); }</span>
+            <span class="chord-bass-separator">/</span><span class="chord-bass">@{ RenderNote(format.Bass.Value, true); }</span>
         }
     }
 
@@ -83,7 +79,7 @@
                 var strokeLength = stroke.Length?.ToString() ?? " ";
                 var strokeNote = stroke.NoteLength?.ToString(Formatter) ?? " ";
 
-                <span class="rhythm-pattern-stroke" data-stroke="@stroke.Type">@stroke.Stroke<span class="stroke-length" style="--stroke-length: '@strokeLength';"></span><span class="stroke-note" style="--note-content: '@strokeNote'"></span></span>
+                <span class="rhythm-pattern-stroke" data-stroke="@stroke.Stroke.Type">@stroke.Type<span class="stroke-length" style="--stroke-length: '@strokeLength';"></span><span class="stroke-note" style="--note-content: '@strokeNote'"></span></span>
                 @*<span class="rhythm-pattern-stroke" data-stroke="@stroke.Type"><span class="stroke-note" style="--note-content: '@(stroke.NoteLength?.ToString(Formatter) ?? " ")'"></span>@stroke.Stroke<span class="stroke-length" style="--stroke-length: '@(stroke.Length?.ToString() ?? " ")'"></span></span>*@
             }
         }
@@ -93,7 +89,7 @@
 
     void RenderTabElement(SheetDisplayLineWidthElement element)
     {
-        var format = element.Format(Formatter);
+        var format = element.GetFormat();
 
         var style = format.Width.Max == 1 && format.Prefix is null && format.Suffix is null ? null
             : (format.Width.Max == 1 ? null : $"--tab-width: {format.Width.Max};--tab-padding: {format.Width.Max - format.TotalTextLength};")
@@ -120,7 +116,7 @@
                 break;
 
             case SheetDisplayLineSegmentTitleBracket titleBracket when titleBracket.IsTitleStart:
-                <span class="scroll-anchor" id="sheetSegment-@(lineContext.Line.Guid)"></span><span @key="titleBracket.Slice" class="@SheetRenderer.GetElementClasses(element)">@titleBracket.ToString(Formatter)</span>
+                <span class="scroll-anchor" id="sheetSegment-@(lineContext.Line.Guid)"></span><span @key="titleBracket.Slice" class="@SheetRenderer.GetElementClasses(element)">@titleBracket.Text</span>
                 break;
 
             case SheetDisplayLineBreakPoint breakpoint:
@@ -132,7 +128,7 @@
             //     break;
 
             default:
-                <span @key="element.Slice" class="@GetElementClasses(element)">@element.ToString(Formatter)</span>
+                <span @key="element.Slice" class="@GetElementClasses(element)">@element.Text</span>
                 break;
         }
     }

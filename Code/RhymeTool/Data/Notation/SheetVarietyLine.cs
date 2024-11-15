@@ -1748,17 +1748,17 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 		public SheetDisplayLineElement CreateElement(SheetDisplaySliceInfo sliceInfo, ISheetFormatter? formatter)
 		{
 			if (Chord is not null)
-				return new SheetDisplayLineChord(Chord)
+				return new SheetDisplayLineChord(Chord, Chord.Format(formatter))
 				{
 					Slice = sliceInfo
 				};
 			else if (Fingering is not null)
-				return new SheetDisplayLineFingering(Fingering)
+				return new SheetDisplayLineFingering(Fingering, Fingering.Format(formatter))
 				{
 					Slice = sliceInfo
 				};
 			else if (Rhythm is not null)
-				return new SheetDisplayLineRhythmPattern(Rhythm)
+				return new SheetDisplayLineRhythmPattern(Rhythm, Rhythm.Format(formatter))
 				{
 					Slice = sliceInfo
 				};

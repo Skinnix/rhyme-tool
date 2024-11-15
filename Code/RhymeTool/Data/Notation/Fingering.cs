@@ -150,17 +150,25 @@ public sealed record Fingering(IReadOnlyList<FingeringPosition> Positions, bool 
 	}
 
 	public override string ToString() => ToString(null);
-
 	public string ToString(ISheetFormatter? formatter)
+		=> (formatter ?? DefaultSheetFormatter.Instance).ToString(this);
+
+	public FingeringFormat Format(ISheetFormatter? formatter)
+		=> (formatter ?? DefaultSheetFormatter.Instance).Format(this);
+
+	public readonly record struct FingeringFormat(Fingering Fingering, string[] Positions, bool UseSeparator, bool EndsWithSeparator)
 	{
-		var s = Positions.Any(p => p.Fret >= 10)
-			? string.Join(SEPARATOR, Positions.Select(p => p.ToString()))
-			: string.Join("", Positions.Select(p => p.ToString()));
+		public override string ToString()
+		{
+			var s = UseSeparator
+				? string.Join(SEPARATOR, Positions.Select(p => p.ToString()))
+				: string.Join("", Positions.Select(p => p.ToString()));
 
-		if (EndsWithSeparator)
-			s += SEPARATOR;
+			if (EndsWithSeparator)
+				s += SEPARATOR;
 
-		return s;
+			return s;
+		}
 	}
 }
 

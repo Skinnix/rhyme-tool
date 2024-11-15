@@ -11,67 +11,43 @@ using Skinnix.RhymeTool.Data.Notation.Display;
 
 namespace Skinnix.RhymeTool.Data.Notation;
 
-public readonly record struct NoteFormat(string Type, string? Accidental = null, AccidentalType AccidentalType = AccidentalType.None)
-{
-	public override string ToString() => Type.ToString() + Accidental?.ToString();
-}
-
-public readonly record struct AlterationFormat(string Type, string Degree, string Modifier, bool ModifierAfter)
-{
-	public override string ToString() => Type + (ModifierAfter ? Degree + Modifier : Modifier + Degree);
-}
-
-public readonly record struct RhythmPatternFormat(string LeftDelimiter, string MiddleDelimiter, string RightDelimiter, RhythmPatternBarFormat[] Bars)
-{
-	public override string ToString() => LeftDelimiter + string.Join(MiddleDelimiter, Bars) + RightDelimiter;
-}
-
-public readonly record struct RhythmPatternBarFormat(StrokeFormat[] Strokes)
-{
-	public override string ToString() => string.Join(null, Strokes);
-}
-
-public readonly record struct StrokeFormat(string Stroke, StrokeType Type, int? Length = null, NoteLength? NoteLength = default)
-{
-	public override string ToString() => Stroke;
-}
-
-public readonly record struct TabNoteFormat(string Text, TabColumnWidth Width, string? Prefix = null, string? Suffix = null)
-{
-	public int TotalTextLength => Text.Length + (Prefix?.Length ?? 0) + (Suffix?.Length ?? 0);
-
-	public override string ToString() => Text;
-}
-
 public interface ISheetFormatter
 {
 	string ToString(Note note);
-	NoteFormat Format(Note note);
+	Note.NoteFormat Format(Note note);
 
 	string ToString(Chord chord);
-	string ToString(ChordQuality quality);
+	Chord.ChordFormat Format(Chord chord);
 
 	string ToString(ChordAlteration alteration, int index);
+	ChordAlteration.AlterationFormat Format(ChordAlteration alteration, int index);
+
+	string ToString(ChordQuality quality);
 	string ToString(ChordAlterationType type);
 
-	AlterationFormat Format(ChordAlteration alteration, int index);
-
 	string ToString(Fingering fingering);
+	Fingering.FingeringFormat Format(Fingering fingering);
+
+	string ToString(Stroke stroke);
+	Stroke.StrokeFormat Format(Stroke stroke);
+	
+	string ToString(RhythmPattern.Bar bar);
+	RhythmPattern.Bar.BarFormat Format(RhythmPattern.Bar bar);
+
+	string ToString(RhythmPattern pattern);
+	RhythmPattern.RhythmPatternFormat Format(RhythmPattern pattern);
 
 	string ToString(NoteLength noteLength);
 
-	string ToString(Stroke stroke);
-	string ToString(RhythmPattern.Bar bar);
-	string ToString(RhythmPattern pattern);
-	RhythmPatternFormat Format(RhythmPattern pattern);
-
+	string ToString(TabNote note);
+	
 	string ToString(TabNote note, TabColumnWidth width);
-	TabNoteFormat Format(TabNote note, TabColumnWidth width);
-	TabNoteFormat[] FormatAll(IEnumerable<TabNote> notes);
+	TabNote.TabNoteFormat Format(TabNote note, TabColumnWidth width);
+	TabNote.TabNoteFormat[] FormatAll(IEnumerable<TabNote> notes);
 
 	string ToString(Note tuning, TabColumnWidth width);
-	TabNoteFormat Format(Note tuning, TabColumnWidth width);
-	TabNoteFormat[] FormatAll(IEnumerable<Note> tunings);
+	TabNote.TabNoteTuningFormat Format(Note tuning, TabColumnWidth width);
+	TabNote.TabNoteTuningFormat[] FormatAll(IEnumerable<Note> tunings);
 }
 
 public interface ISheetBuilderFormatter : ISheetFormatter
@@ -206,24 +182,19 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 
 	public SheetTransformation? Transformation { get; init; }
 
-	public string ToString(ChordQuality quality) => ToString(quality, true);
-	protected virtual string ToString(ChordQuality quality, bool transform) => quality switch
+	public Chord.ChordFormat Format(Chord chord) => Format(chord, true);
+	protected virtual Chord.ChordFormat Format(Chord chord, bool transform)
 	{
-		ChordQuality.Major => MajorQuality,
-		ChordQuality.Minor => MinorQuality,
-		ChordQuality.Diminished => DiminishedQuality,
-		ChordQuality.Augmented => AugmentedQuality,
-		_ => string.Empty
-	};
+		if (transform && Transformation != null)
+			chord = Transformation.TransformChord(chord);
 
-	public string ToString(ChordAlterationType type) => ToString(type, true);
-	protected virtual string ToString(ChordAlterationType type, bool transform) => type switch
-	{
-		ChordAlterationType.Default => DefaultAlteration,
-		ChordAlterationType.Addition => AdditionAlteration,
-		ChordAlterationType.Suspension => SuspensionAlteration,
-		_ => string.Empty
-	};
+		var alterations = chord.Alterations.Select(Format).ToArray();
+		return new(chord,
+			Format(chord.Root, false),
+			ToString(chord.Quality),
+			alterations,
+			chord.Bass is null ? null : Format(chord.Bass.Value, false));
+	}
 
 	public string ToString(Chord chord) => ToString(chord, true);
 	protected virtual string ToString(Chord chord, bool transform)
@@ -233,9 +204,9 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 
 		var sb = new StringBuilder();
 		sb.Append(ToString(chord.Root, false));
-		sb.Append(ToString(chord.Quality, false));
+		sb.Append(ToString(chord.Quality));
 
-		sb.Append(string.Join('/', chord.Alterations.Select((a, i) => ToString(a, i, false))));
+		sb.Append(string.Join('/', chord.Alterations.Select(ToString)));
 
 		if (chord.Bass is not null)
 			sb.Append('/').Append(ToString(chord.Bass.Value, false));
@@ -243,24 +214,38 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 		return sb.ToString();
 	}
 
-	public string ToString(ChordAlteration alteration, int index) => ToString(alteration, index, true);
-	protected virtual string ToString(ChordAlteration alteration, int index, bool transform)
-		=> ToString(alteration.Type) + ToStringInAlteration(alteration.Degree, alteration, index, transform);
-	protected virtual string ToStringInAlteration(ChordDegree degree, ChordAlteration alteration, int alterationIndex, bool transform)
+	public string ToString(ChordAlteration alteration, int index)
 	{
-		if (degree is (7, ChordDegreeModifier.Major) && MajorSeventhDegreeModifier != null)
-			return MajorSeventhDegreeModifier;
+		if (alteration.Degree is (7, ChordDegreeModifier.Major) && MajorSeventhDegreeModifier != null)
+			return ToString(alteration.Type) + MajorSeventhDegreeModifier;
 
-		if (degree.Modifier == ChordDegreeModifier.None)
-			return degree.Value.ToString();
+		if (alteration.Degree.Modifier == ChordDegreeModifier.None)
+			return ToString(alteration.Type) + alteration.Degree.Value.ToString();
 
-		if (alterationIndex == 0 && alteration.Degree.Modifier is ChordDegreeModifier.Sharp or ChordDegreeModifier.Flat)
-			return degree.Value + ToString(degree.Modifier, false, transform);
+		if (index == 0 && alteration.Degree.Modifier is ChordDegreeModifier.Sharp or ChordDegreeModifier.Flat)
+			return ToString(alteration.Type) + alteration.Degree.Value + ToString(alteration.Degree.Modifier, false);
 		else
-			return ToString(degree.Modifier, false, transform) + degree.Value;
+			return ToString(alteration.Type) + ToString(alteration.Degree.Modifier, false) + alteration.Degree.Value;
 	}
 
-	protected virtual string ToString(ChordDegreeModifier modifier, bool inDocument, bool transform) => modifier switch
+	public string ToString(ChordQuality quality) => quality switch
+	{
+		ChordQuality.Major => MajorQuality,
+		ChordQuality.Minor => MinorQuality,
+		ChordQuality.Diminished => DiminishedQuality,
+		ChordQuality.Augmented => AugmentedQuality,
+		_ => string.Empty
+	};
+
+	public virtual string ToString(ChordAlterationType type) => type switch
+	{
+		ChordAlterationType.Default => DefaultAlteration,
+		ChordAlterationType.Addition => AdditionAlteration,
+		ChordAlterationType.Suspension => SuspensionAlteration,
+		_ => string.Empty
+	};
+
+	protected virtual string ToString(ChordDegreeModifier modifier, bool inDocument) => modifier switch
 	{
 		ChordDegreeModifier.None => inDocument ? DefaultDegreeModifier : TextDefaultDegreeModifier,
 		ChordDegreeModifier.Sharp => inDocument ? SharpDegreeModifier : TextSharpDegreeModifier,
@@ -269,23 +254,21 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 		_ => string.Empty
 	};
 
-	public AlterationFormat Format(ChordAlteration alteration, int index)
-		=> FormatAlteration(alteration, index, true);
-	protected virtual AlterationFormat FormatAlteration(ChordAlteration alteration, int index, bool transform)
+	public virtual ChordAlteration.AlterationFormat Format(ChordAlteration alteration, int index)
 	{
 		//Sonderfall: maj7
 		if (alteration.Type == ChordAlterationType.Default && alteration.Degree is (7, ChordDegreeModifier.Major))
 		{
 			if (MajorSeventhDegreeModifier != null)
-				return new(MajorSeventhDegreeModifier, string.Empty, string.Empty, false);
+				return new(alteration, MajorSeventhDegreeModifier, string.Empty, string.Empty, false);
 			else
-				return new(ToString(alteration.Type, transform), alteration.Degree.Value.ToString(), ToString(alteration.Degree.Modifier, true, transform), false);
+				return new(alteration, ToString(alteration.Type), alteration.Degree.Value.ToString(), ToString(alteration.Degree.Modifier, true), false);
 		}
 
-		var type = ToString(alteration.Type, transform);
+		var type = ToString(alteration.Type);
 		var modifierAfter = index == 0
 			&& alteration.Degree.Modifier is ChordDegreeModifier.Sharp or ChordDegreeModifier.Flat;
-		return new(ToString(alteration.Type, transform), alteration.Degree.Value.ToString(), ToString(alteration.Degree.Modifier, true, transform), modifierAfter);
+		return new(alteration, ToString(alteration.Type), alteration.Degree.Value.ToString(), ToString(alteration.Degree.Modifier, true), modifierAfter);
 	}
 
 	protected virtual string ToString(AccidentalType accidental, bool inDocument, bool transform) => accidental switch
@@ -298,10 +281,9 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 
 	public string ToString(Note note) => ToString(note, true);
 	protected virtual string ToString(Note note, bool transform) => Format(note, false, transform).ToString();
-	public NoteFormat Format(Note note) => Format(note, true);
-	protected virtual NoteFormat Format(Note note, bool transform) => Format(note, true, transform);
-
-	protected virtual NoteFormat Format(Note note, bool inDocument, bool transform)
+	public Note.NoteFormat Format(Note note) => Format(note, true);
+	protected virtual Note.NoteFormat Format(Note note, bool transform) => Format(note, true, transform);
+	protected virtual Note.NoteFormat Format(Note note, bool inDocument, bool transform)
 	{
 		if (transform && Transformation != null)
 			note = Transformation.TransformNote(note);
@@ -311,41 +293,47 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 			switch (GermanMode)
 			{
 				case GermanNoteMode.AlwaysH:
-					return new("H", ToString(note.Accidental, inDocument, transform), note.Accidental);
+					return new(note, "H", ToString(note.Accidental, inDocument, transform));
 				case GermanNoteMode.German:
 					if (note.Accidental == AccidentalType.Flat)
-						return new("B", null, AccidentalType.None);
+						return new(note, "B", null);
 					else
-						return new("H", ToString(note.Accidental, inDocument, transform), note.Accidental);
+						return new(note, "H", ToString(note.Accidental, inDocument, transform));
 				case GermanNoteMode.Descriptive:
 					if (note.Accidental == AccidentalType.Flat)
-						return new("B", ToString(note.Accidental, inDocument, transform), note.Accidental);
+						return new(note, "B", ToString(note.Accidental, inDocument, transform));
 					else
-						return new("H", ToString(note.Accidental, inDocument, transform), note.Accidental);
+						return new(note, "H", ToString(note.Accidental, inDocument, transform));
 				case GermanNoteMode.ExplicitB:
 					return note.Accidental switch
 					{
-						AccidentalType.None => new("B", inDocument ? ExplicitNaturalAccidentalModifier : TextExplicitNaturalAccidentalModifier, note.Accidental),
-						AccidentalType.Sharp => new("B", inDocument ? SharpAccidentalModifier : TextSharpAccidentalModifier, note.Accidental),
-						AccidentalType.Flat => new("B", inDocument ? FlatAccidentalModifier : TextFlatAccidentalModifier, note.Accidental),
+						AccidentalType.None => new(note, "B", inDocument ? ExplicitNaturalAccidentalModifier : TextExplicitNaturalAccidentalModifier),
+						AccidentalType.Sharp => new(note, "B", inDocument ? SharpAccidentalModifier : TextSharpAccidentalModifier),
+						AccidentalType.Flat => new(note, "B", inDocument ? FlatAccidentalModifier : TextFlatAccidentalModifier),
 						_ => throw new NotImplementedException("unknown accidental type"),
 					};
 				case GermanNoteMode.ExplicitH:
 					return note.Accidental switch
 					{
-						AccidentalType.None => new("H", inDocument ? ExplicitNaturalAccidentalModifier : TextExplicitNaturalAccidentalModifier, note.Accidental),
-						AccidentalType.Sharp => new("H", inDocument ? SharpAccidentalModifier : TextSharpAccidentalModifier, note.Accidental),
-						AccidentalType.Flat => new("H", inDocument ? FlatAccidentalModifier : TextFlatAccidentalModifier, note.Accidental),
+						AccidentalType.None => new(note, "H", inDocument ? ExplicitNaturalAccidentalModifier : TextExplicitNaturalAccidentalModifier),
+						AccidentalType.Sharp => new(note, "H", inDocument ? SharpAccidentalModifier : TextSharpAccidentalModifier),
+						AccidentalType.Flat => new(note, "H", inDocument ? FlatAccidentalModifier : TextFlatAccidentalModifier),
 						_ => throw new NotImplementedException("unknown accidental type"),
 					};
 
 			}
 
-		return new(note.Type.GetDisplayName(), ToString(note.Accidental, inDocument, transform), note.Accidental);
+		return new(note, note.Type.GetDisplayName(), ToString(note.Accidental, inDocument, transform));
+	}
+
+	public Fingering.FingeringFormat Format(Fingering fingering)
+	{
+		var positions = fingering.Positions.Select(p => p.ToString()).ToArray();
+		return new(fingering, positions, fingering.Positions.Any(p => p.Fret >= 10), fingering.EndsWithSeparator);
 	}
 
 	public string ToString(Fingering fingering)
-		=> string.Join(null, fingering.Positions.Select(p => p.ToString()));
+		=> Format(fingering).ToString();
 
 	public string ToString(NoteLength noteLength)
 	{
@@ -354,26 +342,23 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 		return string.Join(null, s) + new string(NoteLengthDot, noteLength.Dots);
 	}
 
-	public string ToString(Stroke stroke)
-		=> TextStrokeTypes[(int)stroke.Type];
-
-	public string ToString(RhythmPattern.Bar bar)
-		=> string.Join(null, bar.Select(ToString));
-
 	public string ToString(RhythmPattern pattern)
 		=> TextRhythmPatternLeftDelimiter
 		+ string.Join(TextRhythmPatternMiddleDelimiter, pattern.Select(ToString))
 		+ TextRhythmPatternRightDelimiter;
+	public RhythmPattern.RhythmPatternFormat Format(RhythmPattern pattern)
+		=> new(pattern,
+			RhythmPatternLeftDelimiter, RhythmPatternMiddleDelimiter, RhythmPatternRightDelimiter,
+			pattern.Select(Format).ToArray());
 
-	public RhythmPatternFormat Format(RhythmPattern pattern)
-		=> new(RhythmPatternLeftDelimiter, RhythmPatternMiddleDelimiter, RhythmPatternRightDelimiter, pattern.Select(Format).ToArray());
-
-	protected virtual RhythmPatternBarFormat Format(RhythmPattern.Bar bar)
+	public string ToString(RhythmPattern.Bar bar)
+		=> string.Join(null, bar.Select(ToString));
+	public RhythmPattern.Bar.BarFormat Format(RhythmPattern.Bar bar)
 	{
 		//Taktlänge
 		var noteLength = TryCalculateBarLength(bar) ?? NoteValue.Eighth;
 
-		var strokes = new StrokeFormat[bar.Count];
+		var strokes = new Stroke.StrokeFormat[bar.Count];
 		var nextLength = 1;
 		for (var i = bar.Count - 1; i >= 0; i--)
 		{
@@ -381,12 +366,12 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 			var strokeString = StrokeTypes[(int)stroke.Type];
 			if (stroke.Type is StrokeType.Hold or StrokeType.None)
 			{
-				strokes[i] = new(strokeString, stroke.Type);
+				strokes[i] = new(stroke, strokeString);
 				nextLength++;
 				continue;
 			}
 
-			strokes[i] = new(strokeString, stroke.Type)
+			strokes[i] = new(stroke, strokeString)
 			{
 				Length = nextLength,
 				NoteLength = NoteLength.Create(noteLength, nextLength),
@@ -396,6 +381,11 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 
 		return new(strokes);
 	}
+
+	public string ToString(Stroke stroke)
+		=> TextStrokeTypes[(int)stroke.Type];
+	public Stroke.StrokeFormat Format(Stroke stroke)
+		=> new(stroke, TextStrokeTypes[(int)stroke.Type]);
 
 	protected virtual NoteValue? TryCalculateBarLength(RhythmPattern.Bar bar)
 	{
@@ -411,15 +401,22 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 		return noteValue;
 	}
 
+	public string ToString(TabNote note) => ToString(note, true);
+	protected virtual string ToString(TabNote note, bool transform)
+		=> note.IsEmpty ? TabNote.EMPTY_CHAR.ToString()
+		: note.Value is null ? string.Join(string.Empty, note.Modifier.GetFlagsDisplayName())
+		: note.Modifier == TabNoteModifier.None ? note.Value.Value.ToString()
+		: $"{string.Join(string.Empty, note.Modifier.GetFlagsDisplayName())}{note.Value.Value}";
+
 	public string ToString(TabNote note, TabColumnWidth width)
 		=> ToString(note, width, true);
 	protected virtual string ToString(TabNote note, TabColumnWidth width, bool transform)
-		=> Format(note, width).ToString();
+		=> Format(note, ToString(note, transform), width).ToString();
 
-	public TabNoteFormat Format(TabNote note, TabColumnWidth width)
-		=> Format(note.ToString(), width);
-
-	protected virtual TabNoteFormat Format(string noteString, TabColumnWidth width)
+	public TabNote.TabNoteFormat Format(TabNote note, TabColumnWidth width) => Format(note, width, true);
+	protected virtual TabNote.TabNoteFormat Format(TabNote note, TabColumnWidth width, bool transform)
+		=> Format(note, ToString(note, transform), width);
+	protected virtual TabNote.TabNoteFormat Format(TabNote note, string noteString, TabColumnWidth width)
 	{
 		if (CondenseTabNotes)
 		{
@@ -427,53 +424,56 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 			if (suffix.Length == 0)
 				suffix = null;
 			noteString = noteString[0].ToString();
-			return new(noteString, width, Suffix: suffix);
+			return new(note, noteString, width, Suffix: suffix);
 		}
 
 		var padding = width.Max - noteString.Length;
 		if (padding > 0)
 			noteString = noteString + new string(' ', padding);
 
-		return new(noteString, width);
+		return new(note, noteString, width);
 	}
 
-	public TabNoteFormat[] FormatAll(IEnumerable<TabNote> notes)
+	public TabNote.TabNoteFormat[] FormatAll(IEnumerable<TabNote> notes) => FormatAll(notes, true);
+	protected virtual TabNote.TabNoteFormat[] FormatAll(IEnumerable<TabNote> notes, bool transform)
 	{
-		var noteStrings = TabColumnWidth.Calculate(notes.Select(n => n.ToString()), out var width);
-		return noteStrings.Select(n => Format(n, width)).ToArray();
+		var noteArray = notes.ToArray();
+		var noteStrings = TabColumnWidth.Calculate(noteArray.Select(ToString), out var width);
+		return noteArray.Zip(noteStrings).Select(n => Format(n.First, n.Second, width)).ToArray();
 	}
 
 	public string ToString(Note tuning, TabColumnWidth width) => ToString(tuning, width, true);
 	protected virtual string ToString(Note tuning, TabColumnWidth width, bool transform)
 		=> Format(tuning, width, transform).ToString();
 
-	public TabNoteFormat Format(Note tuning, TabColumnWidth width) => Format(tuning, width, true);
-	protected virtual TabNoteFormat Format(Note tuning, TabColumnWidth width, bool transform)
-		=> Format(ToString(tuning, transform), width, transform);
+	public TabNote.TabNoteTuningFormat Format(Note tuning, TabColumnWidth width) => Format(tuning, width, true);
+	protected virtual TabNote.TabNoteTuningFormat Format(Note tuning, TabColumnWidth width, bool transform)
+		=> Format(tuning, ToString(tuning, transform), width);
 
-	protected virtual TabNoteFormat Format(string tuningString, TabColumnWidth width, bool transform)
+	protected virtual TabNote.TabNoteTuningFormat Format(Note tuning, string tuningString, TabColumnWidth width)
 	{
 		if (CondenseTabNotes)
 		{
 			if (tuningString.Length <= 1)
-				return new(tuningString, width);
+				return new(tuning, tuningString, width);
 
 			var suffix = tuningString[1..];
 			tuningString = tuningString[0].ToString();
-			return new(tuningString, width, Suffix: suffix);
+			return new(tuning, tuningString, width, Suffix: suffix);
 		}
 
 		var padding = width.Max - tuningString.Length;
 		if (padding > 0)
 			tuningString = tuningString + new string(' ', padding);
 
-		return new(tuningString, width);
+		return new(tuning, tuningString, width);
 	}
 
-	public TabNoteFormat[] FormatAll(IEnumerable<Note> tunings)
+	public TabNote.TabNoteTuningFormat[] FormatAll(IEnumerable<Note> tunings)
 	{
-		var tuningStrings = TabColumnWidth.Calculate(tunings.Select(n => n.ToString()), out var width);
-		return tuningStrings.Select(n => Format(n, width)).ToArray();
+		var tuningArray = tunings.ToArray();
+		var tuningStrings = TabColumnWidth.Calculate(tuningArray.Select(ToString), out var width);
+		return tuningArray.Zip(tuningStrings).Select(n => Format(n.First, n.Second, width)).ToArray();
 	}
 
 

@@ -94,11 +94,14 @@ public enum ChordAlterationType
 
 public record struct ChordAlteration(ChordAlterationType Type, ChordDegree Degree)
 {
-    public override string ToString()
-        => $"{Type.GetDisplayName()}{Degree}";
+	public AlterationFormat Format(int index, ISheetFormatter? formatter = null)
+		=> (formatter ?? DefaultSheetFormatter.Instance).Format(this, index);
 
-    public string ToString(int index, ISheetFormatter? formatter)
-        => formatter?.ToString(this, index) ?? ToString();
+	public override string ToString()
+		=> ToString(0, null);
+
+    public string ToString(int index = 0, ISheetFormatter? formatter = null)
+		=> (formatter ?? DefaultSheetFormatter.Instance).ToString(this, index);
 
     public static int TryRead(ReadOnlySpan<char> s, out ChordAlteration alteration)
     {
@@ -118,4 +121,10 @@ public record struct ChordAlteration(ChordAlterationType Type, ChordDegree Degre
         alteration = new ChordAlteration(type, degree);
         return offset;
     }
+
+	public readonly record struct AlterationFormat(ChordAlteration Alteration,
+		string Type, string Degree, string Modifier, bool ModifierAfter)
+	{
+		public override string ToString() => Type + (ModifierAfter ? Degree + Modifier : Modifier + Degree);
+	}
 }

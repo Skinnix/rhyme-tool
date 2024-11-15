@@ -32,7 +32,7 @@ public abstract class SheetDisplayLineBuilder<TElement, TLine> : SheetDisplayLin
 
 	public virtual void Append(TElement element, ISheetFormatter? formatter = null)
 	{
-		var length = element.GetLength(formatter);
+		var length = element.Length;
 		elements.Add(element);
 		element.DisplayOffset = currentLength;
 		element.DisplayLength = length;

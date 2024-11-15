@@ -90,11 +90,9 @@ public class RhythmPattern : IReadOnlyList<RhythmPattern.Bar>
 	}
 
 	public RhythmPatternFormat Format(ISheetFormatter? formatter = null)
-		=> formatter?.Format(this)
-		?? new(LEFT_DELIMITER.ToString(), MIDDLE_DELIMITER.ToString(), RIGHT_DELIMITER.ToString(), bars.Select(b => b.Format()).ToArray());
+		=> (formatter ?? DefaultSheetFormatter.Instance).Format(this);
 
 	public override string ToString() => ToString(null);
-
 	public string ToString(ISheetFormatter? formatter)
 		=> formatter?.ToString(this)
 		?? $"{LEFT_DELIMITER}{string.Join(null, bars)}{RIGHT_DELIMITER}";
@@ -120,11 +118,24 @@ public class RhythmPattern : IReadOnlyList<RhythmPattern.Bar>
 		public IEnumerator<Stroke> GetEnumerator() => strokes.GetEnumerator();
 		IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-		public RhythmPatternBarFormat Format()
-			=> new(strokes.Select(s => new StrokeFormat(s.ToString(), s.Type)).ToArray());
+		public BarFormat Format(ISheetFormatter? formatter = null)
+			=> (formatter ?? DefaultSheetFormatter.Instance).Format(this);
 
-		public override string ToString()
+		public override string ToString() => ToString(null);
+		public string ToString(ISheetFormatter? formatter)
 			=> string.Join(null, strokes);
+
+		public readonly record struct BarFormat(Stroke.StrokeFormat[] Strokes)
+		{
+			public override string ToString() => string.Join(null, Strokes);
+		}
+	}
+
+	public readonly record struct RhythmPatternFormat(RhythmPattern Pattern,
+		string LeftDelimiter, string MiddleDelimiter, string RightDelimiter,
+		Bar.BarFormat[] Bars)
+	{
+		public override string ToString() => LeftDelimiter + string.Join(MiddleDelimiter, Bars) + RightDelimiter;
 	}
 }
 

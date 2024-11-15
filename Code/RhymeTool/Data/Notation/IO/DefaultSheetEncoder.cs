@@ -18,10 +18,7 @@ public class DefaultSheetEncoder(ISheetBuilderFormatter? formatter = null) : She
 			foreach (var displayLine in displayLines)
 			{
 				foreach (var element in displayLine.GetElements())
-				{
-					var elementContent = element.ToString(Formatter) ?? string.Empty;
-					yield return elementContent;
-				}
+					yield return element.ToString();
 
 				yield return null;
 			}

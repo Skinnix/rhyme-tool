@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Runtime.Serialization;
 using System.Text;
@@ -24,9 +25,12 @@ public enum ChordQuality : byte
 public sealed record Chord(Note Root, ChordQuality Quality, string OriginalText)
 {
     public Note? Bass { get; init; }
-    public IReadOnlyList<ChordAlteration> Alterations { get; init; } = Array.Empty<ChordAlteration>();
+    public IReadOnlyList<ChordAlteration> Alterations { get; init; } = [];
 
-    public override string ToString()
+	public ChordFormat Format(ISheetFormatter? formatter)
+		=> (formatter ?? DefaultSheetFormatter.Instance).Format(this);
+
+	public override string ToString()
     {
         var sb = new StringBuilder();
         sb.Append(Root);
@@ -71,24 +75,6 @@ public sealed record Chord(Note Root, ChordQuality Quality, string OriginalText)
         var qualityLength = EnumExtensions.TryRead(s[offset..], out ChordQuality quality);
         if (qualityLength != -1)
             offset += qualityLength;
-
-        ////Direkt Bassnote?
-        //if (offset < s.Length && s[offset] == '/')
-        //{
-        //	//Akkord endet auf jeden Fall hier, weil erste Alteration keinen Slash haben kann
-        //	var bassNoteLength = Note.TryRead(s[(offset + 1)..], out var bassNoteRead);
-        //	if (bassNoteLength == -1)
-        //	{
-        //		chord = new Chord(note, quality);
-        //		return offset;
-        //	}
-        //	else
-        //	{
-        //		offset += bassNoteLength + 1;
-        //		chord = new Chord(note, quality) { Bass = bassNoteRead };
-        //		return offset;
-        //	}
-        //}
 
         //Slash als nächstes?
         var slashRead = false;
@@ -152,5 +138,22 @@ public sealed record Chord(Note Root, ChordQuality Quality, string OriginalText)
             Alterations = alterations
         };
         return offset;
-    }
+	}
+	public readonly record struct ChordFormat(Chord Chord,
+		Note.NoteFormat Root, string Quality, ChordAlteration.AlterationFormat[] Alterations, Note.NoteFormat? Bass = null)
+	{
+		public override string ToString()
+		{
+			var sb = new StringBuilder();
+			sb.Append(Root);
+			sb.Append(Quality);
+
+			sb.Append(string.Join('/', Alterations));
+
+			if (Bass is not null)
+				sb.Append('/').Append(Bass);
+
+			return sb.ToString();
+		}
+	}
 }

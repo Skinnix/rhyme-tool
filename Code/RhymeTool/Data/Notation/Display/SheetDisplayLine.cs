@@ -14,7 +14,7 @@ public abstract record SheetDisplayLine(int Id)
 		foreach (var element in GetElements())
 		{
 			//Berechne Länge des Elements
-			var length = element.GetLength(formatter);
+			var length = element.Length;
 
 			//Berechne Offsets
 			var startOffset = currentOffset;

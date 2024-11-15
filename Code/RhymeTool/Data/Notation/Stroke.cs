@@ -35,9 +35,17 @@ public enum StrokeType
 
 public readonly record struct Stroke(StrokeType Type)
 {
+	public StrokeFormat Format(ISheetFormatter? formatter)
+		=> (formatter ?? DefaultSheetFormatter.Instance).Format(this);
+
 	public override string ToString() => ToString(null);
 
 	public string ToString(ISheetFormatter? formatter)
-		=> formatter?.ToString(this)
-		?? Type.GetDisplayName();
+		=> (formatter ?? DefaultSheetFormatter.Instance).ToString(this);
+
+	public readonly record struct StrokeFormat(Stroke Stroke,
+		string Type, int? Length = null, NoteLength? NoteLength = default)
+	{
+		public override string ToString() => Type;
+	}
 }

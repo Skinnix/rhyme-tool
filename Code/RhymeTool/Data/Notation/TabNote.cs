@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using System.Runtime.Serialization;
 
 namespace Skinnix.RhymeTool.Data.Notation;
 
@@ -63,19 +64,6 @@ public readonly record struct TabNote
 		this.Modifier = modifier;
 	}
 
-	public TabNote TriggerModifier(TabNoteModifier modifier)
-		=> new(Value, Modifier ^ modifier);
-
-	public override string ToString()
-		=> IsEmpty ? EMPTY_CHAR.ToString()
-		: Value is null ? string.Join(string.Empty, Modifier.GetFlagsDisplayName())
-		: Modifier == TabNoteModifier.None ? Value.Value.ToString()
-		: $"{string.Join(string.Empty, Modifier.GetFlagsDisplayName())}{Value.Value}";
-
-	public string ToString(ISheetFormatter? formatter, TabColumnWidth width)
-		=> formatter?.ToString(this, width)
-		?? ToString();
-
 	public static int TryRead(ReadOnlySpan<char> s, out TabNote note, int maxNumberLength = 2, ISheetEditorFormatter? formatter = null)
 	{
 		if (formatter is not null)
@@ -105,5 +93,51 @@ public readonly record struct TabNote
 		//Keine Zahl gelesen
 		note = new TabNote(null, modifier);
 		return modifierLength;
+	}
+
+	public TabNote TriggerModifier(TabNoteModifier modifier)
+		=> new(Value, Modifier ^ modifier);
+
+	public override string ToString()
+		=> IsEmpty ? EMPTY_CHAR.ToString()
+		: Value is null ? string.Join(string.Empty, Modifier.GetFlagsDisplayName())
+		: Modifier == TabNoteModifier.None ? Value.Value.ToString()
+		: $"{string.Join(string.Empty, Modifier.GetFlagsDisplayName())}{Value.Value}";
+
+	public string ToString(ISheetFormatter? formatter, TabColumnWidth width)
+		=> formatter?.ToString(this, width)
+		?? ToString();
+
+	public TabNoteFormat Format(TabColumnWidth width, ISheetFormatter? formatter = null)
+		=> (formatter ?? DefaultSheetFormatter.Instance).Format(this, width);
+
+	public readonly record struct SimpleTabNoteFormat(string Text, TabColumnWidth Width,
+		string? Prefix = null, string? Suffix = null)
+	{
+		public int TotalTextLength => Text.Length + (Prefix?.Length ?? 0) + (Suffix?.Length ?? 0);
+
+		public override string ToString() => Text;
+	}
+
+	public readonly record struct TabNoteFormat(TabNote Note,
+		string Text, TabColumnWidth Width, string? Prefix = null, string? Suffix = null)
+	{
+		public int TotalTextLength => Text.Length + (Prefix?.Length ?? 0) + (Suffix?.Length ?? 0);
+
+		public override string ToString() => Text;
+
+		public static implicit operator SimpleTabNoteFormat(TabNoteFormat format)
+			=> new(format.Text, format.Width, format.Prefix, format.Suffix);
+	}
+
+	public readonly record struct TabNoteTuningFormat(Note Note,
+		string Text, TabColumnWidth Width, string? Prefix = null, string? Suffix = null)
+	{
+		public int TotalTextLength => Text.Length + (Prefix?.Length ?? 0) + (Suffix?.Length ?? 0);
+
+		public override string ToString() => Text;
+
+		public static implicit operator SimpleTabNoteFormat(TabNoteTuningFormat format)
+			=> new(format.Text, format.Width, format.Prefix, format.Suffix);
 	}
 }
