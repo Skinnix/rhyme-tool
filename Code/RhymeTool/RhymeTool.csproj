@@ -1,12 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<TargetFramework>net8.0</TargetFramework>
+		<TargetFramework>net9.0</TargetFramework>
 		<Nullable>enable</Nullable>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<AssemblyName>Skinnix.RhymeTool</AssemblyName>
 		<RootNamespace>Skinnix.RhymeTool</RootNamespace>
 	</PropertyGroup>
+
+	<Import Project="..\Common.targets" />
 
 	<PropertyGroup>
 		<OutputPath>..\..\Build\$(Configuration)\</OutputPath>

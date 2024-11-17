@@ -1,0 +1,7 @@
+<Project>
+	<Import Project="Version.props" />
+
+	<Target Name="VersionMessage" AfterTargets="Build">
+		<Message Importance="high" Text="Version: $(BaseVersion)" />
+	</Target>
+</Project>

@@ -9,6 +9,7 @@
 @using Skinnix.RhymeTool.Client.Services.Files
 @using Skinnix.RhymeTool.Data.Notation
 @using Skinnix.RhymeTool.Data.Notation.Display
+@using Skinnix.RhymeTool.Update
 
 @inject IDocumentFileService fileService
 @inject IDocumentService documentService
@@ -135,6 +136,8 @@ else if (shouldSelectWorkingDirectory)
 #else
         false;
 #endif
+
+    private IUpdateService
 
     protected override async Task OnParametersSetAsync()
     {

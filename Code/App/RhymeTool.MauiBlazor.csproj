@@ -45,6 +45,8 @@
 		<OutputPath>..\..\Build\$(Configuration)\</OutputPath>
 	</PropertyGroup>
 
+	<Import Project="..\Common.targets" />
+
 	<ItemGroup>
 		<!-- App Icon -->
 		<MauiIcon Include="Resources\AppIcon\appicon.svg" ForegroundFile="Resources\AppIcon\appiconfg.svg" Color="#512BD4" />

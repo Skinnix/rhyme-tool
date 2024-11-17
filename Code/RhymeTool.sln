@@ -10,6 +10,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Common", "Common", "{E5D15BFB-63FB-4C5D-92A8-249F0325F37F}"
 	ProjectSection(SolutionItems) = preProject
 		.editorconfig = .editorconfig
+		Version.props = Version.props
+		Common.targets = Common.targets
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RhymeTool", "RhymeTool\RhymeTool.csproj", "{1A32AB1B-ACDE-4E37-883D-A3F3CF71DA24}"

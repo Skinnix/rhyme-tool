@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
 		<AssemblyName>Skinnix.RhymeTool.Server</AssemblyName>
@@ -13,6 +13,8 @@
 		<OutputPath>..\..\Build\$(Configuration)\</OutputPath>
 	</PropertyGroup>
 
+	<Import Project="..\Common.targets" />
+	
 	<PropertyGroup Condition="'$(Configuration)'=='Server Side'">
 		<DefineConstants>$(DefineConstants)TRACE;DEBUG</DefineConstants>
 	</PropertyGroup>
