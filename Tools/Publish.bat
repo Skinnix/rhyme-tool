@@ -23,12 +23,19 @@ dotnet restore App\RhymeTool.MauiBlazor.csproj
 dotnet publish App\RhymeTool.MauiBlazor.csproj -c Release -f net9.0-android
 dotnet publish App\RhymeTool.MauiBlazor.csproj -c Release -f net9.0-windows10.0.19041.0
 
-copy /B /Y ..\Build\Release\net9.0-android\Net.Skinnix.RhymeTool.MauiBlazor-Signed.apk ..\Build\Publish\wwwroot\update\%version%\app.apk
-tar -a -c -f ..\Build\Publish\wwwroot\update\%version%\app.zip -C ..\Build\Release\net9.0-windows10.0.19041.0\win10-x64 *
+if not exist ..\Build\Publish\wwwroot\update\version\%version% mkdir ..\Build\Publish\wwwroot\update\version\%version%
+copy /B /Y ..\Build\Release\net9.0-android\Net.Skinnix.RhymeTool.MauiBlazor-Signed.apk ..\Build\Publish\wwwroot\update\version\%version%\app.apk
+tar -a -c -f ..\Build\Publish\wwwroot\update\version\%version%\app.zip -C ..\Build\Release\net9.0-windows10.0.19041.0\win10-x64 .
 
-echo windows=app.zip > ..\Build\Publish\wwwroot\update\newest
-echo android=app.apk >> ..\Build\Publish\wwwroot\update\newest
-echo %version% >> ..\Build\Publish\wwwroot\update\newest
+echo [Platform:windows]>> ..\Build\Publish\wwwroot\update\check
+echo Label=Windows>> ..\Build\Publish\wwwroot\update\check
+echo Version=%version%>> ..\Build\Publish\wwwroot\update\check
+echo URL=app.zip>> ..\Build\Publish\wwwroot\update\check
+echo.>> ..\Build\Publish\wwwroot\update\check
+echo [Platform:android]>> ..\Build\Publish\wwwroot\update\check
+echo Label=Android>> ..\Build\Publish\wwwroot\update\check
+echo Version=%version%>> ..\Build\Publish\wwwroot\update\check
+echo URL=app.apk>> ..\Build\Publish\wwwroot\update\check
 
 pause
 

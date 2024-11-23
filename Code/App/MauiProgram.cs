@@ -4,9 +4,9 @@ using Skinnix.RhymeTool.Client;
 using Skinnix.RhymeTool.Client.Services;
 using Skinnix.RhymeTool.Client.Services.Files;
 using Skinnix.RhymeTool.Client.Services.Preferences;
+using Skinnix.RhymeTool.Client.Updating;
 using Skinnix.RhymeTool.MauiBlazor.Services;
 using Skinnix.RhymeTool.MauiBlazor.Updating;
-using Skinnix.RhymeTool.Updating;
 
 namespace Skinnix.RhymeTool.MauiBlazor;
 
@@ -28,14 +28,17 @@ public static class MauiProgram
 		//MAUI-Services
 		builder.Services.AddSingleton<IMauiUiService, MauiUiService>();
 
+		//HTTP-Client
+		builder.Services.AddScoped(_ => new HttpClient());
+
 		//Update-Service
-		builder.Services.AddSingleton<IUpdateService, MauiUpdateService>();
+		builder.Services.AddScoped<IUpdateService, MauiUpdateService>();
 		builder.Services.Configure<UpdateOptions>(options =>
 		{
 #if WINDOWS
-			options.PlatformName = "windows";
+			options.PlatformKey = "windows";
 #elif ANDROID
-			options.PlatformName = "android";
+			options.PlatformKey = "android";
 #endif
 		});
 

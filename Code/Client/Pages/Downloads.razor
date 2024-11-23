@@ -1,0 +1,74 @@
+﻿@page "/downloads"
+@page "/chords/downloads"
+
+@using Skinnix.RhymeTool.Client.Services
+@using Skinnix.RhymeTool.Client.Updating
+
+@layout FullscreenLayout
+
+@inject IDialogService dialogService
+@inject IUpdateService updateService
+
+<SectionContent SectionName="NavbarMain">
+    <a class="btn btn-dark" href="/chords">
+        <i class="fas fa-arrow-left"></i>
+    </a>
+
+    <div class="me-auto">
+        Downloads
+    </div>
+</SectionContent>
+
+@if (downloadsResult is null)
+{
+    <div class="spinner-border" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+
+    @:Lade...
+}
+else if (!downloadsResult.CheckSuccess)
+{
+    <div class="alert alert-danger" role="alert">
+        <h4 class="alert-heading">Fehler</h4>
+        <p>@downloadsResult.ErrorMessage</p>
+    </div>
+}
+else
+{
+    <h2>Downloads</h2>
+    <div class="list-group">
+        @foreach (var download in downloadsResult.DownloadOptions)
+        {
+            if (download.DownloadUrl is not null)
+            {
+                <a href="@download.DownloadUrl" download class="list-group-item list-group-item-action">@download.Label (@download.Version)</a>
+            }
+            else
+            {
+                <button class="list-group-item list-group-item-action" @onclick="download.StartDownload">@download.Label (@download.Version)</button>
+            }
+        }
+    </div>
+}
+
+@code {
+    public static string GetUrl() => "/chords/downloads";
+
+    private IUpdateService.ICheckDownloadsResult? downloadsResult;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await base.OnParametersSetAsync();
+
+        if (updateService.IsDownloadAvailable)
+            _ = CheckDownloads();
+    }
+
+    private async Task CheckDownloads()
+    {
+        downloadsResult = null;
+        downloadsResult = await updateService.CheckDownloadsAsync();
+        StateHasChanged();
+    }
+}

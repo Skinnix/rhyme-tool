@@ -1181,4 +1181,14 @@ var ActionQueue = (function () {
     };
     return ActionQueue;
 }());
+function downloadFile(url, fileName) {
+    var _a;
+    var a = document.createElement('a');
+    if (!fileName) {
+        fileName = (_a = url.split('/').pop()) !== null && _a !== void 0 ? _a : null;
+    }
+    if (fileName)
+        a.download = fileName;
+    a.click();
+}
 //# sourceMappingURL=app.js.map

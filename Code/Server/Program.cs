@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.Hosting;
 using Skinnix.RhymeTool.Client;
 using Skinnix.RhymeTool.Client.Services;
+using Skinnix.RhymeTool.Client.Updating;
 using Skinnix.RhymeTool.Data.Notation;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -20,6 +21,9 @@ builder.Services.AddServerSideBlazor()
 	});
 
 builder.Services.AddRhymeToolClient();
+
+//Update-Service
+builder.Services.AddScoped<IUpdateService, UpdateService>();
 
 #if DEBUG
 builder.Services.AddSingleton<HttpClient>(services => new HttpClient { BaseAddress = new Uri("https://localhost:7105/chords/") });

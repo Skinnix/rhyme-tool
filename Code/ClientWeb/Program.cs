@@ -5,6 +5,7 @@ using Skinnix.RhymeTool;
 using Skinnix.RhymeTool.Client;
 using Skinnix.RhymeTool.Client.Services;
 using Skinnix.RhymeTool.Client.Services.Files;
+using Skinnix.RhymeTool.Client.Updating;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
@@ -14,6 +15,9 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 Console.WriteLine(builder.HostEnvironment.BaseAddress);
 
 builder.Services.AddRhymeToolClient();
+
+//Update-Service
+builder.Services.AddScoped<IUpdateService, UpdateService>();
 
 #if DEBUG
 builder.Services.AddScoped<HttpClient>(services => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });

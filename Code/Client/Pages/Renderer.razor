@@ -204,8 +204,16 @@
     {
         if (resizer is not null)
         {
-            await resizer.InvokeVoidAsync("destroy");
-            await resizer.DisposeAsync();
+            try
+            {
+                await resizer.InvokeVoidAsync("destroy");
+                await resizer.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+                //Ignore
+            }
+
             resizer = null;
         }
     }

@@ -7,15 +7,15 @@
 @using Skinnix.RhymeTool.Client.Components.Rendering
 @using Skinnix.RhymeTool.Client.Services
 @using Skinnix.RhymeTool.Client.Services.Files
+@using Skinnix.RhymeTool.Client.Updating
 @using Skinnix.RhymeTool.Data.Notation
 @using Skinnix.RhymeTool.Data.Notation.Display
-@using Skinnix.RhymeTool.Update
 
 @inject IDocumentFileService fileService
 @inject IDocumentService documentService
 @inject IDialogService dialogService
-
 @inject NavigationManager navigation
+@inject IUpdateService updateService
 
 <PageTitle>Index</PageTitle>
 
@@ -27,6 +27,24 @@
     <div class="navbar-brand me-auto">
         Akkorde
     </div>
+
+    @if (updateResult is not null)
+    {
+        if (!updateResult.CheckSuccess)
+        {
+            <button class="btn btn-outline-light fa-solid fa-cloud-arrow-down position-relative" tooltip="@updateResult.ErrorMessage"
+                    @onclick="@(_ => dialogService.ShowErrorAsync(updateResult.ErrorMessage, "Update"))">
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger fa-solid fa-triangle-exclamation">
+                    <span class="visually-hidden">@updateResult.ErrorMessage</span>
+                </span>
+            </button>
+        }
+        else if (updateResult.IsUpdateAvailable)
+        {
+            <button class="btn btn-outline-light fa-solid fa-cloud-arrow-down" tooltip="Update verfügbar" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Update verfügbar" @onclick="updateResult.Download.StartDownload">
+            </button>
+        }
+    }
 </SectionContent>
 
 <aside class="offcanvas offcanvas-start d-flex" data-bs-scroll="true" id="mainMenu">
@@ -36,6 +54,18 @@
     </div>
     <div class="offcanvas-body d-flex flex-column">
         <div class="list-group flex-fill d-table">
+            @if (updateService.IsDownloadAvailable)
+            {
+                <button class="list-group-item list-group-item-action d-table-row" @onclick="() => navigation.NavigateTo(Downloads.GetUrl())">
+                    <span class="d-table-cell">
+                        <i class="fa-solid fa-download"></i>&nbsp;
+                    </span>
+                    <span class="d-table-cell">
+                        Download
+                    </span>
+                </button>
+            }
+
             <button class="list-group-item list-group-item-action d-table-row" @onclick="() => navigation.NavigateTo(Preferences.GetUrl())">
                 <span class="d-table-cell">
                     <i class="fa-solid fa-gear"></i>&nbsp;
@@ -130,14 +160,14 @@ else if (shouldSelectWorkingDirectory)
     private bool waitingForDirectoryPermission;
     private bool shouldSelectWorkingDirectory;
 
+    private IUpdateService.ICheckUpdateResult? updateResult;
+
     private bool isDebug = 
 #if DEBUG
-        true;
+    true;
 #else
         false;
 #endif
-
-    private IUpdateService
 
     protected override async Task OnParametersSetAsync()
     {
@@ -162,6 +192,8 @@ else if (shouldSelectWorkingDirectory)
 
             StateHasChanged();
         }
+
+        _ = CheckForUpdates();
     }
 
     private async Task SelectWorkingDirectory()
@@ -286,5 +318,12 @@ else if (shouldSelectWorkingDirectory)
 
         //Zeige an
         navigation.NavigateTo(Renderer.GetUrl(documentSource));
+    }
+
+    private async Task CheckForUpdates()
+    {
+        updateResult = null;
+        updateResult = await updateService.CheckUpdatesAsync();
+        StateHasChanged();
     }
 }
