@@ -3,5 +3,6 @@
 
 	<Target Name="VersionMessage" AfterTargets="Build">
 		<Message Importance="high" Text="Version: $(BaseVersion)" />
+		<Message Importance="high" Text="AssemblyVersion: $(AssemblyVersion)" />
 	</Target>
 </Project>

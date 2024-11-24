@@ -9,7 +9,7 @@ using Skinnix.RhymeTool.Client.Updating;
 
 namespace Skinnix.RhymeTool.MauiBlazor.Updating;
 
-internal class MauiUpdateService(IOptions<UpdateOptions> options, HttpClient httpClient) : UpdateServiceBase(options, httpClient, false)
+internal class MauiUpdateService(IOptions<UpdateOptions> options, HttpClient httpClient) : UpdateServiceBase(options, httpClient, true, false)
 {
 	protected override Task StartDownload(IUpdateService.IDownloadElement element, string url)
 		=> Browser.OpenAsync(url);

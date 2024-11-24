@@ -32,7 +32,7 @@ public record AppVersionInfoData
 				|| !Version.TryParse(versionString, out var version))
 				continue;
 
-			platforms[platformKey] = new PlatformInfo(label, version, url);
+			platforms[platformKey.ToLower()] = new PlatformInfo(label, version, url);
 		}
 
 		if (platforms.Count == 0)

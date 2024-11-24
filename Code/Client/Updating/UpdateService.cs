@@ -14,6 +14,10 @@ namespace Skinnix.RhymeTool.Client.Updating;
 
 public interface IUpdateService
 {
+	Version? CurrentVersion { get; }
+	string? CurrentVersionString { get; }
+
+	bool IsUpdateAvailable { get; }
 	bool IsDownloadAvailable { get; }
 
 	Task<ICheckUpdateResult> CheckUpdatesAsync();
@@ -56,10 +60,12 @@ public interface IUpdateService
 	}
 }
 
-public abstract class UpdateServiceBase(IOptions<UpdateOptions> options, HttpClient httpClient, bool isDownloadAvailable) : IUpdateService
+public abstract class UpdateServiceBase(IOptions<UpdateOptions> options, HttpClient httpClient, bool isUpdateAvailable, bool isDownloadAvailable) : IUpdateService
 {
-	private readonly Version? currentVersion = Assembly.GetExecutingAssembly().GetName().Version;
+	public Version? CurrentVersion { get; } = Assembly.GetExecutingAssembly().GetName().Version;
+	public string? CurrentVersionString => CurrentVersion is null ? null : "Version " + CurrentVersion?.ToString(2);
 
+	public bool IsUpdateAvailable { get; } = isUpdateAvailable;
 	public bool IsDownloadAvailable { get; } = isDownloadAvailable;
 
 	public virtual async Task<IUpdateService.ICheckUpdateResult> CheckUpdatesAsync()
@@ -67,35 +73,35 @@ public abstract class UpdateServiceBase(IOptions<UpdateOptions> options, HttpCli
 		try
 		{
 			AppVersionInfoData updateData;
-			var checkUrl = options.Value.UpdateBaseUrl + string.Format(options.Value.UpdateVersionUrl, currentVersion);
+			var checkUrl = options.Value.UpdateBaseUrl + string.Format(options.Value.UpdateVersionUrl, CurrentVersion);
 			using (var infoStream = await httpClient.GetStreamAsync(checkUrl))
 			{
 				using var reader = new StreamReader(infoStream);
 				var data = await IniFile.ReadAsync(reader, StringComparison.OrdinalIgnoreCase);
 				if (!AppVersionInfoData.TryRead(data, out updateData!))
-					return new CheckUpdateResult.Error("Leere oder ungültige Antwort", currentVersion);
+					return new CheckUpdateResult.Error("Leere oder ungültige Antwort", CurrentVersion);
 			}
 
 			if (!updateData.Platforms.TryGetValue(options.Value.PlatformKey, out var platformInfo))
-				return new CheckUpdateResult.Error("Plattform nicht gefunden", currentVersion);
+				return new CheckUpdateResult.Error("Plattform nicht gefunden", CurrentVersion);
 
-			if (currentVersion is not null && currentVersion >= platformInfo.Version)
-				return new CheckUpdateResult.NoUpdate(currentVersion);
+			if (CurrentVersion is not null && CurrentVersion >= platformInfo.Version)
+				return new CheckUpdateResult.NoUpdate(CurrentVersion);
 
-			var downloadUrl = options.Value.UpdateBaseUrl + string.Format(options.Value.UpdateDownloadUrl, platformInfo.Version, platformInfo.Url);
-			return new CheckUpdateResult.UpdateAvailable(this, currentVersion, platformInfo.Version, platformInfo.Label, downloadUrl);
+			var downloadUrl = options.Value.UpdateBaseUrl + platformInfo.Url;
+			return new CheckUpdateResult.UpdateAvailable(this, CurrentVersion, platformInfo.Version, platformInfo.Label, downloadUrl);
 		}
 		catch (HttpRequestException)
 		{
-			return new CheckUpdateResult.Error("Keine Serververbindung", currentVersion);
+			return new CheckUpdateResult.Error("Keine Serververbindung", CurrentVersion);
 		}
 		catch (TaskCanceledException)
 		{
-			return new CheckUpdateResult.Error("Serververbindung abgebrochen", currentVersion);
+			return new CheckUpdateResult.Error("Serververbindung abgebrochen", CurrentVersion);
 		}
 		catch (Exception ex)
 		{
-			return new CheckUpdateResult.Error("Unbekannter Fehler: " + ex.Message, currentVersion);
+			return new CheckUpdateResult.Error("Unbekannter Fehler: " + ex.Message, CurrentVersion);
 		}
 	}
 
@@ -104,7 +110,7 @@ public abstract class UpdateServiceBase(IOptions<UpdateOptions> options, HttpCli
 		try
 		{
 			AppVersionInfoData updateData;
-			var checkUrl = options.Value.UpdateBaseUrl + string.Format(options.Value.UpdateVersionUrl, currentVersion);
+			var checkUrl = options.Value.UpdateBaseUrl + string.Format(options.Value.UpdateVersionUrl, CurrentVersion);
 			using (var infoStream = await httpClient.GetStreamAsync(checkUrl))
 			{
 				using var reader = new StreamReader(infoStream);
@@ -167,7 +173,7 @@ public abstract class UpdateServiceBase(IOptions<UpdateOptions> options, HttpCli
 	}
 }
 
-public class UpdateService(IOptions<UpdateOptions> options, HttpClient httpClient, IJSRuntime js) : UpdateServiceBase(options, httpClient, true)
+public class UpdateService(IOptions<UpdateOptions> options, HttpClient httpClient, IJSRuntime js) : UpdateServiceBase(options, httpClient, false, true)
 {
 	protected override Task StartDownload(IUpdateService.IDownloadElement element, string url)
 		=> js.InvokeVoidAsync("downloadFile", url, element.Label + Path.GetExtension(url)).AsTask();

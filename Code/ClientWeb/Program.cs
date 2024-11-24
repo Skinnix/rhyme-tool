@@ -16,11 +16,13 @@ Console.WriteLine(builder.HostEnvironment.BaseAddress);
 
 builder.Services.AddRhymeToolClient();
 
+//HTTP-Client
+builder.Services.AddScoped(_ => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
+
 //Update-Service
 builder.Services.AddScoped<IUpdateService, UpdateService>();
 
 #if DEBUG
-builder.Services.AddScoped<HttpClient>(services => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 builder.Services.AddScoped<IDebugDataService, WebDebugDataService>();
 #endif
 

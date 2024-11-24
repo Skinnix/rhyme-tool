@@ -32,7 +32,7 @@
     {
         if (!updateResult.CheckSuccess)
         {
-            <button class="btn btn-outline-light fa-solid fa-cloud-arrow-down position-relative" tooltip="@updateResult.ErrorMessage"
+            <button class="btn btn-outline-light fa-solid fa-cloud-arrow-down position-relative" title="@updateResult.ErrorMessage" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="@updateResult.ErrorMessage"
                     @onclick="@(_ => dialogService.ShowErrorAsync(updateResult.ErrorMessage, "Update"))">
                 <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger fa-solid fa-triangle-exclamation">
                     <span class="visually-hidden">@updateResult.ErrorMessage</span>
@@ -41,7 +41,7 @@
         }
         else if (updateResult.IsUpdateAvailable)
         {
-            <button class="btn btn-outline-light fa-solid fa-cloud-arrow-down" tooltip="Update verfügbar" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Update verfügbar" @onclick="updateResult.Download.StartDownload">
+            <button class="btn btn-outline-light fa-solid fa-cloud-arrow-down" title="Update verfügbar" data-bs-toggle="tooltip" data-bs-placement="top" data-bs-title="Update verfügbar" @onclick="updateResult.Download.StartDownload">
             </button>
         }
     }
@@ -50,7 +50,6 @@
 <aside class="offcanvas offcanvas-start d-flex" data-bs-scroll="true" id="mainMenu">
     <div class="offcanvas-header">
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#mainMenu" aria-label="Close"></button>
-        <SectionOutlet SectionName="MainMenuHeader" />
     </div>
     <div class="offcanvas-body d-flex flex-column">
         <div class="list-group flex-fill d-table">
@@ -75,6 +74,11 @@
                 </span>
             </button>
         </div>
+
+        @if (updateService.CurrentVersionString is not null)
+        {
+            <div class="d-block text-end" title="@updateService.CurrentVersion">@updateService.CurrentVersionString</div>
+        }
     </div>
 </aside>
 
@@ -193,7 +197,8 @@ else if (shouldSelectWorkingDirectory)
             StateHasChanged();
         }
 
-        _ = CheckForUpdates();
+        if (updateService.IsUpdateAvailable)
+            _ = CheckForUpdates();
     }
 
     private async Task SelectWorkingDirectory()

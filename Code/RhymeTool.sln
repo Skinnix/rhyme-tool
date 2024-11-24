@@ -25,6 +25,10 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tools", "Tools", "{AA2122AB
 		..\Tools\Publish.bat = ..\Tools\Publish.bat
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MediaWikiScraper", "Scrapers\MediaWikiScraper\MediaWikiScraper.csproj", "{08CC89D5-9D99-4CFC-8BFB-FABC68BA5F20}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Scrapers", "Scrapers", "{D0F206A6-B5F4-4F0E-A1B9-E3649613197A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -65,9 +69,18 @@ Global
 		{A7BE72BF-BA82-4A49-A400-0A3788B17BFC}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A7BE72BF-BA82-4A49-A400-0A3788B17BFC}.Server Side|Any CPU.ActiveCfg = Server Side|Any CPU
 		{A7BE72BF-BA82-4A49-A400-0A3788B17BFC}.Server Side|Any CPU.Build.0 = Server Side|Any CPU
+		{08CC89D5-9D99-4CFC-8BFB-FABC68BA5F20}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{08CC89D5-9D99-4CFC-8BFB-FABC68BA5F20}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{08CC89D5-9D99-4CFC-8BFB-FABC68BA5F20}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{08CC89D5-9D99-4CFC-8BFB-FABC68BA5F20}.Release|Any CPU.Build.0 = Release|Any CPU
+		{08CC89D5-9D99-4CFC-8BFB-FABC68BA5F20}.Server Side|Any CPU.ActiveCfg = Debug|Any CPU
+		{08CC89D5-9D99-4CFC-8BFB-FABC68BA5F20}.Server Side|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{08CC89D5-9D99-4CFC-8BFB-FABC68BA5F20} = {D0F206A6-B5F4-4F0E-A1B9-E3649613197A}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E94CAD93-4200-43EB-8F03-A6A82C5FFD80}
