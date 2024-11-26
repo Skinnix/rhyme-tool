@@ -29,6 +29,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MediaWikiScraper", "Scraper
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Scrapers", "Scrapers", "{D0F206A6-B5F4-4F0E-A1B9-E3649613197A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DwdsScraper", "Scrapers\DwdsScraper\DwdsScraper.csproj", "{8E67A531-A0D8-4C6F-A99B-E4330EB7F119}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Libraries", "Libraries", "{C8EC39D7-80E0-4C74-AD83-0B61F2CD4326}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ScraperBase", "Scrapers\ScraperBase\ScraperBase.csproj", "{6FFA894D-EE1C-4572-A127-EA3DF0BFBCBD}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -75,12 +81,27 @@ Global
 		{08CC89D5-9D99-4CFC-8BFB-FABC68BA5F20}.Release|Any CPU.Build.0 = Release|Any CPU
 		{08CC89D5-9D99-4CFC-8BFB-FABC68BA5F20}.Server Side|Any CPU.ActiveCfg = Debug|Any CPU
 		{08CC89D5-9D99-4CFC-8BFB-FABC68BA5F20}.Server Side|Any CPU.Build.0 = Debug|Any CPU
+		{8E67A531-A0D8-4C6F-A99B-E4330EB7F119}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8E67A531-A0D8-4C6F-A99B-E4330EB7F119}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8E67A531-A0D8-4C6F-A99B-E4330EB7F119}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8E67A531-A0D8-4C6F-A99B-E4330EB7F119}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8E67A531-A0D8-4C6F-A99B-E4330EB7F119}.Server Side|Any CPU.ActiveCfg = Debug|Any CPU
+		{8E67A531-A0D8-4C6F-A99B-E4330EB7F119}.Server Side|Any CPU.Build.0 = Debug|Any CPU
+		{6FFA894D-EE1C-4572-A127-EA3DF0BFBCBD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6FFA894D-EE1C-4572-A127-EA3DF0BFBCBD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6FFA894D-EE1C-4572-A127-EA3DF0BFBCBD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6FFA894D-EE1C-4572-A127-EA3DF0BFBCBD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6FFA894D-EE1C-4572-A127-EA3DF0BFBCBD}.Server Side|Any CPU.ActiveCfg = Debug|Any CPU
+		{6FFA894D-EE1C-4572-A127-EA3DF0BFBCBD}.Server Side|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{08CC89D5-9D99-4CFC-8BFB-FABC68BA5F20} = {D0F206A6-B5F4-4F0E-A1B9-E3649613197A}
+		{8E67A531-A0D8-4C6F-A99B-E4330EB7F119} = {D0F206A6-B5F4-4F0E-A1B9-E3649613197A}
+		{C8EC39D7-80E0-4C74-AD83-0B61F2CD4326} = {D0F206A6-B5F4-4F0E-A1B9-E3649613197A}
+		{6FFA894D-EE1C-4572-A127-EA3DF0BFBCBD} = {D0F206A6-B5F4-4F0E-A1B9-E3649613197A}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {E94CAD93-4200-43EB-8F03-A6A82C5FFD80}

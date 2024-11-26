@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
+using ScraperBase;
 
-namespace MediaWikiScraper;
+namespace ScraperBase;
 
 [XmlRoot("word")]
 public class WordInfo
@@ -117,6 +119,94 @@ public class WordInfo
 		return newGroup;
 	}
 
+	#region Read/Write
+	public void WriteBinary(BinaryWriter writer)
+	{
+		writer.Write(Popularity);
+		writer.Write(AntiPopularity);
+
+		writer.WriteCollection(Forms, form =>
+		{
+			writer.Write(form.Text);
+			writer.Write(form.Suffix ?? string.Empty);
+
+			writer.WriteCollection(form.Labels, label =>
+			{
+				writer.Write(label);
+			});
+
+			writer.WriteCollection(form.Hyphenations, hyphenation =>
+			{
+				writer.WriteCollection(hyphenation, position =>
+				{
+					writer.Write(position);
+				});
+			});
+
+			writer.WriteCollection(form.Rhymes, rhyme =>
+			{
+				writer.Write(rhyme.Language ?? string.Empty);
+
+				writer.WriteCollection(rhyme.Values, value =>
+				{
+					writer.Write(value);
+				});
+			});
+		});
+	}
+
+	public static WordInfo ReadBinary(BinaryReader reader)
+	{
+		var popularity = reader.ReadInt32();
+		var antiPopularity = reader.ReadInt32();
+
+		var forms = reader.ReadCollection(() =>
+		{
+			var text = reader.ReadString();
+			var suffix = reader.ReadString();
+			if (suffix == string.Empty)
+				suffix = null;
+
+			var labels = reader.ReadCollection(reader.ReadString);
+			var hyphenations = reader.ReadCollection(() =>
+			{
+				var positions = reader.ReadCollection(reader.ReadByte);
+				return positions;
+			});
+
+			var rhymes = reader.ReadCollection(() =>
+			{
+				var language = reader.ReadString();
+				if (language == string.Empty)
+					language = null;
+
+				var values = reader.ReadCollection(reader.ReadString);
+				return new RhymeInfo
+				{
+					Language = language,
+					Values = values
+				};
+			});
+
+			return new WordForm
+			{
+				Text = text,
+				Suffix = suffix,
+				Labels = labels,
+				Hyphenations = hyphenations,
+				Rhymes = rhymes,
+			};
+		});
+
+		return new WordInfo
+		{
+			Forms = forms,
+			Popularity = popularity,
+			AntiPopularity = antiPopularity,
+		};
+	}
+	#endregion
+
 	public class WordForm
 	{
 		[XmlAttribute("text")]
@@ -136,6 +226,10 @@ public class WordInfo
 		[XmlArray("rhymes")]
 		[XmlArrayItem("language")]
 		public List<RhymeInfo> Rhymes { get; set; } = new();
+
+		[JsonPropertyName("s")]
+		[XmlElement("suffix")]
+		public string? Suffix { get; set; }
 
 		[JsonConstructor]
 		public WordForm() { }

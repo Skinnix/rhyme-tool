@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Serialization;
 using MediaWikiScraper;
+using ScraperBase;
 
 internal class Program
 {
@@ -147,7 +148,7 @@ internal class Program
 					if (!hyphenations && !rhymes)
 						continue;
 
-					WriteWordInfo(binaryWriter, word);
+					word.WriteBinary(binaryWriter);
 					//JsonSerializer.Serialize(writerStream, word, wordTypeInfo);
 					//writerStream.Write(jsonDelimiter);
 					//wordSerializer.Serialize(writer, word);
@@ -172,80 +173,6 @@ internal class Program
 
 			Console.WriteLine("Fertig!");
 			Console.ReadLine();
-		}
-	}
-
-	private static void Main(string[] args)
-	{
-		var tree = new RhymeTree();
-		var path = @"C:\Users\Hendrik\Downloads\output-binary.txt.gz";
-		using (var fileStream = File.OpenRead(path))
-		using (var readerStream = new GZipStream(fileStream, CompressionMode.Decompress))
-		using (var reader = new BinaryReader(readerStream))
-		{
-			var step = 100f / fileStream.Length;
-			var stride = 100;
-			var next = stride;
-
-			while (fileStream.Position < fileStream.Length || reader.PeekChar() >= 0)
-			{
-				var word = ReadWordInfo(reader);
-				tree.AddWord(word);
-
-				next--;
-				if (next <= 0)
-				{
-					next = stride;
-					Console.WriteLine($"{fileStream.Position * step}% {fileStream.Position}/{fileStream.Length} ({word.DefaultForm?.Text})");
-				}
-			}
-		}
-
-		//var path = @"C:\Users\Hendrik\Downloads\hyph_de_DE.dic";
-		//using (var fileStream = File.OpenRead(path))
-		//using (var reader = new StreamReader(fileStream))
-		//{
-		//	var step = 100f / fileStream.Length;
-		//	var stride = 100;
-		//	var next = stride;
-
-		//	while (fileStream.Position < fileStream.Length)
-		//	{
-		//		var wordLine = reader.ReadLine();
-		//		if (string.IsNullOrWhiteSpace(wordLine) || wordLine.StartsWith("#"))
-		//			continue;
-
-		//		var word = new WordInfo();
-		//		word.AddHyphenation(wordLine.Replace("1", WordInfo.HYPHENATION_SEPARATOR), null);
-
-		//		tree.AddWord(word);
-
-		//		next--;
-		//		if (next <= 0)
-		//		{
-		//			next = stride;
-		//			Console.WriteLine($"{fileStream.Position * step}% {fileStream.Position}/{fileStream.Length} ({word.DefaultForm?.Text})");
-		//		}
-		//	}
-		//}
-
-		var before = GC.GetTotalMemory(true);
-
-		tree.Finish();
-
-		var after = GC.GetTotalMemory(true);
-
-		Console.WriteLine("Gelesen!");
-
-		var line = Console.ReadLine();
-		while (line is not null)
-		{
-			var rhymes = tree.GetRhymes(line);
-			Console.WriteLine(string.Join(", ", rhymes.Rhymes));
-			Console.WriteLine("---------------------------");
-			Console.WriteLine(string.Join(", ", rhymes.Suffixes));
-			Console.WriteLine();
-			line = Console.ReadLine();
 		}
 	}
 
@@ -335,104 +262,5 @@ internal class Program
 		foreach (var property in typeInfo.Properties)
 			if (typeof(ICollection).IsAssignableFrom(property.PropertyType))
 				property.ShouldSerialize = (_, val) => val is ICollection collection && collection.Count > 0;
-	}
-
-
-	static void WriteWordInfo(BinaryWriter writer, WordInfo word)
-	{
-		writer.Write(word.Popularity);
-		writer.Write(word.AntiPopularity);
-
-		WriteCollection(writer, word.Forms, form =>
-		{
-			writer.Write(form.Text);
-
-			WriteCollection(writer, form.Labels, label =>
-			{
-				writer.Write(label);
-			});
-
-			WriteCollection(writer, form.Hyphenations, hyphenation =>
-			{
-				WriteCollection(writer, hyphenation, position =>
-				{
-					writer.Write(position);
-				});
-			});
-
-			WriteCollection(writer, form.Rhymes, rhyme =>
-			{
-				writer.Write(rhyme.Language ?? string.Empty);
-
-				WriteCollection(writer, rhyme.Values, value =>
-				{
-					writer.Write(value);
-				});
-			});
-		});
-	}
-
-	static WordInfo ReadWordInfo(BinaryReader reader)
-	{
-		var popularity = reader.ReadInt32();
-		var antiPopularity = reader.ReadInt32();
-
-		var forms = ReadCollection(reader, () =>
-		{
-			var text = reader.ReadString();
-
-			var labels = ReadCollection(reader, reader.ReadString);
-			var hyphenations = ReadCollection(reader, () =>
-			{
-				var positions = ReadCollection(reader, reader.ReadByte);
-				return positions;
-			});
-
-			var rhymes = ReadCollection(reader, () =>
-			{
-				var language = reader.ReadString();
-				if (language == string.Empty)
-					language = null;
-
-				var values = ReadCollection(reader, reader.ReadString);
-				return new WordInfo.RhymeInfo
-				{
-					Language = language,
-					Values = values
-				};
-			});
-
-			return new WordInfo.WordForm
-			{
-				Text = text,
-				Labels = labels,
-				Hyphenations = hyphenations,
-				Rhymes = rhymes,
-			};
-		});
-
-		return new WordInfo
-		{
-			Forms = forms,
-			Popularity = popularity,
-			AntiPopularity = antiPopularity,
-		};
-	}
-
-	static void WriteCollection<T>(BinaryWriter writer, IReadOnlyCollection<T> collection, Action<T> itemAction)
-	{
-		writer.Write7BitEncodedInt(collection.Count);
-		foreach (var item in collection)
-			itemAction(item);
-	}
-
-	static List<T> ReadCollection<T>(BinaryReader reader, Func<T> readItem)
-	{
-		var count = reader.Read7BitEncodedInt();
-		var result = new List<T>();
-		for (var i = 0; i < count; i++)
-			result.Add(readItem());
-
-		return result;
 	}
 }

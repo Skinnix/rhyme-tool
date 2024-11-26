@@ -4,8 +4,9 @@ using System.Formats.Tar;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Net.Mime.MediaTypeNames;
 
-namespace MediaWikiScraper;
+namespace ScraperBase;
 
 public class RhymeTree
 {
@@ -32,6 +33,12 @@ public class RhymeTree
 			return null;
 
 		var entry = GetOrCreateEntry(wordsRoot, text);
+
+		if (form.Suffix is not null)
+		{
+			var suffixEntry = GetOrCreateEntry(wordsRoot, form.Suffix.ToLowerInvariant());
+			((List<WordEntry>)entry.SuffixWords).Add(suffixEntry);
+		}
 
 		var wordHyphenations = new HyphenationTarget[form.Hyphenations.Count];
 		var i = 0;
@@ -72,24 +79,38 @@ public class RhymeTree
 		suffixRoot = new();
 	}
 
-	public (IEnumerable<string> Rhymes, IEnumerable<string> Suffixes) GetRhymes(string text)
+	public (IEnumerable<string> Rhymes, IEnumerable<string> HyphenRhymes) GetRhymes(string text)
 	{
 		var entry = TryGetEntry(wordsRoot, text);
 		if (entry is null)
 			return ([], []);
 
+		var (rhymes, hyphenRhymes) = GetRhymes(entry, text);
+		rhymes.Sort((w1, w2) => w2.Popularity - w1.Popularity);
+		hyphenRhymes.Sort((w1, w2) => w2.Popularity - w1.Popularity);
+
+		return (rhymes.Select(w => w.Word), hyphenRhymes.Select(w => w.Word));
+	}
+
+	private (List<(string Word, int Popularity)> Rhymes, List<(string Word, int Popularity)> HyphenRhymes) GetRhymes(WordEntry entry, string text)
+	{
 		var rhymes = new List<(string Word, int Popularity)>();
 		foreach (var word in entry.Words)
 			GetRhymes(rhymes, word, text);
 
-		var suffixes = new List<(string Word, int Popularity)>();
+		var hyphenRhymes = new List<(string Word, int Popularity)>();
 		foreach (var word in entry.Words)
-			GetSuffixes(suffixes, word, text);
+			GetHyphenRhymes(hyphenRhymes, word, text);
 
-		rhymes.Sort((w1, w2) => w2.Popularity - w1.Popularity);
-		suffixes.Sort((w1, w2) => w2.Popularity - w1.Popularity);
+		foreach (var suffixWord in entry.SuffixWords)
+		{
+			var suffixText = suffixWord.ReconstructWord();
+			var suffixRhymes = GetRhymes(suffixWord, suffixText);
+			rhymes.AddRange(suffixRhymes.Rhymes);
+			hyphenRhymes.AddRange(suffixRhymes.HyphenRhymes);
+		}
 
-		return (rhymes.Select(w => w.Word), suffixes.Select(w => w.Word));
+		return (rhymes, hyphenRhymes);
 	}
 
 	private void GetRhymes(List<(string Word, int Popularity)> result, Word word, string text)
@@ -105,14 +126,14 @@ public class RhymeTree
 		}
 	}
 
-	private void GetSuffixes(List<(string Word, int Popularity)> result, Word word, string text)
+	private void GetHyphenRhymes(List<(string Word, int Popularity)> result, Word word, string text)
 	{
-		var suffixes = word.Hyphenations.SelectMany(h => h.Target.Words).Distinct();
-		foreach (var suffixWord in suffixes)
+		var targets = word.Hyphenations.SelectMany(h => h.Target.Words).Distinct();
+		foreach (var target in targets)
 		{
-			var rhymeText = suffixWord.ReconstructWord();
+			var rhymeText = target.ReconstructWord();
 			if (!rhymeText.Equals(text, StringComparison.OrdinalIgnoreCase) && !result.Any(r => r.Word == rhymeText))
-				result.Add((rhymeText, suffixWord.Words.Sum(w => w.AntiPopularity)));
+				result.Add((rhymeText, target.Words.Sum(w => w.AntiPopularity)));
 		}
 	}
 
@@ -224,7 +245,7 @@ public class RhymeTree
 		public override WordEntry? Parent { get; init; }
 
 		public IReadOnlyCollection<Word> Words { get; private set; } = new List<Word>();
-		//public IReadOnlyCollection<WordEntry> SuffixWords { get; private set; } = new List<WordEntry>();
+		public IReadOnlyCollection<WordEntry> SuffixWords { get; private set; } = new List<WordEntry>();
 
 		public string ReconstructWord()
 		{
@@ -243,10 +264,10 @@ public class RhymeTree
 			if (Words is List<Word> words)
 				Words = words.ToArray();
 
-			return TotalCount + Words.Count;
+			if (SuffixWords is List<WordEntry> suffixWords)
+				SuffixWords = suffixWords.ToArray();
 
-			/*if (SuffixWords is List<WordEntry> suffixWords)
-				SuffixWords = suffixWords.ToArray();*/
+			return TotalCount + Words.Count;
 		}
 	}
 
