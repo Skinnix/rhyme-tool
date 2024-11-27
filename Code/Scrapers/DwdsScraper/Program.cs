@@ -145,9 +145,11 @@ internal class Program
 					if (decompositionNodes is null || decompositionNodes.Count == 0)
 						continue;
 
-					var suffixNode = decompositionNodes[decompositionNodes.Count - 1];
-					var suffix = suffixNode.InnerText;
-					word.DefaultForm!.Suffix = suffix;
+					foreach (var componentNode in decompositionNodes)
+					{
+						var component = componentNode.InnerText;
+						word.DefaultForm!.Components.Add(component);
+					}
 					break;
 			}
 		}

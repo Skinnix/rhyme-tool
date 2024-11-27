@@ -128,7 +128,11 @@ public class WordInfo
 		writer.WriteCollection(Forms, form =>
 		{
 			writer.Write(form.Text);
-			writer.Write(form.Suffix ?? string.Empty);
+
+			writer.WriteCollection(form.Components, component =>
+			{
+				writer.Write(component);
+			});
 
 			writer.WriteCollection(form.Labels, label =>
 			{
@@ -163,9 +167,7 @@ public class WordInfo
 		var forms = reader.ReadCollection(() =>
 		{
 			var text = reader.ReadString();
-			var suffix = reader.ReadString();
-			if (suffix == string.Empty)
-				suffix = null;
+			var components = reader.ReadCollection(reader.ReadString);
 
 			var labels = reader.ReadCollection(reader.ReadString);
 			var hyphenations = reader.ReadCollection(() =>
@@ -191,7 +193,7 @@ public class WordInfo
 			return new WordForm
 			{
 				Text = text,
-				Suffix = suffix,
+				Components = components,
 				Labels = labels,
 				Hyphenations = hyphenations,
 				Rhymes = rhymes,
@@ -227,9 +229,9 @@ public class WordInfo
 		[XmlArrayItem("language")]
 		public List<RhymeInfo> Rhymes { get; set; } = new();
 
-		[JsonPropertyName("s")]
-		[XmlElement("suffix")]
-		public string? Suffix { get; set; }
+		[JsonPropertyName("c")]
+		[XmlElement("somponents")]
+		public List<string> Components { get; set; } = new();
 
 		[JsonConstructor]
 		public WordForm() { }

@@ -34,9 +34,9 @@ public class RhymeTree
 
 		var entry = GetOrCreateEntry(wordsRoot, text);
 
-		if (form.Suffix is not null)
+		if (form.Components.Count != 0)
 		{
-			var suffixEntry = GetOrCreateEntry(wordsRoot, form.Suffix.ToLowerInvariant());
+			var suffixEntry = GetOrCreateEntry(wordsRoot, form.Components[^1].ToLowerInvariant());
 			((List<WordEntry>)entry.SuffixWords).Add(suffixEntry);
 		}
 
