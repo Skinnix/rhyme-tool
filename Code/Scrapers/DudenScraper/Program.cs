@@ -14,11 +14,101 @@ using GraphicsState = (bool CurrentlyBlue, bool WrittenBlue, bool WrittenHyphen,
 const char STRESS1 = '§';
 const char STRESS2 = '$';
 
-Regex accentRegex = new(@"(\p{L})([`´^~˚])", RegexOptions.Compiled);
-Regex ipaRegex = new(@"^\[([^\];\s]+)[\];]", RegexOptions.Compiled);
+var ipa_count = 0;
 
-var input = @"C:\Users\Hendrik\Downloads\Duden - Deutsches Universalwörterbuch_removed.pdf";
-var output = @"C:\Users\Hendrik\Downloads\Duden-words1.txt";
+Regex accentRegex = new(@"(\p{L})([`´^~˚])", RegexOptions.Compiled);
+Regex ipaRegex = new(@"^\[(?!auch:)(?!griech\.)(?!H\.u\.)([^\];\s\u0004]+)[\];]", RegexOptions.Compiled);
+
+Dictionary<string, string> ipaConversion = new()
+{
+	{ "\a", "ː" },
+	{ "\u0005", "ɛ" },
+	{ "\b", "ˈ" },
+	{ "\u000e", "ʔ" },
+	{ "\u0016", "ʊ" },
+	{ "\u0015", "ɑ" },
+	{ "\u000f", "ɔ" },
+	{ "\u001f", "̃" },
+	{ "\u0006", "ʒ" },
+	{ "\u0014", "ɪ" },
+	{ "\u0011", "̯" },
+	{ "\u009c", "œ" },
+	{ "\u0012", "ɐ" },
+	{ "\u0013", "ɡ" },
+	{ "æ", "æ" },
+	{ "\u0017", "ŋ" },
+	{ "ø", "ø" },
+	{ "w", "w" },
+	{ "\u001a", "ʌ" },
+	{ "\u001c", "θ" },
+	{ "\u0019", "ʏ" },
+	{ "\u001b", "ð" },
+	{ "\u0018", "\u0306" },
+	{ "\u0080", "ɲ" },
+
+	{ "aè", "aː" },
+	{ "", "ɐ" },
+	{ "í", "ɐ̯" },
+	{ "³˜", "ɑ̃" },
+	{ "³˜è", "ɑ̃ː" },
+	{ "a¹í", "aɪ̯" },
+	{ "aí", "aʊ̯" },
+	{ "c¸", "ç" },
+	{ "då", "dʒ" },
+	{ "eè", "eː" },
+	{ "¸", "ɛ" },
+	{ "¸è", "ɛː" },
+	{ "˜¸", "ɛ̃" },
+	{ "˜¸è", "ɛ̃ː" },
+	{ "·", "ə" },
+	{ "·í", "ə̯" },
+	{ "", "ɡ" },
+	{ "iè", "iː" },
+	{ "ií", "i̯" },
+	{ "¹", "ɪ" },
+	{ "lì", "l̩" },
+	{ "mì", "m̩" },
+	{ "nì", "n̩" },
+	{ "½", "ŋ" },
+	{ "oè", "oː" },
+	{ "oí", "o̯" },
+	{ "¶˜", "ɔ̃" },
+	{ "¶˜è", "ɔ̃ː" },
+	{ "¶", "ɔ" },
+	{ "øè", "øː" },
+	{ "œ˜", "œ̃" },
+	{ "¶¹í", "ɔɪ̯" },
+	{ "pf", "pf" },
+	{ "r", "ʀ" },
+	{ "Ã", "ʃ" },
+	{ "ts", "ts" },
+	{ "tÃ", "tʃ" },
+	{ "uè", "uː" },
+	{ "uí", "u̯" },
+	{ "", "ʊ" },
+	{ "yè", "yː" },
+	{ "y˘", "y̆" },
+	{ "¡", "ʏ" },
+	{ "å", "ʒ" },
+	{ "³è", "ɑː" },
+	{ "", "ʌ" },
+	{ "¸¹í", "ɛɪ̯" },
+	{ "¶í", "ɔʊ̯" },
+	{ "", "ð" },
+	{ "Å", "θ" },
+	{ "Ì", "β" },
+	{ "»", "ʔ" },
+	{ "è", "\u02D0" },
+	{ "~", "\u0303" },
+	{ "±", "\u02C8" },
+	{ "", "\u0329" },
+	{ "í", "\u032F" },
+	{ "˘", "\u0306" },
+};
+var ipaCharacters = ipaConversion.Values.Concat("abcdefghijklmnopqrstuvwxyz().,-".ToCharArray().Select(c => c.ToString())).Distinct().ToArray();
+
+var input = @"C:\Users\Hendrik\Downloads\Duden\Duden - Deutsches Universalwörterbuch_removed.pdf";
+var output = @"C:\Users\Hendrik\Downloads\Duden\Duden-words1.txt";
 
 var document = PdfReader.Open(input, PdfDocumentOpenMode.Import);
 
@@ -136,13 +226,12 @@ using (var writer = new StreamWriter(file))
 
 Console.WriteLine("Fertig!");
 
-
 void WriteWord(StreamWriter writer, StringBuilder currentWord, StringBuilder currentNonWord)
 {
 	string? ipa = null;
 	if (currentNonWord.Length > 0)
 	{
-		var ipaMatch = ipaRegex.Match(currentNonWord.ToString());
+		var ipaMatch = ipaRegex.Match(currentNonWord.ToString().Replace("[\u000e]", "(\u000e)"));
 		if (ipaMatch.Success)
 		{
 			ipa = ipaMatch.Groups[1].Value;
@@ -154,8 +243,12 @@ void WriteWord(StreamWriter writer, StringBuilder currentWord, StringBuilder cur
 	foreach (var w in words)
 	{
 		var word = w;
-		if (word.EndsWith(':'))
+		while (word.EndsWith(':') || word.EndsWith(';') || word.EndsWith('Y'))
 			word = word[..^1];
+		word = word.Replace("\u0002", string.Empty);
+
+		if (word.StartsWith('-') || word.EndsWith('-'))
+			continue;
 
 		word = accentRegex.Replace(word, m =>
 		{
@@ -175,10 +268,19 @@ void WriteWord(StreamWriter writer, StringBuilder currentWord, StringBuilder cur
 		
 		writer.Write(word);
 
-		if (ipa is not null)
+		if (ipa is not null && !ipa.Contains("..."))
 		{
 			writer.Write('\t');
-			writer.Write(ipa);
+			var converted = ipa;
+			foreach (var (key, value) in ipaConversion)
+				converted = converted.Replace(key, value);
+			/*if (!converted.All(c => ipaCharacters.Contains(c.ToString())))
+			{
+
+			}*/
+			writer.Write(converted);
+
+			ipa_count++;
 		}
 
 		writer.WriteLine();

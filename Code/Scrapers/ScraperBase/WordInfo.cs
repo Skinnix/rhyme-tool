@@ -23,6 +23,10 @@ public class WordInfo
 	[XmlIgnore, JsonIgnore]
 	public WordForm? DefaultForm => Forms.FirstOrDefault();
 
+	[JsonPropertyName("b")]
+	[XmlAttribute("baseForm")]
+	public string? BaseForm { get; set; }
+
 	[XmlAttribute("popularity")]
 	[JsonPropertyName("p")]
 	public int Popularity { get; set; }
@@ -119,9 +123,12 @@ public class WordInfo
 		return newGroup;
 	}
 
+	public override string ToString() => DefaultForm?.Text ?? string.Empty;
+
 	#region Read/Write
 	public void WriteBinary(BinaryWriter writer)
 	{
+		writer.Write(BaseForm ?? string.Empty);
 		writer.Write(Popularity);
 		writer.Write(AntiPopularity);
 
@@ -161,6 +168,10 @@ public class WordInfo
 
 	public static WordInfo ReadBinary(BinaryReader reader)
 	{
+		var baseForm = reader.ReadString();
+		if (baseForm == string.Empty)
+			baseForm = null;
+
 		var popularity = reader.ReadInt32();
 		var antiPopularity = reader.ReadInt32();
 
@@ -202,6 +213,7 @@ public class WordInfo
 
 		return new WordInfo
 		{
+			BaseForm = baseForm,
 			Forms = forms,
 			Popularity = popularity,
 			AntiPopularity = antiPopularity,
@@ -240,6 +252,8 @@ public class WordInfo
 		{
 			Text = text;
 		}
+
+		public override string ToString() => Text;
 	}
 
 	public class RhymeInfo
@@ -252,5 +266,7 @@ public class WordInfo
 		[XmlArray("values")]
 		[XmlArrayItem("rhyme")]
 		public List<string> Values { get; set; } = new();
+
+		public override string ToString() => Values.FirstOrDefault() ?? string.Empty;
 	}
 }

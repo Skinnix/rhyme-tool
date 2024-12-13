@@ -4,7 +4,6 @@ using System.Formats.Tar;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace ScraperBase;
 
@@ -24,7 +23,7 @@ public class RhymeTree
 
 	private Word? AddForm(WordInfo wordInfo, WordInfo.WordForm form)
 	{
-		var text = form.Text.ToLowerInvariant();
+		var text = form.Text;
 		if (text.IndexOfAny([' ', ',', ':']) >= 0)
 			return null;
 
@@ -36,7 +35,7 @@ public class RhymeTree
 
 		if (form.Components.Count != 0)
 		{
-			var suffixEntry = GetOrCreateEntry(wordsRoot, form.Components[^1].ToLowerInvariant());
+			var suffixEntry = GetOrCreateEntry(wordsRoot, form.Components[^1]);
 			((List<WordEntry>)entry.SuffixWords).Add(suffixEntry);
 		}
 
@@ -164,6 +163,8 @@ public class RhymeTree
 	{
 		public char Character { get; init; }
 
+		public char LowerCharacter => char.ToLowerInvariant(Character);
+
 		public abstract TEntry? Parent { get; init; }
 
 		public IReadOnlyCollection<TEntry> Children { get; private set; } = new SortedSet<TEntry>();
@@ -174,7 +175,7 @@ public class RhymeTree
 		public int TotalCount { get; private set; }
 
 		public int CompareTo(TEntry? other)
-			=> other is null ? 1 : Character.CompareTo(other.Character);
+			=> other is null ? 1 : LowerCharacter.CompareTo(other.LowerCharacter);
 
 		public TEntry? TryGetChild<TEntry1>(char character)
 			where TEntry1 : TEntry, new()
@@ -312,21 +313,4 @@ public class RhymeTree
 	}
 
 	private record HyphenationTarget(Hyphenation Hyphenation, SuffixEntry Target);
-
-	private record Hyphenation(byte[] Positions)
-	{
-		public IEnumerable<string> GetSyllables(string text)
-		{
-			var previous = 0;
-			foreach (var position in Positions)
-			{
-				var syllable = text[previous..position];
-				yield return syllable;
-				previous = position;
-			}
-
-			var lastSyllable = text[previous..];
-			yield return lastSyllable;
-		}
-	}
 }
