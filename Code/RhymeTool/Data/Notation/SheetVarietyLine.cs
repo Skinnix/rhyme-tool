@@ -613,6 +613,10 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 		private MetalineEditResult DeleteAndInsertContent(SheetDisplayLineEditingContext context,
 			ISheetEditorFormatter? formatter, string? content, DeleteDirection direction)
 		{
+			var selectionRange = context.SelectionRange;
+			if (selectionRange.End == -1 && Line.components.Count != 0)
+				selectionRange = new(selectionRange.Start, Line.components[^1].DisplayRenderBounds.EndOffset);
+
 			//Finde alle Komponente im Bereich
 			Component? leftEdge = null;
 			int leftEdgeIndex = -1;
@@ -627,7 +631,7 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 				index++;
 
 				//Beginnt die Komponente vor dem Bereich?
-				if (component.DisplayRenderBounds.StartOffset < context.SelectionRange.Start)
+				if (component.DisplayRenderBounds.StartOffset < selectionRange.Start)
 				{
 					//Die Komponente ist der linke Rand
 					leftEdge = component;
@@ -635,19 +639,19 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 				}
 
 				//Liegt die Komponente komplett vor dem Bereich?
-				if (component.DisplayRenderBounds.EndOffset < context.SelectionRange.Start)
+				if (component.DisplayRenderBounds.EndOffset < selectionRange.Start)
 					continue;
 
 				//Beginnt die Komponente mit dem Bereich?
-				if (component.DisplayRenderBounds.StartOffset == context.SelectionRange.Start)
+				if (component.DisplayRenderBounds.StartOffset == selectionRange.Start)
 					rangeStartsOnComponent = true;
 
 				//Endet die Komponente mit dem Bereich?
-				if (component.DisplayRenderBounds.EndOffset == context.SelectionRange.End)
+				if (component.DisplayRenderBounds.EndOffset == selectionRange.End)
 					rangeEndsOnComponent = true;
 
 				//Endet die Komponente nach dem Bereich?
-				if (rightEdge is null && component.DisplayRenderBounds.EndOffset > context.SelectionRange.End)
+				if (rightEdge is null && component.DisplayRenderBounds.EndOffset > selectionRange.End)
 				{
 					//Die Komponente ist der rechte Rand
 					rightEdge = component;
@@ -655,12 +659,12 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 				}
 				
 				//Liegt die Komponente komplett hinter dem Bereich?
-				if (component.DisplayRenderBounds.StartOffset > context.SelectionRange.End)
+				if (component.DisplayRenderBounds.StartOffset > selectionRange.End)
 					break;
 
 				//Liegt die Komponente komplett im Bereich?
 				if (component != leftEdge && component != rightEdge
-					&& component.DisplayRenderBounds.StartOffset >= context.SelectionRange.Start && component.DisplayRenderBounds.EndOffset <= context.SelectionRange.End)
+					&& component.DisplayRenderBounds.StartOffset >= selectionRange.Start && component.DisplayRenderBounds.EndOffset <= selectionRange.End)
 				{
 					//Die Komponente liegt im Bereich
 					fullyInside.Add(component);
@@ -670,7 +674,7 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 			//Prüfe auf Änderungen
 			var removedAnything = fullyInside.Count != 0;
 			var addedContent = false;
-			var cursorPosition = context.SelectionRange.Start;
+			var cursorPosition = selectionRange.Start;
 			SpecialCursorPosition? specialCursorPosition = null;
 
 			//Sonderfall: wird ein Text unter einem Leerzeichen-Attachment eingegeben?
@@ -701,7 +705,7 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 					addedContent = true;
 
 					//Setze den Cursor an das Ende des eingefügten Inhalts
-					//cursorPosition = context.SelectionRange.Start + newContentComponents[0].Content.GetLength(formatter);
+					//cursorPosition = selectionRange.Start + newContentComponents[0].Content.GetLength(formatter);
 					specialCursorPosition = SpecialCursorPosition.Behind(newContentComponents[0]);
 				}
 			}
@@ -733,7 +737,7 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 					addedContent = true;
 
 					//Setze den Cursor an das Ende des eingefügten Inhalts
-					//cursorPosition = context.SelectionRange.Start + newContentComponents[0].Content.GetLength(formatter);
+					//cursorPosition = selectionRange.Start + newContentComponents[0].Content.GetLength(formatter);
 					specialCursorPosition = SpecialCursorPosition.Behind(newContentComponents[0]);
 				}
 			}
@@ -743,8 +747,8 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 			if (leftEdge is not null)
 			{
 				//Kürze die Komponente
-				var leftEdgeOverlapOffset = leftEdge.DisplayRenderBounds.GetContentOffset(context.SelectionRange.Start);
-				var leftEdgeOverlapLength = leftEdge.DisplayRenderBounds.GetContentOffset(context.SelectionRange.End).ContentOffset - leftEdgeOverlapOffset.ContentOffset;
+				var leftEdgeOverlapOffset = leftEdge.DisplayRenderBounds.GetContentOffset(selectionRange.Start);
+				var leftEdgeOverlapLength = leftEdge.DisplayRenderBounds.GetContentOffset(selectionRange.End).ContentOffset - leftEdgeOverlapOffset.ContentOffset;
 				if (leftEdge.TryRemoveContent(leftEdgeOverlapOffset.ContentOffset, leftEdgeOverlapLength, formatter))
 					removedAnything = true;
 
@@ -794,7 +798,7 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 								newContentComponents.RemoveAt(newContentComponents.Count - 1);
 
 								//Setze den Cursor an das Ende des eingefügten Inhalts im rechten Rand
-								//cursorPosition = context.SelectionRange.Start + newContentComponents.Sum(c => c.Content.GetLength(formatter));
+								//cursorPosition = selectionRange.Start + newContentComponents.Sum(c => c.Content.GetLength(formatter));
 								var cursorOffset = lastNewComponent.Content.GetLength(formatter);
 								specialCursorPosition = SpecialCursorPosition.FromStart(rightEdge, cursorOffset, SpecialCursorVirtualPositionType.KeepLeft);
 							}
@@ -814,7 +818,7 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 								if (specialCursorPosition is null)
 								{
 									//Setze den Cursor an das Ende des eingefügten Inhalts
-									//cursorPosition = context.SelectionRange.Start + newContentComponents.Sum(c => c.Content.GetLength(formatter));
+									//cursorPosition = selectionRange.Start + newContentComponents.Sum(c => c.Content.GetLength(formatter));
 									specialCursorPosition = SpecialCursorPosition.Behind(lastNewComponent);
 								}
 							}
@@ -894,7 +898,7 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 			if (rightEdge is not null && rightEdge != leftEdge)
 			{
 				//Kürze die Komponente
-				var rightEdgeOverlap = rightEdge.DisplayRenderBounds.GetContentOffset(context.SelectionRange.End);
+				var rightEdgeOverlap = rightEdge.DisplayRenderBounds.GetContentOffset(selectionRange.End);
 				if (!skipTrimAfter && rightEdge.TryRemoveContent(ContentOffset.Zero, rightEdgeOverlap.ContentOffset, formatter))
 					removedAnything = true;
 
@@ -922,7 +926,7 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 						addedContent = true;
 
 						//Setze den Cursor an das Ende des eingefügten Inhalts
-						//cursorPosition = context.SelectionRange.Start + newContentComponents.Sum(c => c.Content.GetLength(formatter));
+						//cursorPosition = selectionRange.Start + newContentComponents.Sum(c => c.Content.GetLength(formatter));
 						var cursorOffset = lastComponent.Content.GetLength(formatter);
 						if (rightEdge is VarietyComponent varietyEdge)
 						{
@@ -964,7 +968,7 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 				//}
 
 				//Setze den Cursor an das Ende des eingefügten Inhalts
-				cursorPosition = context.SelectionRange.Start + newContentComponents.Sum(c => c.Content.GetLength(formatter).Value);
+				cursorPosition = selectionRange.Start + newContentComponents.Sum(c => c.Content.GetLength(formatter).Value);
 				specialCursorPosition = SpecialCursorPosition.Behind(newContentComponents[^1]);
 			}
 

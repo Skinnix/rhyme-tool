@@ -237,18 +237,18 @@ function registerChordEditor(wrapper: HTMLElement, reference: BlazorDotNetRefere
 	let actionQueue = new ActionQueue();
 	
 	//create editor wrapper (delayed)
-	let handler: (event: Event) => void;
+	//let handler: (event: Event) => void;
 	let editor: ModificationEditor | null = null;
 	let selectionObserver: SelectionObserver | null = null;
-	handler = (event) => {
+	/*handler = () => {
 		wrapper.removeEventListener('focus', handler);
 		createEditor();
 	};
-	wrapper.addEventListener('focus', handler);
+	wrapper.addEventListener('focus', handler);*/
+	createEditor();
 
 	//create return object
 	return {
-		//notifyBeforeRender: editor.stopRevertingModifications.bind(editor),
 		notifyAfterRender: actionQueue.notifyRender.bind(actionQueue),
 		destroy: () => {
 			editor?.destroy();
@@ -257,80 +257,91 @@ function registerChordEditor(wrapper: HTMLElement, reference: BlazorDotNetRefere
 	};
 
     function createEditor() {
-		let afterRender: () => void;
-        const callback: EditorCallback = (editor, data, selectionRange, expectRender) => {
-            let result: MetalineEditResult;
-            actionQueue.then(() => {
-                //prepare event data
-				var selection = editor.getCurrentSelection();
+		const callback: EditorCallback = (editor, data, selectionRange) => {
+			//Warte auf vorherige Aktionen
+			console.log('awaiting queue');
+			actionQueue.then(async () => {
+				console.log('queue finished');
+
+				//Hole Selection
+				let selection = editor.getCurrentSelection();
 				if (!selection)
 					throw new Error("Keine Auswahl vorhanden.");
-                var eventData = {
-                    selection: selection,
-					editRange: data.editRange,
-					justSelected: selectionObserver!.triggerJustSelected(),
-                    ...data
-                };
 
-                //hide caret
+				//Eventdaten
+				let editRange: AnchorSelection<MetalineLineAnchor> | null = data.editRangeStart == undefined || data.editRangeEnd == undefined ? null : {
+					start: {
+						metaline: selection.start.metaline,
+						line: selection.start.line,
+						offset: data.editRangeStart,
+					},
+					end: {
+						metaline: selection.end.metaline,
+						line: selection.end.line,
+						offset: data.editRangeEnd,
+					}
+				};
+				let eventData = {
+					selection: selection,
+					editRange: editRange,
+					justSelected: selectionObserver!.triggerJustSelected(),
+					...data
+				};
+
+				//Verstecke Cursor
 				wrapper.classList.add('refreshing');
 				selectionObserver!.pauseObservation();
-                selectionRange!.collapse(false);
+				selectionRange!.collapse(false);
 
-                //a new render is coming
-                actionQueue.prepareForNextRender();
-                afterRender = expectRender();
+				//Neuer Render kommt
+				actionQueue.prepareForNextRender();
 
-                //invoke the callback
-                console.log("invoke Blazor");
-                return invokeBlazor<MetalineEditResult>(reference, callbackName, eventData);
-            }).then(r => {
-                console.log("check result");
+				//Blazor aufrufen
+				console.log("invoke Blazor");
+				let result = await invokeBlazor<MetalineEditResult>(reference, callbackName, eventData);
 
-                //store result
-                result = r;
+				//Fehler anzeigen
+				console.log("check result");
+				if (result.failReason)
+					showToast(`${result.failReason.label} (${result.failReason.code})`, 'Bearbeitungsfehler', 5000);
 
-                //show error
-                if (result.failReason)
-                    showToast(`${result.failReason.label} (${result.failReason.code})`, 'Bearbeitungsfehler', 5000);
-
-                //no render coming (anymore)?
-                if (!result.willRender) {
-                    //trigger render
-                    actionQueue.notifyRender();
-                } else {
-                    //await render
-                    return actionQueue.awaitRender();
-                }
-            }).then(() => {
-                console.log("after render");
-
-                //rendered
-                afterRender();
-
-				//update selection
-				let selection: Selection | null = null;
-				if (result.selection && data.inputType != 'deleteByDrag') {
-                    //set new selection range
-					selection = editor.setCurrentSelection(result.selection);
-                } else {
-                    //restore old range
-                    selection = getSelection();
-                    if (selection?.rangeCount == 1) {
-                        var currentSelectionRange = selection.getRangeAt(0);
-                        currentSelectionRange.setStart(selectionRange.startContainer, selectionRange.startOffset);
-						currentSelectionRange.setEnd(selectionRange.endContainer, selectionRange.endOffset);
-                    } else if (selection) {
-                        selection.removeAllRanges();
-                        selection.addRange(selectionRange);
-                    }
+				//Kommt doch kein Render mehr?
+				if (!result.willRender) {
+					//Trigger Render
+					actionQueue.notifyRender();
+				} else {
+					//Auf Render warten
+					await actionQueue.awaitRender();
 				}
 
-				//refresh custom selections
+				console.log("after render");
+
+				//Auswahl aktualisieren
+				let newSelection: Selection | null = null;
+				if (result.selection && data.inputType != 'deleteByDrag') {
+					//Neue Auswahl setzen
+					newSelection = editor.setCurrentSelection(result.selection);
+				} else {
+					//Alte Auswahl wiederherstellen
+					newSelection = getSelection();
+					if (newSelection?.rangeCount == 1) {
+						var currentSelectionRange = newSelection.getRangeAt(0);
+						currentSelectionRange.setStart(selectionRange.startContainer, selectionRange.startOffset);
+						currentSelectionRange.setEnd(selectionRange.endContainer, selectionRange.endOffset);
+					} else if (newSelection) {
+						newSelection.removeAllRanges();
+						newSelection.addRange(selectionRange);
+					}
+				}
+
+				//Editor synchronisieren
+				editor.updateFromElement();
+
+				//Benutzerdefinierte Auswahl aktualisieren
 				selectionObserver!.refreshSelection();
-				
-				//scroll the selection into view
-				for (var focusElement = selection?.focusNode; focusElement && !('scrollIntoView' in focusElement); focusElement = focusElement.parentElement) { }
+
+				//Auswahl sichtbar machen
+				for (var focusElement = newSelection?.focusNode; focusElement && !('scrollIntoView' in focusElement); focusElement = focusElement.parentElement) { }
 				if (focusElement) {
 					(focusElement as HTMLElement).scrollIntoView({
 						block: 'nearest',
@@ -338,10 +349,11 @@ function registerChordEditor(wrapper: HTMLElement, reference: BlazorDotNetRefere
 					});
 				}
 
-                //show caret
-                wrapper.classList.remove('refreshing');
-            });
-        };
+				//Cursor anzeigen
+				wrapper.classList.remove('refreshing');
+			});
+		};
+
 		editor = new ModificationEditor(wrapper, callback);
 		selectionObserver = new SelectionObserver(editor);
 

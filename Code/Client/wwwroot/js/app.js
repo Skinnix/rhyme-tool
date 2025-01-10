@@ -9,6 +9,42 @@ var __assign = (this && this.__assign) || function () {
     };
     return __assign.apply(this, arguments);
 };
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __generator = (this && this.__generator) || function (thisArg, body) {
+    var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g = Object.create((typeof Iterator === "function" ? Iterator : Object).prototype);
+    return g.next = verb(0), g["throw"] = verb(1), g["return"] = verb(2), typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+    function verb(n) { return function (v) { return step([n, v]); }; }
+    function step(op) {
+        if (f) throw new TypeError("Generator is already executing.");
+        while (g && (g = 0, op[0] && (_ = 0)), _) try {
+            if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+            if (y = 0, t) op = [op[0] & 2, t.value];
+            switch (op[0]) {
+                case 0: case 1: t = op; break;
+                case 4: _.label++; return { value: op[1], done: false };
+                case 5: _.label++; y = op[1]; op = [0]; continue;
+                case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                default:
+                    if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                    if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                    if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                    if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                    if (t[2]) _.ops.pop();
+                    _.trys.pop(); continue;
+            }
+            op = body.call(thisArg, _);
+        } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+        if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+    }
+};
 var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
     if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
         if (ar || !(i in from)) {
@@ -168,14 +204,9 @@ function registerChordEditor(wrapper, reference, callbackName) {
         }
     }
     var actionQueue = new ActionQueue();
-    var handler;
     var editor = null;
     var selectionObserver = null;
-    handler = function (event) {
-        wrapper.removeEventListener('focus', handler);
-        createEditor();
-    };
-    wrapper.addEventListener('focus', handler);
+    createEditor();
     return {
         notifyAfterRender: actionQueue.notifyRender.bind(actionQueue),
         destroy: function () {
@@ -184,61 +215,81 @@ function registerChordEditor(wrapper, reference, callbackName) {
         }
     };
     function createEditor() {
-        var afterRender;
-        var callback = function (editor, data, selectionRange, expectRender) {
-            var result;
-            actionQueue.then(function () {
-                var selection = editor.getCurrentSelection();
-                if (!selection)
-                    throw new Error("Keine Auswahl vorhanden.");
-                var eventData = __assign({ selection: selection, editRange: data.editRange, justSelected: selectionObserver.triggerJustSelected() }, data);
-                wrapper.classList.add('refreshing');
-                selectionObserver.pauseObservation();
-                selectionRange.collapse(false);
-                actionQueue.prepareForNextRender();
-                afterRender = expectRender();
-                console.log("invoke Blazor");
-                return invokeBlazor(reference, callbackName, eventData);
-            }).then(function (r) {
-                console.log("check result");
-                result = r;
-                if (result.failReason)
-                    showToast("".concat(result.failReason.label, " (").concat(result.failReason.code, ")"), 'Bearbeitungsfehler', 5000);
-                if (!result.willRender) {
-                    actionQueue.notifyRender();
-                }
-                else {
-                    return actionQueue.awaitRender();
-                }
-            }).then(function () {
-                console.log("after render");
-                afterRender();
-                var selection = null;
-                if (result.selection && data.inputType != 'deleteByDrag') {
-                    selection = editor.setCurrentSelection(result.selection);
-                }
-                else {
-                    selection = getSelection();
-                    if ((selection === null || selection === void 0 ? void 0 : selection.rangeCount) == 1) {
-                        var currentSelectionRange = selection.getRangeAt(0);
-                        currentSelectionRange.setStart(selectionRange.startContainer, selectionRange.startOffset);
-                        currentSelectionRange.setEnd(selectionRange.endContainer, selectionRange.endOffset);
+        var _this = this;
+        var callback = function (editor, data, selectionRange) {
+            console.log('awaiting queue');
+            actionQueue.then(function () { return __awaiter(_this, void 0, void 0, function () {
+                var selection, editRange, eventData, result, newSelection, currentSelectionRange, focusElement;
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0:
+                            console.log('queue finished');
+                            selection = editor.getCurrentSelection();
+                            if (!selection)
+                                throw new Error("Keine Auswahl vorhanden.");
+                            editRange = data.editRangeStart == undefined || data.editRangeEnd == undefined ? null : {
+                                start: {
+                                    metaline: selection.start.metaline,
+                                    line: selection.start.line,
+                                    offset: data.editRangeStart,
+                                },
+                                end: {
+                                    metaline: selection.end.metaline,
+                                    line: selection.end.line,
+                                    offset: data.editRangeEnd,
+                                }
+                            };
+                            eventData = __assign({ selection: selection, editRange: editRange, justSelected: selectionObserver.triggerJustSelected() }, data);
+                            wrapper.classList.add('refreshing');
+                            selectionObserver.pauseObservation();
+                            selectionRange.collapse(false);
+                            actionQueue.prepareForNextRender();
+                            console.log("invoke Blazor");
+                            return [4, invokeBlazor(reference, callbackName, eventData)];
+                        case 1:
+                            result = _a.sent();
+                            console.log("check result");
+                            if (result.failReason)
+                                showToast("".concat(result.failReason.label, " (").concat(result.failReason.code, ")"), 'Bearbeitungsfehler', 5000);
+                            if (!!result.willRender) return [3, 2];
+                            actionQueue.notifyRender();
+                            return [3, 4];
+                        case 2: return [4, actionQueue.awaitRender()];
+                        case 3:
+                            _a.sent();
+                            _a.label = 4;
+                        case 4:
+                            console.log("after render");
+                            newSelection = null;
+                            if (result.selection && data.inputType != 'deleteByDrag') {
+                                newSelection = editor.setCurrentSelection(result.selection);
+                            }
+                            else {
+                                newSelection = getSelection();
+                                if ((newSelection === null || newSelection === void 0 ? void 0 : newSelection.rangeCount) == 1) {
+                                    currentSelectionRange = newSelection.getRangeAt(0);
+                                    currentSelectionRange.setStart(selectionRange.startContainer, selectionRange.startOffset);
+                                    currentSelectionRange.setEnd(selectionRange.endContainer, selectionRange.endOffset);
+                                }
+                                else if (newSelection) {
+                                    newSelection.removeAllRanges();
+                                    newSelection.addRange(selectionRange);
+                                }
+                            }
+                            editor.updateFromElement();
+                            selectionObserver.refreshSelection();
+                            for (focusElement = newSelection === null || newSelection === void 0 ? void 0 : newSelection.focusNode; focusElement && !('scrollIntoView' in focusElement); focusElement = focusElement.parentElement) { }
+                            if (focusElement) {
+                                focusElement.scrollIntoView({
+                                    block: 'nearest',
+                                    inline: 'nearest'
+                                });
+                            }
+                            wrapper.classList.remove('refreshing');
+                            return [2];
                     }
-                    else if (selection) {
-                        selection.removeAllRanges();
-                        selection.addRange(selectionRange);
-                    }
-                }
-                selectionObserver.refreshSelection();
-                for (var focusElement = selection === null || selection === void 0 ? void 0 : selection.focusNode; focusElement && !('scrollIntoView' in focusElement); focusElement = focusElement.parentElement) { }
-                if (focusElement) {
-                    focusElement.scrollIntoView({
-                        block: 'nearest',
-                        inline: 'nearest'
-                    });
-                }
-                wrapper.classList.remove('refreshing');
-            });
+                });
+            }); });
         };
         editor = new ModificationEditor(wrapper, callback);
         selectionObserver = new SelectionObserver(editor);
@@ -402,269 +453,109 @@ var Debouncer = (function () {
 }());
 var ModificationEditor = (function () {
     function ModificationEditor(editor, callback) {
+        var _a, _b;
         this.editor = editor;
         this.callback = callback;
-        this.debouncer = new Debouncer(2);
-        this.actualCompositionUpdate = false;
-        this.revertModifications = true;
-        this.isUncancelable = function (event) { return false; };
-        this.editor.addEventListener('beforeinput', this.handleBeforeInput.bind(this));
-        this.editor.addEventListener('input', this.handleInput.bind(this));
-        this.editor.addEventListener('compositionstart', this.handleCompositionStart.bind(this));
-        this.editor.addEventListener('compositionupdate', this.handleCompositionUpdate.bind(this));
-        this.editor.addEventListener('compositionend', this.handleCompositionEnd.bind(this));
-        if (/Chrome.*Mobile/.test(navigator.userAgent)) {
-            this.isUncancelable = function (event) {
-                if (event.inputType == 'deleteContent' || event.inputType == 'deleteContentBackward' || event.inputType == 'deleteContentForward') {
-                    return true;
-                }
-                return false;
-            };
-        }
-        var self = this;
-        this.observer = new MutationObserver(function (mutations) {
-            if (self.ignoreMutation(mutations, editor))
-                return;
-            if (self.isRenderDone(mutations)) {
-                self.revertModifications = true;
-                console.log("render done");
-                return;
-            }
-            if (self.revertModifications) {
-                self.revertModificationAndRestoreSelection({
-                    mutations: mutations
-                }, self.revertSelection);
-            }
-            if (self.afterModification) {
-                var handler = self.afterModification;
-                self.afterModification = null;
-                handler({
-                    mutations: mutations
-                });
-            }
-            else if (!self.revertModifications) {
-                console.log("allowed modification (render?)", mutations);
-            }
+        var selection = SelectionHelper.getGlobalOffset(getSelection(), editor);
+        this.editContext = new EditContext(this.currentState = {
+            text: editor.innerText,
+            selectionStart: (_a = selection === null || selection === void 0 ? void 0 : selection.start) !== null && _a !== void 0 ? _a : 0,
+            selectionEnd: (_b = selection === null || selection === void 0 ? void 0 : selection.end) !== null && _b !== void 0 ? _b : 0,
         });
-        this.startObserver();
+        this.editContext.addEventListener('textupdate', this.handleTextUpdate.bind(this));
+        this.editor.addEventListener('keydown', this.handleKeyDown.bind(this));
+        this.editor.addEventListener('paste', this.handlePaste.bind(this));
+        this.editor.editContext = this.editContext;
     }
     ModificationEditor.prototype.destroy = function () {
-        this.observer.disconnect();
-        this.editor.removeEventListener('beforeinput', this.handleBeforeInput.bind(this));
-        this.editor.removeEventListener('input', this.handleInput.bind(this));
-        this.editor.removeEventListener('compositionstart', this.handleCompositionStart.bind(this));
-        this.editor.removeEventListener('compositionupdate', this.handleCompositionUpdate.bind(this));
-        this.editor.removeEventListener('compositionend', this.handleCompositionEnd.bind(this));
+        this.editContext.removeEventListener('textupdate', this.handleTextUpdate.bind(this));
+        this.editor.removeEventListener('keydown', this.handleKeyDown.bind(this));
+        this.editor.removeEventListener('paste', this.handlePaste.bind(this));
     };
-    ModificationEditor.prototype.startObserver = function () {
-        this.observer.observe(this.editor, {
-            childList: true,
-            subtree: true,
-            characterData: true,
-            characterDataOldValue: true,
-            attributes: true,
-            attributeFilter: ['data-render-key', 'data-render-key-done']
-        });
-    };
-    ModificationEditor.prototype.isRenderDone = function (mutations) {
-        for (var i = 0; i < mutations.length; i++) {
-            var mutation = mutations[i];
-            for (var j = 0; j < mutation.addedNodes.length; j++) {
-                var node = mutation.addedNodes[j];
-                if (node instanceof HTMLElement) {
-                    if (node.getAttribute('data-render-key-done'))
-                        return true;
-                }
-            }
-        }
-        return false;
-    };
-    ModificationEditor.prototype.ignoreMutation = function (mutations, editor) {
-        for (var i = 0; i < mutations.length; i++) {
-            var mutation = mutations[i];
-            for (var current = mutation.target; current && current != editor; current = current.parentElement) {
-                if (current instanceof HTMLElement) {
-                    if (current.classList.contains('metaline-controls') || current.classList.contains('line-controls')) {
-                        return true;
-                    }
-                }
-            }
-        }
-        return false;
-    };
-    ModificationEditor.prototype.handleBeforeInput = function (event) {
-        var _this = this;
+    ModificationEditor.prototype.handleTextUpdate = function (event) {
         var _a;
         event.stopImmediatePropagation();
-        var editRange = null;
-        if (event.inputType == 'insertCompositionText') {
-            if (!this.actualCompositionUpdate) {
-                return;
-            }
-            this.actualCompositionUpdate = false;
-            var targetRange = event.getTargetRanges()[0];
-            if (targetRange) {
-                editRange = this.getLineSelection(targetRange);
-            }
-        }
-        var data = event.data;
-        if (!event.data && event.dataTransfer) {
-            data = event.dataTransfer.getData('text');
-        }
+        event.preventDefault();
         console.log(event);
         var currentRange = (_a = getSelection()) === null || _a === void 0 ? void 0 : _a.getRangeAt(0);
         if (!currentRange)
             return;
-        if (event.inputType == 'deleteContent' || event.inputType == 'deleteContentBackward' || event.inputType == 'deleteContentForward') {
-            if (currentRange.endOffset == 0 && currentRange.startContainer !== currentRange.endContainer) {
-                var rangeString = currentRange.toString();
-                if (rangeString === '' || rangeString === "\n") {
-                    currentRange.collapse(event.inputType == 'deleteContentForward');
-                }
-            }
-        }
-        this.revertSelection = new StaticRange(currentRange);
-        if (event.cancelable && !this.isUncancelable(event)) {
-            event.preventDefault();
-            this.callback(this, {
-                inputType: event.inputType,
-                editRange: editRange,
-                data: data
-            }, currentRange, this.pauseRender.bind(this));
+        var inputType = event.text ? 'insertText'
+            : event.updateRangeStart < this.currentState.selectionStart ? 'deleteContentBackward'
+                : 'deleteContentForward';
+        var lineStart = this.currentState.text.lastIndexOf('\n', event.updateRangeStart);
+        var lineEnd = this.currentState.text.lastIndexOf('\n', event.updateRangeEnd);
+        if (lineStart < 0) {
+            lineStart = 0;
         }
         else {
-            this.afterModification = function (modification) {
-                var debounce = event.inputType == 'insertCompositionText';
-                _this.debouncer.debounce(function () {
-                    var _a;
-                    console.log("callback");
-                    var currentRange = (_a = getSelection()) === null || _a === void 0 ? void 0 : _a.getRangeAt(0);
-                    if (!currentRange)
-                        throw new Error("Keine Auswahl m�glich");
-                    _this.callback(_this, {
-                        inputType: event.inputType,
-                        editRange: editRange,
-                        data: data
-                    }, currentRange, _this.pauseRender.bind(_this));
-                }, debounce);
-            };
+            for (var current = lineStart; current > 0; current = this.currentState.text.lastIndexOf('\n', current - 1))
+                lineStart--;
         }
-    };
-    ModificationEditor.prototype.handleInput = function (event) {
-        if (event.inputType == 'insertCompositionText') {
-            if (!this.actualCompositionUpdate) {
-                return;
-            }
+        if (lineEnd < 0) {
+            lineEnd = 0;
         }
-        if (!this.afterModification) {
-            console.error("Unhandled input event!", event);
+        else {
+            for (var current = lineEnd; current > 0; current = this.currentState.text.lastIndexOf('\n', current - 1))
+                lineEnd--;
         }
+        var lineOffsetStart = event.updateRangeStart - lineStart;
+        var lineOffsetEnd = event.updateRangeEnd - lineEnd;
+        this.callback(this, {
+            inputType: inputType,
+            editRangeStart: lineOffsetStart,
+            editRangeEnd: lineOffsetEnd,
+            data: event.text
+        }, currentRange);
     };
-    ModificationEditor.prototype.handleCompositionStart = function (event) {
-        console.log('compositionstart', event);
-    };
-    ModificationEditor.prototype.handleCompositionUpdate = function (event) {
-        this.actualCompositionUpdate = true;
-        console.log('compositionupdate', event);
-    };
-    ModificationEditor.prototype.handleCompositionEnd = function (event) {
-        console.log('compositionend', event);
-    };
-    ModificationEditor.prototype.pauseRender = function () {
-        var _this = this;
-        this.revertModifications = false;
-        return function () {
-            _this.revertModifications = true;
-        };
-    };
-    ModificationEditor.prototype.revertModificationAndRestoreSelection = function (modification, selection) {
-        if (modification) {
-            this.revertModification(modification);
-            this.observer.takeRecords();
-        }
-        if (selection !== undefined) {
-            this.restoreSelection(selection);
-        }
-    };
-    ;
-    ModificationEditor.prototype.revertModification = function (modification) {
+    ModificationEditor.prototype.handleKeyDown = function (event) {
         var _a;
-        console.log("Revert modification", modification);
-        console.log(JSON.stringify(modification, null, 2));
-        var mutations = Array.from(modification.mutations.reverse());
-        while (mutations.length != 0) {
-            for (var m = 0; m < mutations.length; m++) {
-                var mutation = mutations[m];
-                if (mutation.type == 'childList') {
-                    if (mutation.removedNodes.length > 0) {
-                        if (mutation.nextSibling) {
-                            if (!mutation.target.contains(mutation.nextSibling))
-                                continue;
-                            for (var i = 0; i < mutation.removedNodes.length; i++) {
-                                var node = mutation.removedNodes[i];
-                                mutation.target.insertBefore(node, mutation.nextSibling);
-                            }
-                        }
-                        else {
-                            for (var i = 0; i < mutation.removedNodes.length; i++) {
-                                var node = mutation.removedNodes[i];
-                                mutation.target.appendChild(node);
-                            }
-                        }
-                    }
-                    if (mutation.addedNodes.length > 0) {
-                        var found = true;
-                        for (var j = 0; j < mutation.addedNodes.length; j++) {
-                            var node = mutation.addedNodes[j];
-                            if (!node.parentElement) {
-                                found = false;
-                                break;
-                            }
-                        }
-                        if (!found)
-                            continue;
-                        for (var j = 0; j < mutation.addedNodes.length; j++) {
-                            var node = mutation.addedNodes[j];
-                            (_a = node.parentElement) === null || _a === void 0 ? void 0 : _a.removeChild(node);
-                        }
-                    }
-                }
-                else if (mutation.type == 'characterData') {
-                    mutation.target.nodeValue = mutation.oldValue;
-                }
-                mutations.splice(m, 1);
-                m--;
-            }
+        if (event.isComposing || event.keyCode === 229)
+            return;
+        console.log(event);
+        var currentRange = (_a = getSelection()) === null || _a === void 0 ? void 0 : _a.getRangeAt(0);
+        if (!currentRange)
+            return;
+        if (event.key === "Enter") {
+            this.callback(this, {
+                inputType: 'insertText',
+                data: '\n'
+            }, currentRange);
         }
     };
-    ModificationEditor.prototype.restoreSelection = function (selection) {
-        var _a, _b, _c, _d;
-        console.log("Restore selection", selection);
-        var currentSelection = getSelection();
-        if (!currentSelection)
-            throw new Error("Keine Auswahl m�glich");
-        if (selection) {
-            var currentRange = void 0;
-            if ((currentSelection === null || currentSelection === void 0 ? void 0 : currentSelection.rangeCount) == 1) {
-                currentRange = currentSelection.getRangeAt(0);
-            }
-            else {
-                currentSelection.removeAllRanges();
-                currentRange = document.createRange();
-                currentSelection.addRange(currentRange);
-            }
-            if (selection.startOffset <= ((_b = (_a = selection.startContainer.textContent) === null || _a === void 0 ? void 0 : _a.length) !== null && _b !== void 0 ? _b : 0))
-                currentRange.setStart(selection.startContainer, selection.startOffset);
-            else
-                currentRange.setStartAfter(selection.startContainer);
-            if (selection.endOffset <= ((_d = (_c = selection.endContainer.textContent) === null || _c === void 0 ? void 0 : _c.length) !== null && _d !== void 0 ? _d : 0))
-                currentRange.setEnd(selection.endContainer, selection.endOffset);
-            else
-                currentRange.setEndAfter(selection.endContainer);
+    ModificationEditor.prototype.handlePaste = function (event) {
+        var _a, _b;
+        console.log(event);
+        var currentRange = (_a = getSelection()) === null || _a === void 0 ? void 0 : _a.getRangeAt(0);
+        if (!currentRange)
+            return;
+        var text = (_b = event.clipboardData) === null || _b === void 0 ? void 0 : _b.getData('text');
+        if (!text)
+            return;
+        this.callback(this, {
+            inputType: 'insertText',
+            data: text
+        }, currentRange);
+    };
+    ModificationEditor.prototype.updateFromElement = function (text, selection) {
+        if (text !== false) {
+            if (typeof text !== 'string')
+                text = this.editor.innerText;
+            this.editContext.updateText(0, this.editContext.text.length, text);
         }
-        else {
-            currentSelection === null || currentSelection === void 0 ? void 0 : currentSelection.removeAllRanges();
+        if (selection !== false) {
+            if (typeof selection !== 'object')
+                selection = getSelection();
+            var textSelection = SelectionHelper.getGlobalOffset(selection, this.editor);
+            if (textSelection) {
+                this.editContext.updateSelection(textSelection.start, textSelection.end);
+            }
         }
+        this.currentState = {
+            text: this.editContext.text,
+            selectionStart: this.editContext.selectionStart,
+            selectionEnd: this.editContext.selectionEnd
+        };
     };
     ModificationEditor.prototype.getCurrentSelection = function (documentSelection) {
         var _a;
@@ -686,7 +577,6 @@ var ModificationEditor = (function () {
         if (!lineSelection) {
             if (documentSelection.rangeCount != 0)
                 documentSelection.removeAllRanges();
-            this.revertSelection = null;
             return documentSelection;
         }
         var range;
@@ -698,7 +588,6 @@ var ModificationEditor = (function () {
             documentSelection.addRange(range);
         }
         this.setLineSelectionRange(documentSelection, range, lineSelection);
-        this.revertSelection = new StaticRange(range);
         return documentSelection;
     };
     ModificationEditor.prototype.setLineSelectionRange = function (documentSelection, range, lineSelection) {
@@ -870,6 +759,165 @@ var ModificationEditor = (function () {
     ModificationEditor.LAST_LINE_ID = -2;
     return ModificationEditor;
 }());
+var SelectionHelper = (function () {
+    function SelectionHelper() {
+    }
+    SelectionHelper.getNodeAndOffset = function (node, offset) {
+        var _a, _b, _c, _d, _e, _f;
+        if (offset < 0)
+            return SelectionHelper.getNodeAndOffsetFromEnd(node, offset);
+        var iterator = document.createNodeIterator(node, NodeFilter.SHOW_TEXT);
+        var currentOffset = 0;
+        var current = iterator.nextNode();
+        while (current && currentOffset + ((_b = (_a = current.textContent) === null || _a === void 0 ? void 0 : _a.length) !== null && _b !== void 0 ? _b : 0) < offset) {
+            currentOffset += (_d = (_c = current.textContent) === null || _c === void 0 ? void 0 : _c.length) !== null && _d !== void 0 ? _d : 0;
+            var next = iterator.nextNode();
+            if (!next)
+                return {
+                    node: current,
+                    offset: ((_f = (_e = current.textContent) === null || _e === void 0 ? void 0 : _e.length) !== null && _f !== void 0 ? _f : 0),
+                };
+            current = next;
+        }
+        return {
+            node: current !== null && current !== void 0 ? current : node,
+            offset: offset - currentOffset,
+        };
+    };
+    SelectionHelper.getNodeAndOffsetFromEnd = function (node, offset) {
+        var _a, _b, _c, _d;
+        var iterator = document.createNodeIterator(node, NodeFilter.SHOW_TEXT);
+        var allNodes = [];
+        var current = iterator.nextNode();
+        if (!current)
+            return {
+                node: node,
+                offset: 0,
+            };
+        while (current) {
+            allNodes.push(current);
+            current = iterator.nextNode();
+        }
+        offset = -offset - 1;
+        var currentOffset = 0;
+        for (var i = allNodes.length - 1; i >= 0; i--) {
+            current = allNodes[i];
+            if (currentOffset + ((_b = (_a = current.textContent) === null || _a === void 0 ? void 0 : _a.length) !== null && _b !== void 0 ? _b : 0) >= offset)
+                break;
+            currentOffset += (_d = (_c = current.textContent) === null || _c === void 0 ? void 0 : _c.length) !== null && _d !== void 0 ? _d : 0;
+        }
+        current !== null && current !== void 0 ? current : (current = node);
+        if (!current.textContent)
+            throw new Error("Kein Textknoten gefunden");
+        return {
+            node: current,
+            offset: current.textContent.length - (offset - currentOffset),
+        };
+    };
+    SelectionHelper.getGlobalOffset = function (selection, editor) {
+        var _a, _b, _c, _d;
+        if (!selection)
+            return null;
+        var treeWalker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
+        var anchorNodeFound = false;
+        var extentNodeFound = false;
+        var anchorOffset = 0;
+        var extentOffset = 0;
+        while (treeWalker.nextNode()) {
+            var node = treeWalker.currentNode;
+            if (node === selection.anchorNode) {
+                anchorNodeFound = true;
+                anchorOffset += selection.anchorOffset;
+            }
+            if (node === selection.focusNode) {
+                extentNodeFound = true;
+                extentOffset += selection.focusOffset;
+            }
+            if (node.nodeType == Node.TEXT_NODE) {
+                if (!anchorNodeFound) {
+                    anchorOffset += (_b = (_a = node.textContent) === null || _a === void 0 ? void 0 : _a.length) !== null && _b !== void 0 ? _b : 0;
+                }
+                if (!extentNodeFound) {
+                    extentOffset += (_d = (_c = node.textContent) === null || _c === void 0 ? void 0 : _c.length) !== null && _d !== void 0 ? _d : 0;
+                }
+            }
+        }
+        if (!anchorNodeFound || !extentNodeFound) {
+            return null;
+        }
+        return { start: anchorOffset, end: extentOffset };
+    };
+    return SelectionHelper;
+}());
+var ActionQueue = (function () {
+    function ActionQueue() {
+        this.queue = null;
+        this.resolveRender = null;
+        this.awaitRenderPromise = null;
+    }
+    Object.defineProperty(ActionQueue.prototype, "isBusy", {
+        get: function () {
+            return !!this.queue;
+        },
+        enumerable: false,
+        configurable: true
+    });
+    ActionQueue.prototype.then = function (onfulfilled, onrejected) {
+        var self = this;
+        var promise = null;
+        function checkRemove(next) {
+            if (next && next.then) {
+                return next.then(function (afterNext) {
+                    return checkRemove(afterNext);
+                });
+            }
+            if (self.queue === promise) {
+                self.queue = null;
+                console.log("Queue is empty");
+            }
+            else {
+            }
+            return next;
+        }
+        ;
+        var handler = function (value) { return checkRemove(onfulfilled ? onfulfilled(value) : undefined); };
+        if (this.queue) {
+            this.queue = promise = this.queue.then(handler);
+        }
+        else {
+            this.queue = promise = new Promise(function (resolve, reject) {
+                resolve(handler(undefined));
+            });
+        }
+        return this;
+    };
+    ActionQueue.prototype.prepareForNextRender = function () {
+        if (this.resolveRender)
+            return;
+        var self = this;
+        this.awaitRenderPromise = new Promise(function (resolve, reject) {
+            self.resolveRender = function () {
+                resolve();
+                self.resolveRender = null;
+                self.awaitRenderPromise = null;
+            };
+        });
+    };
+    ActionQueue.prototype.awaitRender = function () {
+        if (!this.awaitRenderPromise)
+            return;
+        console.log("Awaiting next render");
+        var promise = this.awaitRenderPromise;
+        return promise;
+    };
+    ActionQueue.prototype.notifyRender = function () {
+        console.log("Render called");
+        if (!this.resolveRender)
+            return;
+        this.resolveRender();
+    };
+    return ActionQueue;
+}());
 var SelectionObserver = (function () {
     function SelectionObserver(modificationEditor) {
         this.modificationEditor = modificationEditor;
@@ -917,6 +965,7 @@ var SelectionObserver = (function () {
         var documentSelection = getSelection();
         if (!documentSelection || documentSelection.rangeCount == 0)
             return this.resetCustomSelections();
+        this.modificationEditor.updateFromElement(false, documentSelection);
         var range = documentSelection.getRangeAt(0);
         if (documentSelection.rangeCount > 1) {
             var firstRange = range;
@@ -1166,132 +1215,6 @@ var SelectionObserver = (function () {
     };
     SelectionObserver.needsLineFix = /Firefox/.test(navigator.userAgent);
     return SelectionObserver;
-}());
-var SelectionHelper = (function () {
-    function SelectionHelper() {
-    }
-    SelectionHelper.getNodeAndOffset = function (node, offset) {
-        var _a, _b, _c, _d, _e, _f;
-        if (offset < 0)
-            return SelectionHelper.getNodeAndOffsetFromEnd(node, offset);
-        var iterator = document.createNodeIterator(node, NodeFilter.SHOW_TEXT);
-        var currentOffset = 0;
-        var current = iterator.nextNode();
-        while (current && currentOffset + ((_b = (_a = current.textContent) === null || _a === void 0 ? void 0 : _a.length) !== null && _b !== void 0 ? _b : 0) < offset) {
-            currentOffset += (_d = (_c = current.textContent) === null || _c === void 0 ? void 0 : _c.length) !== null && _d !== void 0 ? _d : 0;
-            var next = iterator.nextNode();
-            if (!next)
-                return {
-                    node: current,
-                    offset: ((_f = (_e = current.textContent) === null || _e === void 0 ? void 0 : _e.length) !== null && _f !== void 0 ? _f : 0),
-                };
-            current = next;
-        }
-        return {
-            node: current !== null && current !== void 0 ? current : node,
-            offset: offset - currentOffset,
-        };
-    };
-    SelectionHelper.getNodeAndOffsetFromEnd = function (node, offset) {
-        var _a, _b, _c, _d;
-        var iterator = document.createNodeIterator(node, NodeFilter.SHOW_TEXT);
-        var allNodes = [];
-        var current = iterator.nextNode();
-        if (!current)
-            return {
-                node: node,
-                offset: 0,
-            };
-        while (current) {
-            allNodes.push(current);
-            current = iterator.nextNode();
-        }
-        offset = -offset - 1;
-        var currentOffset = 0;
-        for (var i = allNodes.length - 1; i >= 0; i--) {
-            current = allNodes[i];
-            if (currentOffset + ((_b = (_a = current.textContent) === null || _a === void 0 ? void 0 : _a.length) !== null && _b !== void 0 ? _b : 0) >= offset)
-                break;
-            currentOffset += (_d = (_c = current.textContent) === null || _c === void 0 ? void 0 : _c.length) !== null && _d !== void 0 ? _d : 0;
-        }
-        current !== null && current !== void 0 ? current : (current = node);
-        if (!current.textContent)
-            throw new Error("Kein Textknoten gefunden");
-        return {
-            node: current,
-            offset: current.textContent.length - (offset - currentOffset),
-        };
-    };
-    return SelectionHelper;
-}());
-var ActionQueue = (function () {
-    function ActionQueue() {
-        this.queue = null;
-        this.resolveRender = null;
-        this.awaitRenderPromise = null;
-    }
-    Object.defineProperty(ActionQueue.prototype, "isBusy", {
-        get: function () {
-            return !!this.queue;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    ActionQueue.prototype.then = function (onfulfilled, onrejected) {
-        var self = this;
-        var promise = null;
-        function checkRemove(next) {
-            if (next && next.then) {
-                return next.then(function (afterNext) {
-                    return checkRemove(afterNext);
-                });
-            }
-            if (self.queue === promise) {
-                self.queue = null;
-                console.log("Queue is empty");
-            }
-            else {
-            }
-            return next;
-        }
-        ;
-        var handler = function (value) { return checkRemove(onfulfilled ? onfulfilled(value) : undefined); };
-        if (this.queue) {
-            this.queue = promise = this.queue.then(handler);
-        }
-        else {
-            this.queue = promise = new Promise(function (resolve, reject) {
-                resolve(handler(undefined));
-            });
-        }
-        return this;
-    };
-    ActionQueue.prototype.prepareForNextRender = function () {
-        if (this.resolveRender)
-            return;
-        var self = this;
-        this.awaitRenderPromise = new Promise(function (resolve, reject) {
-            self.resolveRender = function () {
-                resolve();
-                self.resolveRender = null;
-                self.awaitRenderPromise = null;
-            };
-        });
-    };
-    ActionQueue.prototype.awaitRender = function () {
-        if (!this.awaitRenderPromise)
-            return;
-        console.log("Awaiting next render");
-        var promise = this.awaitRenderPromise;
-        return promise;
-    };
-    ActionQueue.prototype.notifyRender = function () {
-        console.log("Render called");
-        if (!this.resolveRender)
-            return;
-        this.resolveRender();
-    };
-    return ActionQueue;
 }());
 function downloadFile(url, fileName) {
     var _a;

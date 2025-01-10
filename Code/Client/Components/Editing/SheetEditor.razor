@@ -9,7 +9,7 @@
 
 @inject IJSRuntime js
 
-<div class="chord-sheet chord-sheet-editor chord-sheet-editing" contenteditable="true" @ref="editorWrapper"
+<div class="chord-sheet chord-sheet-editor chord-sheet-editing" tabindex="-1" @ref="editorWrapper"
      spellcheck="false" enterkeyhint="enter">
     @if (Document != null)
     {

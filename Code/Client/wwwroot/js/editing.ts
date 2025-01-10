@@ -46,9 +46,13 @@ declare interface LineNodeAnchor {
 	lineNode: Node;
 }
 
+declare type InputType = 'insertText' | 'deleteContentBackward' | 'deleteContentForward' | 'deleteByDrag';
+
 declare interface ModificationData {
-	inputType: string,
+	inputType: InputType,
 	data: string | null,
+	editRangeStart?: number,
+	editRangeEnd?: number,
 	editRange?: AnchorSelection<MetalineLineAnchor> | null,
 }
 
@@ -62,7 +66,13 @@ declare interface MetalineEditResult {
 	},
 }
 
-declare type EditorCallback = (editor: ModificationEditor, data: ModificationData, selectionRange: Range, pauseRender: () => (() => void)) => void;
+declare interface EditContextState {
+	text: string;
+	selectionStart: number;
+	selectionEnd: number;
+}
+
+declare type EditorCallback = (editor: ModificationEditor, data: ModificationData, selectionRange: Range) => void;
 declare type ModificationHandler = (modification: ObservedModification) => void;
 
 function registerModificationEditor(editor: HTMLElement, reference: BlazorDotNetReference, callbackName: string): ModificationEditor {
@@ -119,142 +129,35 @@ class ModificationEditor implements Destructible {
 	static FIRST_LINE_ID = -1;
 	static LAST_LINE_ID = -2;
 
-	private observer: MutationObserver;
-	private debouncer = new Debouncer(2);
-	private actualCompositionUpdate = false;
-	private afterModification: ModificationHandler | null;
+	private currentState: EditContextState;
+	private editContext: EditContext;
 
-	private revertModifications = true;
-	private revertSelection: StaticRange | null | undefined;
-
-	private isUncancelable = (event: InputEvent) => false;
-	
 	constructor(public editor: HTMLElement, private callback: EditorCallback) {
-		this.editor.addEventListener('beforeinput', this.handleBeforeInput.bind(this));
-		this.editor.addEventListener('input', this.handleInput.bind(this));
-		this.editor.addEventListener('compositionstart', this.handleCompositionStart.bind(this));
-		this.editor.addEventListener('compositionupdate', this.handleCompositionUpdate.bind(this));
-		this.editor.addEventListener('compositionend', this.handleCompositionEnd.bind(this));
-
-		if (/Chrome.*Mobile/.test(navigator.userAgent)) {
-			this.isUncancelable = (event: InputEvent) => {
-				if (event.inputType == 'deleteContent' || event.inputType == 'deleteContentBackward' || event.inputType == 'deleteContentForward') {
-					return true;
-				}
-
-				return false;
-			};
-		}
-
-		let self = this;
-		this.observer = new MutationObserver(function (mutations) {
-			//Element ignorieren?
-			if (self.ignoreMutation(mutations, editor))
-				return;
-
-			//Rerender?
-			if (self.isRenderDone(mutations)) {
-				//Render fertig
-				self.revertModifications = true;
-				console.log("render done");
-				return;
-			}
-
-			if (self.revertModifications) {
-				self.revertModificationAndRestoreSelection({
-					mutations: mutations
-				}, self.revertSelection);
-			}
-
-			if (self.afterModification) {
-				let handler = self.afterModification;
-				self.afterModification = null;
-				handler({
-					mutations: mutations
-				});
-			} else if (!self.revertModifications) {
-				console.log("allowed modification (render?)", mutations);
-			}
+		let selection = SelectionHelper.getGlobalOffset(getSelection(), editor);
+		this.editContext = new EditContext(this.currentState = {
+			text: editor.innerText,
+			selectionStart: selection?.start ?? 0,
+			selectionEnd: selection?.end ?? 0,
 		});
-		this.startObserver();
+
+		this.editContext.addEventListener('textupdate', this.handleTextUpdate.bind(this));
+		this.editor.addEventListener('keydown', this.handleKeyDown.bind(this));
+		this.editor.addEventListener('paste', this.handlePaste.bind(this));
+
+		(this.editor as any).editContext = this.editContext;
 	}
 
 	public destroy() {
-		this.observer.disconnect();
-		this.editor.removeEventListener('beforeinput', this.handleBeforeInput.bind(this));
-		this.editor.removeEventListener('input', this.handleInput.bind(this));
-		this.editor.removeEventListener('compositionstart', this.handleCompositionStart.bind(this));
-		this.editor.removeEventListener('compositionupdate', this.handleCompositionUpdate.bind(this));
-		this.editor.removeEventListener('compositionend', this.handleCompositionEnd.bind(this));
+		this.editContext.removeEventListener('textupdate', this.handleTextUpdate.bind(this));
+		this.editor.removeEventListener('keydown', this.handleKeyDown.bind(this));
+		this.editor.removeEventListener('paste', this.handlePaste.bind(this));
 	}
 
-	private startObserver() {
-		this.observer.observe(this.editor, {
-			childList: true,
-			subtree: true,
-			characterData: true,
-			characterDataOldValue: true,
-			attributes: true,
-			attributeFilter: ['data-render-key', 'data-render-key-done']
-		});
-	}
-
-	private isRenderDone(mutations: MutationRecord[]): boolean {
-		for (let i = 0; i < mutations.length; i++) {
-			let mutation = mutations[i];
-			for (var j = 0; j < mutation.addedNodes.length; j++) {
-				let node = mutation.addedNodes[j];
-				if (node instanceof HTMLElement) {
-					if (node.getAttribute('data-render-key-done'))
-						return true;
-				}
-			}
-		}
-
-		return false;
-	}
-
-	private ignoreMutation(mutations: MutationRecord[], editor: HTMLElement) {
-		for (let i = 0; i < mutations.length; i++) {
-			let mutation = mutations[i];
-			for (var current: Node | null = mutation.target; current && current != editor; current = current.parentElement) {
-				if (current instanceof HTMLElement) {
-					if (current.classList.contains('metaline-controls') || current.classList.contains('line-controls')) {
-						return true;
-					}
-				}
-			}
-		}
-
-		return false;
-	}
-
-	private handleBeforeInput(event: InputEvent) {
+	private handleTextUpdate(event: TextUpdateEvent) {
 		event.stopImmediatePropagation();
+		event.preventDefault();
 
-		let editRange: AnchorSelection<MetalineLineAnchor> | null = null;
-		if (event.inputType == 'insertCompositionText') {
-			//Findet gerade gar keine Komposition statt?
-			if (!this.actualCompositionUpdate) {
-				//Ungültiges Event
-				return;
-			}
-			this.actualCompositionUpdate = false;
-
-			//Ermittle den Bereich der Komposition
-			let targetRange = event.getTargetRanges()[0];
-			if (targetRange) {
-				editRange = this.getLineSelection(targetRange);
-			}
-		}
-
-		//Lese Daten
-		let data = event.data;
-		if (!event.data && event.dataTransfer) {
-			data = event.dataTransfer.getData('text');
-		}
-
-		//Hole Auswahl
+		//Hole aktuelle Auswahl
 		console.log(event);
 		let currentRange = getSelection()?.getRangeAt(0);
 
@@ -262,180 +165,104 @@ class ModificationEditor implements Destructible {
 		if (!currentRange)
 			return;
 
-		//Wird ein Zeilenumbruch gelöscht?
-		if (event.inputType == 'deleteContent' || event.inputType == 'deleteContentBackward' || event.inputType == 'deleteContentForward') {
-			if (currentRange.endOffset == 0 && currentRange.startContainer !== currentRange.endContainer) {
-				let rangeString = currentRange.toString();
-				if (rangeString === '' || rangeString === "\n") {
-					currentRange.collapse(event.inputType == 'deleteContentForward');
-				}
-			}
-		}
+		//Simuliere InputType
+		let inputType: InputType = event.text ? 'insertText'
+			: event.updateRangeStart < this.currentState.selectionStart ? 'deleteContentBackward'
+			: 'deleteContentForward';
 
-		//Speichere die aktuelle Auswahl, um sie später wiederherstellen zu können
-		this.revertSelection = new StaticRange(currentRange);
-
-		//Kann das Event verhindert werden?
-		if (event.cancelable && !this.isUncancelable(event)) {
-			//Das Event wurde verhindert und die Bearbeitung kann durchgeführt werden
-			event.preventDefault();
-			this.callback(this, {
-				inputType: event.inputType,
-				editRange: editRange,
-				data: data
-			}, currentRange, this.pauseRender.bind(this));
+		//Finde Range
+		let lineStart = this.currentState.text.lastIndexOf('\n', event.updateRangeStart);
+		let lineEnd = this.currentState.text.lastIndexOf('\n', event.updateRangeEnd);
+		if (lineStart < 0) {
+			lineStart = 0;
 		} else {
-			//Das Event wurde nicht verhindert und muss zunächst rückgängig gemacht werden
-			this.afterModification = (modification) => {
-				//Die Änderung wurde rückgängig gemacht
-
-				//Debounce bei Composition-Events
-				let debounce = event.inputType == 'insertCompositionText';
-				this.debouncer.debounce(() => {
-					console.log("callback");
-
-					//Lese aktuelle Selection
-					let currentRange = getSelection()?.getRangeAt(0);
-					if (!currentRange)
-						throw new Error("Keine Auswahl möglich");
-
-					this.callback(this, {
-						inputType: event.inputType,
-						editRange: editRange,
-						data: data
-					}, currentRange, this.pauseRender.bind(this));
-				}, debounce);
-			};
+			for (var current = lineStart; current > 0; current = this.currentState.text.lastIndexOf('\n', current - 1))
+				lineStart--;
 		}
-	}
-
-	private handleInput(event: InputEvent) {
-		//Findet gerade gar keine Komposition statt?
-		if (event.inputType == 'insertCompositionText') {
-			if (!this.actualCompositionUpdate) {
-				//Ungültiges Event
-				return;
-			}
+		if (lineEnd < 0) {
+			lineEnd = 0;
+		} else {
+			for (var current = lineEnd; current > 0; current = this.currentState.text.lastIndexOf('\n', current - 1))
+				lineEnd--;
 		}
+		let lineOffsetStart = event.updateRangeStart - lineStart;
+		let lineOffsetEnd = event.updateRangeEnd - lineEnd;
 
-		if (!this.afterModification) {
-			console.error("Unhandled input event!", event);
-		}
+		//Führe die Bearbeitung durch
+		this.callback(this, {
+			inputType: inputType,
+			//editRange: this.getLineSelection(currentRange, false),
+			editRangeStart: lineOffsetStart,
+			editRangeEnd: lineOffsetEnd,
+			data: event.text
+		}, currentRange);
 	}
 
-	private handleCompositionStart(event: CompositionEvent) {
-		console.log('compositionstart', event);
-	}
-
-	private handleCompositionUpdate(event: CompositionEvent) {
-		this.actualCompositionUpdate = true;
-		console.log('compositionupdate', event);
-	}
-
-	private handleCompositionEnd(event: CompositionEvent) {
-		console.log('compositionend', event);
-	}
-
-	private pauseRender(): (() => void) {
-		this.revertModifications = false;
-		return () => {
-			this.revertModifications = true;
-		};
-	}
-
-	private revertModificationAndRestoreSelection(modification: ObservedModification | null, selection: AbstractRange | null | undefined) {
-		//Rückgängigmachen der Änderung
-		if (modification) {
-			this.revertModification(modification);
-			this.observer.takeRecords();
-		}
+	private handleKeyDown(event: KeyboardEvent): void {
+		// keyCode === 229 is a special code that indicates an IME event.
+		if (event.isComposing || event.keyCode === 229)
+			return;
 		
-		//Wiederherstellen der Auswahl
-		if (selection !== undefined) {
-			this.restoreSelection(selection);
-		}
-	};
+		//Hole aktuelle Auswahl
+		console.log(event);
+		let currentRange = getSelection()?.getRangeAt(0);
 
-	private revertModification(modification: ObservedModification) {
-		console.log("Revert modification", modification);
-		console.log(JSON.stringify(modification, null, 2))
-		var mutations = Array.from(modification.mutations.reverse());
-		while (mutations.length != 0) {
-			for (var m = 0; m < mutations.length; m++) {
-				var mutation = mutations[m];
-				if (mutation.type == 'childList') {
-					if (mutation.removedNodes.length > 0) {
-						if (mutation.nextSibling) {
-							if (!mutation.target.contains(mutation.nextSibling))
-								continue;
+		//Keine Auswahl?
+		if (!currentRange)
+			return;
 
-							for (var i = 0; i < mutation.removedNodes.length; i++) {
-								var node = mutation.removedNodes[i];
-								mutation.target.insertBefore(node, mutation.nextSibling);
-							}
-						} else {
-							for (var i = 0; i < mutation.removedNodes.length; i++) {
-								var node = mutation.removedNodes[i];
-								mutation.target.appendChild(node);
-							}
-						}
-					}
-
-					if (mutation.addedNodes.length > 0) {
-						var found = true;
-						for (var j = 0; j < mutation.addedNodes.length; j++) {
-							var node = mutation.addedNodes[j];
-							if (!node.parentElement) {
-								found = false;
-								break;
-							}
-						}
-						if (!found)
-							continue;
-
-						for (var j = 0; j < mutation.addedNodes.length; j++) {
-							var node = mutation.addedNodes[j];
-							node.parentElement?.removeChild(node);
-						}
-					}
-				} else if (mutation.type == 'characterData') {
-					mutation.target.nodeValue = mutation.oldValue;
-				}
-
-				mutations.splice(m, 1);
-				m--;
-			}
+		if (event.key === "Enter") {
+			//Führe die Bearbeitung durch
+			this.callback(this, {
+				inputType: 'insertText',
+				data: '\n'
+			}, currentRange);
 		}
 	}
 
-	private restoreSelection(selection: AbstractRange | null) {
-		console.log("Restore selection", selection);
-		let currentSelection = getSelection();
-		if (!currentSelection)
-			throw new Error("Keine Auswahl möglich");
+	private handlePaste(event: ClipboardEvent): void {
+		//Hole aktuelle Auswahl
+		console.log(event);
+		let currentRange = getSelection()?.getRangeAt(0);
 
-		if (selection) {
-			let currentRange: Range;
-			if (currentSelection?.rangeCount == 1) {
-				currentRange = currentSelection.getRangeAt(0);
-			} else {
-				currentSelection.removeAllRanges();
-				currentRange = document.createRange();
-				currentSelection.addRange(currentRange);
-			}
+		//Keine Auswahl?
+		if (!currentRange)
+			return;
 
-			if (selection.startOffset <= (selection.startContainer.textContent?.length ?? 0))
-				currentRange.setStart(selection.startContainer, selection.startOffset);
-			else
-				currentRange.setStartAfter(selection.startContainer);
+		let text = event.clipboardData?.getData('text');
+		if (!text)
+			return;
 
-			if (selection.endOffset <= (selection.endContainer.textContent?.length ?? 0))
-				currentRange.setEnd(selection.endContainer, selection.endOffset);
-			else
-				currentRange.setEndAfter(selection.endContainer);
-		} else {
-			currentSelection?.removeAllRanges();
+		//Führe die Bearbeitung durch
+		this.callback(this, {
+			inputType: 'insertText',
+			data: text
+		}, currentRange);
+	}
+
+	public updateFromElement(text?: string | null | boolean, selection?: Selection | null | boolean): void {
+		if (text !== false) {
+			if (typeof text !== 'string')
+				text = this.editor.innerText;
+
+			this.editContext.updateText(0, this.editContext.text.length, text);
 		}
+
+		if (selection !== false) {
+			if (typeof selection !== 'object')
+				selection = getSelection();
+
+			let textSelection = SelectionHelper.getGlobalOffset(selection, this.editor);
+			if (textSelection) {
+				this.editContext.updateSelection(textSelection.start, textSelection.end);
+			}
+		}
+
+		this.currentState = {
+			text: this.editContext.text,
+			selectionStart: this.editContext.selectionStart,
+			selectionEnd: this.editContext.selectionEnd
+		};
 	}
 
 	public getCurrentSelection(documentSelection?: Selection | undefined): AnchorSelection<MetalineLineAnchor> | null {
@@ -463,7 +290,6 @@ class ModificationEditor implements Destructible {
 			if (documentSelection.rangeCount != 0)
 				documentSelection.removeAllRanges();
 
-			this.revertSelection = null;
 			return documentSelection;
 		}
 
@@ -478,9 +304,6 @@ class ModificationEditor implements Destructible {
 
 		//Setze Range
 		this.setLineSelectionRange(documentSelection, range, lineSelection);
-
-		//Speichere die Auswahl, um sie später wiederherstellen zu können
-		this.revertSelection = new StaticRange(range);
 		return documentSelection;
 	}
 
@@ -677,379 +500,6 @@ class ModificationEditor implements Destructible {
 	}
 }
 
-class SelectionObserver implements Destructible {
-	private static needsLineFix = /Firefox/.test(navigator.userAgent);
-	private supportsMultipleRanges = false;
-	private customSelection: HTMLElement;
-	private editor: HTMLElement;
-	private editorWrapper: HTMLElement;
-
-	private isPaused: boolean;
-	private justSelected: boolean;
-
-	constructor(private modificationEditor: ModificationEditor) {
-		this.editor = modificationEditor.editor;
-		this.editorWrapper = this.editor.parentElement!;
-		if (!this.editorWrapper)
-			throw new Error("Editor hat kein Elternelement");
-		this.customSelection = this.editorWrapper.querySelector('.custom-selection')!;
-		if (!this.customSelection)
-			throw new Error("Custom-Selection-Element nicht gefunden");
-
-		document.addEventListener('selectionchange', this.handleSelectionChange.bind(this));
-		this.editor.addEventListener('dragstart', this.handleDragStart.bind(this));
-	}
-
-	destroy(): void {
-		document.removeEventListener('selectionchange', this.handleSelectionChange.bind(this));
-		this.editor.removeEventListener('dragstart', this.handleDragStart.bind(this));
-	}
-
-	public triggerJustSelected() {
-		if (this.justSelected) {
-			this.justSelected = false;
-			return true;
-		}
-
-		return false;
-	}
-
-	public refreshSelection() {
-		this.isPaused = false;
-		requestAnimationFrame(this.processSelectionChange.bind(this));
-	}
-
-	public pauseObservation() {
-		this.isPaused = true;
-	}
-
-	private handleSelectionChange() {
-		if (this.isPaused) {
-			requestAnimationFrame((() => {
-				this.isPaused = false;
-			}).bind(this));
-			return;
-		}
-		
-		this.processSelectionChange();
-	}
-
-	private processSelectionChange() {
-		const documentSelection = getSelection();
-		if (!documentSelection || documentSelection.rangeCount == 0)
-			return this.resetCustomSelections();
-
-		//Mehrere Ranges?
-		let range = documentSelection.getRangeAt(0);
-		if (documentSelection.rangeCount > 1) {
-			let firstRange = range;
-			let lastRange = documentSelection.getRangeAt(documentSelection.rangeCount - 1);
-			if (lastRange.startContainer.compareDocumentPosition(firstRange.startContainer) & Node.DOCUMENT_POSITION_FOLLOWING) {
-				firstRange = lastRange;
-				lastRange = range;
-			}
-
-			range = document.createRange();
-			if (firstRange.endContainer.compareDocumentPosition(firstRange.startContainer) & Node.DOCUMENT_POSITION_FOLLOWING) {
-				range.setStart(lastRange.endContainer, lastRange.endOffset);
-				range.setEnd(firstRange.startContainer, firstRange.startOffset);
-			} else {
-				range.setStart(firstRange.startContainer, firstRange.startOffset);
-				range.setEnd(lastRange.endContainer, lastRange.endOffset);
-			}
-		}
-
-		//Ist die Auswahl nicht im Editor?
-		if (!this.editor.contains(range.startContainer) || !this.editor.contains(range.endContainer))
-			return this.resetCustomSelections();
-
-		if (SelectionObserver.needsLineFix && this.fixSelection(documentSelection, range))
-			return;
-
-		//Finde die Metazeilen/Zeilen
-		const lineSelection = this.modificationEditor.getLineSelection(range, true);
-
-		//Keine oder mehr als eine Metazeile?
-		if (!lineSelection || lineSelection.start.metaline != lineSelection.end.metaline)
-			return this.resetCustomSelections();
-
-		//Metazeile mit Box-Auswahl?
-		const metaline = lineSelection.start.lineNode?.parentElement?.parentElement;
-		if (!metaline)
-			return this.resetCustomSelections();
-		const selectionType = metaline.getAttribute('data-selection');
-		if (!selectionType)
-			return this.resetCustomSelections();
-			
-		switch (selectionType) {
-			case 'box':
-				this.adjustBoxSelection(documentSelection, range, lineSelection);
-				break;
-			default:
-				this.resetCustomSelections();
-				break;
-		}
-	}
-
-	private fixSelection(documentSelection: Selection, range: Range): Boolean {
-		let modified = false;
-		let collapsed = range.collapsed;
-		let newStart: { node: Node, offset: number } | null = null;
-		if (!(range.startContainer instanceof Text)) {
-			if (range.startContainer.childNodes.length > range.startOffset) {
-				let node = range.startContainer.childNodes[range.startOffset];
-				while (node.firstChild)
-					node = node.firstChild;
-
-				newStart = { node, offset: 0 };
-				modified = true;
-			}
-		}
-
-		if (!collapsed) {
-			if (!(range.endContainer instanceof Text)) {
-				if (range.endContainer.childNodes.length > range.endOffset) {
-					let node = range.endContainer.childNodes[range.startOffset];
-					while (node.lastChild)
-						node = node.lastChild;
-
-					range.setEnd(node, node.textContent?.length ?? 0);
-					modified = true;
-				}
-			}
-
-			if (newStart)
-				range.setStart(newStart.node, newStart.offset);
-		} else if (newStart) {
-			range.setStart(newStart.node, newStart.offset);
-			range.setEnd(newStart.node, newStart.offset);
-		}
-
-		let startContainer = range.endContainer;
-		let startNode = startContainer instanceof HTMLElement ? startContainer : startContainer.parentElement;
-		if (startNode?.classList.contains('suffix')) {
-			//Das passiert nur bei doppelt auswählbaren Knoten (in Firefox)
-			if ((startNode.previousSibling as HTMLElement)?.classList.contains('suffix') === false) {
-				startNode = <HTMLElement>startNode.previousSibling;
-				let node = SelectionHelper.getNodeAndOffset(startNode, -1);
-				range.setEnd(node.node, node.offset);
-				if (collapsed)
-					range.setStart(node.node, node.offset);
-				modified = true;
-			} else {
-				range.setEnd(startContainer, 0);
-				if (collapsed)
-					range.setStart(startContainer, 0);
-				modified = true;
-			}
-		}
-
-		if (modified)
-			console.log('fixed');
-		return modified;
-    }
-
-	private resetCustomSelections() {
-		//Blende die Box aus
-		this.customSelection.className = 'custom-selection';
-		this.justSelected = true;
-	}
-
-	private adjustBoxSelection(documentSelection: Selection, range: Range, lineSelection: AnchorSelection<MetalineLineAnchor>) {
-		//Nicht unterstützt?
-		if (!this.supportsMultipleRanges)
-			return emulateBoxSelection(this, documentSelection, range, lineSelection);
-
-		//Invertiere ggf. die Auswahl
-		if (lineSelection.start.lineNode && lineSelection.end.lineNode && lineSelection.end.lineNode.compareDocumentPosition(lineSelection.start.lineNode) & Node.DOCUMENT_POSITION_FOLLOWING) {
-			lineSelection = {
-				start: lineSelection.end,
-				end: lineSelection.start,
-			};
-		}
-
-		//Ermittle die Zeilen
-		const startLine = lineSelection.start.lineNode;
-		const endLine = lineSelection.end.lineNode;
-		if (!(startLine instanceof HTMLElement) || !(endLine instanceof HTMLElement))
-			return this.resetCustomSelections();
-		let lines = [startLine];
-		for (let current = startLine.nextSibling; current != endLine; current = current.nextSibling) {
-			if (!(current instanceof HTMLElement) || !current.classList.contains('line'))
-				continue;
-
-			lines.push(current);
-		}
-		lines.push(endLine);
-
-		//Ermittle die Offsets
-		const startOffset = lineSelection.start.offset;
-		const endOffset = lineSelection.end.offset;
-
-		//Erzeuge die Ranges
-		documentSelection.removeAllRanges();
-		for (let i = 0; i < lines.length; i++) {
-			//Erzeuge die Range
-			let line = lines[i];
-			let lineRange = document.createRange();
-
-			//Füge die Range hinzu
-			documentSelection.addRange(lineRange);
-
-			//Setze die Range
-			this.modificationEditor.setLineSelectionRange(documentSelection, lineRange, {
-				start: {
-					lineNode: line,
-					offset: startOffset,
-				},
-				end: {
-					lineNode: line,
-					offset: endOffset,
-				}
-			});
-		}
-
-		//Hat das nicht funktioniert?
-		if (documentSelection.rangeCount != lines.length) {
-			this.supportsMultipleRanges = false;
-			emulateBoxSelection(this, documentSelection, range, lineSelection);
-		}
-
-		function emulateBoxSelection(self: SelectionObserver, documentSelection: Selection, range: Range, lineSelection: AnchorSelection<MetalineLineAnchor>) {
-			let startCell: Node | null | undefined = range.startContainer;
-			let endCell: Node | null | undefined = range.endContainer;
-			if (!startCell || !endCell || lineSelection.start.line == null || lineSelection.end.line == null)
-				return self.resetCustomSelections();
-
-			console.log(lineSelection.start, lineSelection.end);
-			console.log(range);
-
-			if (lineSelection.start.line > lineSelection.end.line
-				|| (lineSelection.start.line == lineSelection.end.line && lineSelection.start.offset > lineSelection.end.offset)) {
-				startCell = endCell;
-				endCell = range.startContainer;
-			}
-
-			if (!(startCell instanceof HTMLElement))
-				startCell = startCell?.parentNode;
-			if (!(endCell instanceof HTMLElement))
-				endCell = endCell?.parentNode;
-
-			let selectionBox: DOMRect;
-			if (range.collapsed) {
-				//Keine Auswahl, verwende die linke Kante der Startzelle
-				if (range.startOffset != 0)
-					startCell = startCell?.nextSibling;
-
-				if (!(startCell instanceof HTMLElement))
-					return self.resetCustomSelections();
-
-				selectionBox = startCell.getBoundingClientRect();
-			} else {
-				//Vertikal?
-				if (lineSelection.start.offset == lineSelection.end.offset) {
-					endCell = endCell?.nextSibling;
-				}
-
-				//Geht die Box nach rechts?
-				if (lineSelection.end.offset >= lineSelection.start.offset) {
-					//Verwende die linke Kante der Startzelle
-					if (range.startOffset != 0)
-						startCell = startCell?.nextSibling;
-
-					//Verwende die rechte Kante der Endzelle
-					if (range.endOffset == 0)
-						endCell = endCell?.previousSibling;
-				} else {
-					//Verwende die rechte Kante der Startzelle
-					if (range.startOffset == 0)
-						startCell = startCell?.previousSibling;
-
-					//Verwende die linke Kante der Endzelle
-					if (range.endOffset != 0)
-						endCell = endCell?.nextSibling;
-				}
-
-				if (!(startCell instanceof HTMLElement) || !(endCell instanceof HTMLElement))
-					return self.resetCustomSelections();
-
-				//Berechne die Bounding Box
-				let startBox = startCell.getBoundingClientRect();
-				let endBox = endCell.getBoundingClientRect();
-				selectionBox = SelectionObserver.getBoundingBox(startBox, endBox);
-			}
-
-			//Setze die Position
-			setBoxPosition(self, selectionBox);
-
-			function setBoxPosition(self: SelectionObserver, box: DOMRect) {
-				//Positioniere die Box
-				let editorRect = self.editor.getBoundingClientRect();
-				let left = box.left - editorRect.left;
-				let top = box.top - editorRect.top;
-				let width = box.width;
-				let height = box.height;
-				let newPosition = top.toFixed(0) + ';' + left.toFixed(0) + ';' + documentSelection.toString().length;
-				let newPositionFull = newPosition + ';' + width.toFixed(0) + ';' + height.toFixed(0);
-				let currentPosition = (<any>self.customSelection)['data-position'];
-				if (currentPosition != newPositionFull) {
-					self.customSelection.style.top = top + 'px';
-					self.customSelection.style.left = left + 'px';
-					self.customSelection.style.width = width + 'px';
-					self.customSelection.style.height = height + 'px';
-					(<any>self.customSelection)['data-position'] = newPositionFull;
-
-					if (!currentPosition?.startsWith(newPosition))
-						self.justSelected = true;
-				}
-
-				//Mache die Box sichtbar
-				if (self.customSelection.className != 'custom-selection custom-selection-box') {
-					self.customSelection.className = 'custom-selection custom-selection-box';
-					self.justSelected = true;
-				}
-			}
-		}
-	}
-
-	private static getBoundingBox(...args: DOMRect[]): DOMRect {
-		let left = Number.MAX_VALUE;
-		let top = Number.MAX_VALUE;
-		let right = 0;
-		let bottom = 0;
-		for (let rect of args) {
-			if (rect.left < left)
-				left = rect.left;
-			if (rect.right > right)
-				right = rect.right;
-
-			if (rect.top < top)
-				top = rect.top;
-			if (rect.bottom > bottom)
-				bottom = rect.bottom;
-		}
-
-		return new DOMRect(left, top, right - left, bottom - top);
-	}
-
-	private handleDragStart(event: DragEvent) {
-		if (!(event.target instanceof Node))
-			return;
-
-		for (let current: Node | null = event.target; current && current != this.editor; current = current.parentElement) {
-			if (!(current instanceof HTMLElement))
-				continue;
-
-			let selectionType = current.getAttribute('data-selection');
-			if (selectionType == 'box') {
-				event.preventDefault();
-				event.stopPropagation();
-				return false;
-			}
-		}
-	}
-}
-
 class SelectionHelper {
 	static getNodeAndOffset(node: Node, offset: number): { node: Node, offset: number } {
 		if (offset < 0)
@@ -1107,5 +557,45 @@ class SelectionHelper {
 			node: current,
 			offset: current.textContent.length - (offset - currentOffset),
 		};
+	}
+
+	public static getGlobalOffset(selection: Selection | null, editor: HTMLElement) {
+		if (!selection)
+			return null;
+
+		const treeWalker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
+
+		let anchorNodeFound = false;
+		let extentNodeFound = false;
+		let anchorOffset = 0;
+		let extentOffset = 0;
+
+		while (treeWalker.nextNode()) {
+			const node = treeWalker.currentNode;
+			if (node === selection.anchorNode) {
+				anchorNodeFound = true;
+				anchorOffset += selection.anchorOffset;
+			}
+
+			if (node === selection.focusNode) {
+				extentNodeFound = true;
+				extentOffset += selection.focusOffset;
+			}
+
+			if (node.nodeType == Node.TEXT_NODE) {
+				if (!anchorNodeFound) {
+					anchorOffset += node.textContent?.length ?? 0;
+				}
+				if (!extentNodeFound) {
+					extentOffset += node.textContent?.length ?? 0;
+				}
+			}
+		}
+
+		if (!anchorNodeFound || !extentNodeFound) {
+			return null;
+		}
+
+		return { start: anchorOffset, end: extentOffset };
 	}
 }
