@@ -1,0 +1,107 @@
+===== Hinweise zur Transkription (= Lautschrift / Umschrift) =====
+
+Die //Deutsche Aussprachedatenbank// (DAD) ist aus dem Wörterverzeichnis des //Deutschen Aussprachewörterbuchs// (DAWB, Krech et al. 2009) hervorgegangen und verwendet die gleichen Transkriptionsregelungen. Neben der IPA-Transkription wird in der DAD zusätzlich die SAMPA-Transkription verwendet. Mit Hilfe der beiden Transkriptionen kann gesprochene Sprache verschriftlicht werden. Transliteration dagegen bedeutet die Wiedergabe von Schriftzeichen eines Schriftsystems (z. B. Kyrillisch) durch Schriftzeichen eines anderen Schriftsystems (z. B. Lateinisch).
+
+==== IPA-Transkription ====
+
+=== VOKALE ===
+
+^ iː   | die Liebe          | diː lˈiːbə        |
+^ ɪ    | die Bitte | diː bˈɪtə           |
+^ i    | das Filet          | das filˈeː        |
+^ i̯    | die Lektion          | diː lɛktsˈi̯oːn        |
+^ eː   | das Leben          | das lˈeːbm̩        |
+^ ɛ    | die Welt          | diː vˈɛlt        |
+^ e    | ein Genie          | aɛ̯n ʒenˈiː        |
+^ ɛː   | der Käse          | deːᵄ kˈɛːzə        |
+^ aː   | der Tag          | deːᵄ tˈaːk        |
+^ a    | die Nacht          | diː nˈaxt        |
+^ yː   | die Übung          | diː ˈˀyːbʊŋ        |
+^ ʏ    | die Küche          | diː kˈʏçə        |
+^ y    | im Büro          | ɪm byʁˈoː        |
+^ y̆    | in Libyen          | ɪn lˈiːby̆ən       |
+^ øː   | ein Brötchen          | aɛ̯n bʁˈøːtçən        |
+^ œ    | der Löffel     | deːᵄ lˈœfl̩        |
+^ ø    | der Ökonom          | deːᵄ ˀøkonˈoːm        |
+^ uː   | ein Buch          | aɛ̯n bˈuːx        |
+^ ʊ    | die Butter          | diː bˈʊtɐ        |
+^ u    | das Futur          | das futˈuːᵄ        |
+^ u̯    | der Linguist          | deːᵄ lɪŋɡu̯ˈɪst        |
+^ oː   | ein Brot          | aɛ̯n bʁˈoːt        |
+^ ɔ    | der Osten          | deːᵄ ˈˀɔstn̩        |
+^ o    | die Olive          | diː ˀolˈiːvə        |
+^ ɔ̯    | die Toilette          | diː tɔ̯alˈɛtə        |
+^ ɔː   | Herr Shaw          | hɛʶ ʃˈɔː        |
+^ ə    | der Beruf          | deːᵄ bəʁˈuːf        |
+^ ᵄ    | die Uhr          | diː ˈˀuːᵄ        |
+^ ɐ    | der Vater          | deːᵄ fˈaːtɐ        |
+^ ɑ̃ː   | Frau Blanc          | fʁ̥aɔ̯ blɑ̃ː        |
+^ ɑ̃    | in Cambrai          | ɪn kɑ̃bʁˈɛː        |
+^ ɛ̃ː   | ein Gratin          | aɛ̯n ɡʁatˈɛ̃ː        |
+^ õː   | der Chanson          | deːᵄ ʃɑ̃sˈõː        |
+^ õ    | ein Bonmot          | aɛ̯n bõmˈoː        |
+^ œ̃ː   | in Verdun          | ɪn vɛʶdˈœ̃ː        |
+^ œ̃    | Herr Lundi          | hɛʶ lœ̃dˈiː        |
+^ aɔ̯   | der Baum          | deːᵄ bˈaɔ̯m        |
+^ aɛ̯   | die Zeit          | diː tsˈaɛ̯t        |
+^ ɔœ̯   | auf Deutsch          | aɔ̯f d̥ˈɔœ̯tʃ        |
+
+=== KONSONANTEN ===
+
+^ f    | am Freitag          | am fʁ̥ˈaɛ̯taːk        |
+^ v    | ein Wort | aɛ̯n vˈɔʶt     |
+^ v̥    | das Wort          | das v̥ˈɔʶt        |
+^ s    | das Haus          | das hˈaɔ̯s        |
+^ z    | ein Sofa          | aɛ̯n zˈoːfaː        |
+^ z̥    | das Sofa          | das ͡ z̥ˈoːfaː        |
+^ θ    | in Southampton          | ɪn saɔ̯θˈɛmptn̩        |
+^ ð    | in Worthington          | ɪn vˈœːᵄðɪŋtn̩       |
+^ ʃ    | die Schule          | diː ʃˈuːlə        |
+^ ʒ    | ein Genie          | aɛ̯n ʒenˈiː        |
+^ ʒ̊    | das Genie          | das ʒ̊enˈiː        |
+^ ç    | das Licht          | das lˈɪçt        |
+^ ʝ    | ein Jahr          | aɛ̯n ʝˈaːʶ        |
+^ ʝ̊    | das Jahr          | das ʝ̊ˈaːʶ        |
+^ x    | ein Buch          | aɛ̯n bˈuːx        |
+^ ʁ    | ein Rad          | aɛ̯n ʁˈaːt        |
+^ ʁ̥    | das Rad          | das ʁ̥ˈaːt        |
+^ ʶ    | ein Jahr          | aɛ̯n ʝˈaːʶ        |
+^ h    | das Haus          | das hˈaɔ̯s        |
+^ p    | die Post          | diː pˈɔst        |
+^ b    | ein Buch          | aɛ̯n bˈuːx        |
+^ b̥    | das Buch          | das b̥ˈuːx        |
+^ t    | der Tag          | deːᵄ tˈaːk        |
+^ d    | ein Datum          | aɛ̯n dˈaːtʊm        |
+^ d̥    | das Datum          | das d̥ˈaːtʊm        |
+^ k    | der Käse          | deːᵄ kˈɛːzə        |
+^ ɡ    | kein Geld          | kaɛ̯n ɡˈɛlt        |
+^ ɡ̊    | das Geld          | das ɡ̊ˈɛlt        |
+^ l    | das Land          | das lˈant        |
+^ m    | der Mann          | deːᵄ mˈan        |
+^ n    | die Nacht          | diː nˈaxt        |
+^ ŋ    | der Anfang          | deːᵄ ˈˀanfaŋ        |
+^ ˀ    | der Verein          | deːᵄ fɐˈˀaɛ̯n        |
+
+=== DIAKRITIKA ===
+
+Weitere phonetische Merkmale können mit Hilfe folgender zusätzlicher Zeichen (Diakritika) angegeben werden (aus Krech 2009, 4):
+
+^ ˈ    | Akzent in Wort oder Wortgruppe   | Vater        | fˈaːtɐ        |
+^ :::    | ::: | mein Vater  | maɛ̯n fˈaːtɐ        |
+^ ˌ    | Nebenakzent in Wort oder Wortgruppe | die Hausaufgabe | diː hˈaɔ̯sˀaɔ̯fɡ̊ˌaːbə |
+^ :::    | :::          | ein halbvolles Glas | aɛ̯n hˌalpfɔləs ɡ̊lˈaːs |
+^ ː    | Länge des Vokals  | das Leben  | das lˈeːbm̩  |
+^ ̯   | Unsilbigkeit des Vokals | die Zeit   | diː tsˈaɛ̯t   |
+^ ̃   | Nasalierung des Vokals | der Chanson | deːᵄ ʃɑ̃sˈõː  |
+^ ̥  ̊ | Entstimmlichung von Konsonanten | das Wort | das v̥ˈɔʶt  |
+^ :::   | :::      | das Genie      | das ʒ̊enˈiː       |
+^ ̩   ̍     | Silbigkeit von Konsonanten | der Löffel       | deːᵄ lˈœfl̩      |
+^ :::   | :::          | der Regen        | deːᵄ ʁˈeːɡŋ̍       |
+^ ͡   ͜   | verschliffene Silben- bzw. Wortgrenze | die Tagessiegerin| diː tˈaːɡəs͡ z̥iːɡəʁɪn       |
+^ :::   | :::        | die Handtasche       | diː hˈant͜taʃə      |
+
+
+
+^ Heading 5    | Row 2 Col 2          | Row 2 Col 3        | Row 1 Col 3        |
+^ Heading 5    | Row 2 Col 2          | Row 2 Col 3        | Row 1 Col 3        |
+^ Heading 5    | Row 2 Col 2          | Row 2 Col 3        | Row 1 Col 3        |

@@ -248,6 +248,118 @@ function registerChordEditor(wrapper, reference, callbackName) {
         }
     }
 }
+var IS_EDIT_CONTEXT_SUPPORTED = "EditContext" in window;
+function initializeEditContext(target, reference, output) {
+    if (!IS_EDIT_CONTEXT_SUPPORTED) {
+        return null;
+    }
+    var editContext = new EditContext({
+        text: target.innerText
+    });
+    target.editContext = editContext;
+    editContext.addEventListener("textupdate", function (event) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        console.log(event);
+        output.innerText = editContext.text;
+        reference.invokeMethodAsync("UpdateContent", event.text, event.updateRangeStart, event.updateRangeEnd).then(function (result) {
+            if (!result) {
+                restoreContextState();
+                output.innerText = editContext.text;
+                return;
+            }
+            output.innerText = editContext.text;
+        });
+    });
+    editContext.addEventListener("textformatupdate", function (event) {
+        console.log(event);
+    });
+    editContext.addEventListener("compositionstart", function (event) {
+        console.log(event);
+    });
+    document.addEventListener("selectionchange", function () {
+        var selection = document.getSelection();
+        var offsets = fromSelectionToOffsets(selection, target);
+        if (offsets) {
+            updateSelection(offsets.start, offsets.end);
+        }
+    });
+    output.innerText = editContext.text;
+    var currentState = createContextState();
+    return {
+        afterRender: function () {
+            updateText(target.innerText);
+            var selection = document.getSelection();
+            var offsets = fromSelectionToOffsets(selection, target);
+            if (offsets) {
+                updateSelection(offsets.start, offsets.end);
+            }
+            storeContextState();
+            output.innerText = editContext.text;
+        },
+    };
+    function createContextState() {
+        return {
+            text: editContext.text,
+            selectionStart: editContext.selectionStart,
+            selectionEnd: editContext.selectionEnd,
+        };
+    }
+    function applyContextState(state) {
+        editContext.updateText(0, editContext.text.length, state.text);
+        editContext.updateSelection(state.selectionStart, state.selectionEnd);
+    }
+    function storeContextState() {
+        return currentState = createContextState();
+    }
+    function restoreContextState() {
+        applyContextState(currentState);
+        return currentState;
+    }
+    function updateText(text) {
+        editContext.updateText(0, editContext.text.length, text);
+    }
+    function updateSelection(start, end) {
+        editContext.updateSelection(start, end);
+        var selection = document.getSelection();
+        if (selection) {
+            editContext.updateSelectionBounds(selection.getRangeAt(0).getBoundingClientRect());
+        }
+    }
+    function fromSelectionToOffsets(selection, editorEl) {
+        var _a, _b, _c, _d;
+        if (!selection)
+            return null;
+        var treeWalker = document.createTreeWalker(editorEl, NodeFilter.SHOW_TEXT);
+        var anchorNodeFound = false;
+        var extentNodeFound = false;
+        var anchorOffset = 0;
+        var extentOffset = 0;
+        while (treeWalker.nextNode()) {
+            var node = treeWalker.currentNode;
+            if (node === selection.anchorNode) {
+                anchorNodeFound = true;
+                anchorOffset += selection.anchorOffset;
+            }
+            if (node === selection.focusNode) {
+                extentNodeFound = true;
+                extentOffset += selection.focusOffset;
+            }
+            if (node.nodeType == Node.TEXT_NODE) {
+                if (!anchorNodeFound) {
+                    anchorOffset += (_b = (_a = node.textContent) === null || _a === void 0 ? void 0 : _a.length) !== null && _b !== void 0 ? _b : 0;
+                }
+                if (!extentNodeFound) {
+                    extentOffset += (_d = (_c = node.textContent) === null || _c === void 0 ? void 0 : _c.length) !== null && _d !== void 0 ? _d : 0;
+                }
+            }
+        }
+        if (!anchorNodeFound || !extentNodeFound) {
+            return null;
+        }
+        return { start: anchorOffset, end: extentOffset };
+    }
+}
 function registerModificationEditor(editor, reference, callbackName) {
     var callback = function (editor, data) {
         var selection = editor.getCurrentSelection();

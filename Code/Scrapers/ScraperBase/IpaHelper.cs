@@ -12,7 +12,14 @@ public static class IpaHelper
 	private const string VOWELS = "iyɨʉɯuɪʏʊeøɘɵɤoəɛœɜɞʌɔæɐaɶɑɒ";
 	private const char SYLLABLE_MARKER = '̩';
 
-	public static bool IsVowel(char c) => VOWELS.Contains(c);
+	public static bool IsVowel(char c)
+	{
+		var normalized = c.ToString().Normalize(NormalizationForm.FormD);
+		if (normalized.Length > 1)
+			c = normalized[0];
+
+		return VOWELS.Contains(c);
+	}
 	public static bool IsStressMarker(char c) => STRESS_MARKERS.Contains(c);
 
 	public static string GetRhymeSyllable(string ipa)
@@ -64,7 +71,7 @@ public static class IpaHelper
 				//Beginne neue Silbe
 				yield return ipa[lastIndex..i];
 				lastIndex = i;
-				vowelIndex = -1;
+				vowelIndex = i;
 				continue;
 			}
 
@@ -80,6 +87,33 @@ public static class IpaHelper
 
 		if (lastIndex < ipa.Length)
 			yield return ipa[lastIndex..];
+	}
+
+	public static string GetRhymeSuffix(string ipa, int maxSyllables = 3)
+		=> string.Join(null, GetRhymeSuffixList(ipa, maxSyllables));
+
+	public static string[] GetRhymeSuffixArray(string ipa, int maxSyllables = 3)
+		=> GetRhymeSuffixList(ipa, maxSyllables).ToArray();
+
+	private static List<string> GetRhymeSuffixList(string ipa, int maxSyllables = 3)
+	{
+		//Trenne Silben
+		var syllables = SplitSyllables(ipa);
+
+		//Verwende maximal die letzten {maxSyllables} Silben
+		var lastSyllables = syllables.TakeLast(maxSyllables).ToList();
+
+		//Ist eine davon betont?
+		var stressedSyllableIndex = lastSyllables.FindLastIndex(s => s.Any(IsStressMarker));
+		if (stressedSyllableIndex != -1)
+			lastSyllables.RemoveRange(0, stressedSyllableIndex);
+
+		//Setze die Silben wieder zusammen
+		var vowelIndex = lastSyllables[0].Select((c, i) => (Char: c, Index: i))
+			.First(c => IsVowel(c.Char))
+			.Index;
+		lastSyllables[0] = lastSyllables[0][vowelIndex..];
+		return lastSyllables;
 	}
 }
 

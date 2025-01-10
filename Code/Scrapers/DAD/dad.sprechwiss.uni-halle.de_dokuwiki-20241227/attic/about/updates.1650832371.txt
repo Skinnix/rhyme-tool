@@ -1,0 +1,8 @@
+==== Neue Einträge in der Aussprachedatenbank ====
+
+{{changes>de&30&type = create&render = list(dayheaders, nosummary, nouser)}}
+
+----
+Letzten 15 Änderungen in der Aussprachedatenbank:
+
+{{changes>de&15&type = edit&render = list(dayheaders, nosummary, nouser)}}

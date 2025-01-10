@@ -1,0 +1,59 @@
+﻿@page "/chords/editcontext1"
+@page "/editcontext1"
+
+@implements IAsyncDisposable
+
+@layout RendererLayout
+
+@inject IJSRuntime js
+
+<h3>EditContext</h3>
+
+<div @ref="div">
+    @content
+</div>
+
+<div @ref="output" style="margin-top: 2em; border: 1px solid black; white-space: pre;">
+
+</div>
+
+@code {
+    private ElementReference div;
+    private ElementReference output;
+    private IJSObjectReference? editor;
+
+    private string content = "Testinhalt";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+
+        if (firstRender)
+        {
+            editor = await js.InvokeAsync<IJSObjectReference>("initializeEditContext", div, DotNetObjectReference.Create(this), output);
+        }
+        else if (editor is not null)
+        {
+            await editor.InvokeVoidAsync("afterRender");
+        }
+    }
+
+    [JSInvokable]
+    public bool UpdateContent(string content, int start, int end)
+    {
+        if (content == "1")
+            return false;
+
+        this.content = this.content.Substring(0, start) + content + this.content.Substring(end);
+        StateHasChanged();
+        return true;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (editor is not null)
+        {
+            await editor.DisposeAsync();
+        }
+    }
+}

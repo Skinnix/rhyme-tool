@@ -1,0 +1,64 @@
+====== Ausspracheregelungen für Namen und Wörtern aus anderen Sprachen (Eindeutschung) ======
+
+Eine Übersicht zu allen Sprachen finden Sie hier: [[languages:start|alle Sprachen]]
+
+Die //Deutsche Aussprachedatenbank// (DAD) ist aus dem Wörterverzeichnis des //Deutschen Aussprachewörterbuchs// (DAWB, Krech et al. 2009) hervorgegangen und verwendet die gleichen Eindeutschungsregelungen. Die folgende Darstellung gibt einen kurzen Überblick über diese Festlegungen (vgl. Krech et al. 2009, 120 ff.).
+
+==== Eindeutschungsprozesse ====
+
+Der Wortschatz der Alltagssprache enthält ebenso wie der der Fachsprachen zahlreiche Namen und Wörter, die aus anderen Sprachen stammen. In Einzelfällen haben sich dafür eigenständige deutsche Varianten in der Aussprache und/oder Schreibung entwickelt, z. B. //Moskau, Paris//. Der größte Teil der gebräuchlichen fremden Namen und Wörter stammt aus einer begrenzten Zahl von Herkunftssprachen. Dazu gehören denen neben dem Englischen beispielsweise das Französische, Spanische, Portugiesische und Italienische sowie eine Reihe von slawischen Sprachen.
+
+Bei der Eindeutschung handelt es sich um einen unterschiedlich schnell und unterschiedlich intensiv verlaufenden Prozess. Für den Grad der Eindeutschung sind u. a. die Bekanntheit und Verbreitung der jeweiligen Sprache von Bedeutung. 
+
+Das Englische, aber auch andere Sprachen fungieren darüber hinaus als Mittlersprachen. Dies hat Folgen für die Eindeutschung von Namen und Wörter aus verschiedenen Regionen der Welt. Die Mittlersprachen modifizieren durch ihre Eigenarten sowohl die Akzentuierung als auch die Laut-Buchstaben-Beziehungen der Herkunftssprachen. Namen und Begriffe aus dem Arabischen und Indischen beispielsweise sind u. a. über das Englische ins Deutsche gelangt; entsprechendes Wortgut aus dem Tadschikischen und Georgischen über das Russische usw. Für Sprachen mit nichtlateinischen Schriftsystemen wurden – häufig über eine Mittlersprache – spezifische Arten der Transliteration entwickelt. Für manche Schriftsysteme können so zeitlich neben- und nacheinander mehrere unterschiedliche Transliterationskonventionen bestehen, z. B. neben //Hwangho// (”Gelber Fluss”) auch //Huangho, Hoangho// und //Huang He//.
+
+Nicht nur für verschiedene Sprachen, sondern auch für einzelne Namen und Wörter kann der Eindeutschungsprozess sehr unterschiedlich verlaufen. Dadurch können – zumindest zeitweise – verschiedene Ausspracheformen nebeneinander existieren, die der Herkunftssprache mehr oder weniger angenähert sind. Für die Aufnahme vieler Namen und Wörter hat sich im Laufe der Zeit eine Tradition herausgebildet, die berücksichtigt werden muss. Generell gilt für das DAWB und die DAD: Fremde Namen müssen für den Gebrauch in der Öffentlichkeit, vor allem in den Medien, eine einheitliche Ausspracheform erhalten. Ein Aussprachewörterbuch / eine Aussprachedatenbank muss also für die Übernahme von Namen und Wörtern aus anderen Sprachen ein möglichst einheitliches und praktikables System von Ausspracheregeln entwickeln, um sie in einem nachvollziehbaren und akzeptierbaren Ausmaß an das Deutsche anpassen zu können.
+
+Eine Form gilt dann als eingedeutscht, wenn ihre Aussprache auf der Basis des deutschen Phonemsystems erfolgt. Das heißt, mit deutschen Phonemrealisationen und bis auf Ausnahmen nach den deutschen Distributionsregeln. Das ist meist dann der Fall, wenn die Namen und Wörter fest im deutschen Alltagswortschatz etabliert sind (z. B. //Frisör//) oder sich zwar in ihrer Schreibung als fremd erkennen lassen, durch häufigen Gebrauch aber in ihrer Aussprache vollkommen an das Deutsche angeglichen sind (z. B. //Mouse//). Wird eine Fremdsprache ausreichend beherrscht und lässt es die Sprechsituation zu, kann die in dieser Sprache festgelegte Aussprache (Originalaussprache) mit deren artikulatorischen und prosodischen Merkmalen verwendet werden. Auch in der Fachkommunikation, vor allem in längeren fremdsprachigen Passagen, ist häufig eine größere Annäherung an die jeweiligen ursprünglichen Aussprachenormen zu beobachten. Das trifft vor allem dann zu, wenn Sprecher dieser Sprachen an der Kommunikation beteiligt sind bzw. wenn davon ausgegangen werden kann, dass allen Beteiligten die entsprechende Sprache bzw. Aussprache bekannt ist. Solche Ausspracheformen sind aber in der alltäglichen öffentlichen Kommunikation meist unüblich, weil die für das Verstehen erforderlichen Sprachkenntnisse nicht allgemein vorausgesetzt werden können.
+
+==== Festlegungen ====
+
+**Akzentuierung**
+
+Die ursprüngliche Wortakzentuierung wird in der Regel unverändert übernommen. In Einzelfällen wird von diesem Prinzip abgewichen, so dass es zu Veränderungen in der ursprünglichen Akzentuierung kommt:
+  - In häufig gebrauchten eingedeutschten Wörtern kann es zu einer Akzentverschiebung kommen, z. B. in //Bonbon// <sub>D</sub>[bˈɔŋbɔŋ].
+  - Namen und Wörter aus Sprachen, in denen keine oder mehrere gleichstarke Akzente auftreten (z. B. Japanisch, Chinesisch), werden nach den deutschen Regeln akzentuiert.
+  - In Bindestrichwörtern oder Wortgruppen, die als phonetische Einheit bzw. phonetisches Wort gesprochen werden, wird einer der Wortakzente als Hauptakzent realisiert. Alle weiteren autosemantischen Wörter können einen Nebenakzent erhalten, z. B. engl. //Stop-and-go-Verkehr// <sub>D</sub>[stɔp ɛnt ɡ̊ˈoː fɐkˌeːᵄ] oder //Sir Winston Churchill// <sub>D</sub>[sœːᵄ vˌɪnstn̩ tʃˈœːᵄtʃɪl]. Hier kann es auch zu Veränderungen in der Reihenfolge von Haupt- und Nebenakzenten kommen, wie z. B. in engl. [mˈeːk ˌˀap], <sub>D</sub>[mˌeːk ˈˀap].
+  - Beim Zusammenstoß zweier Akzente in Komposita, Bindestrichwörtern und Wortgruppen wird der Nebenakzent häufig auf die nächste akzentuierbare Silbe verschoben, z. B. //Amateurfußball// <sub>D</sub>[amatˈøːᵄfuːsb̥ˌal].
+
+**Vokale (allgemein)**
+
+Wie in deutschen Wörtern werden Quantität und Qualität der Vokale in Abhängigkeit von der Silbenstruktur kombiniert, so dass in der Regel mit Ausnahme von [ɛː] und [aː] bzw. [a] kurze ungespannte und lange gespannte Vokale realisiert werden. Das heißt,
+  * lang und gespannt in akzentuierten offenen Silben, z. B. ital. //Roma// <sub>D</sub>[ʁˈoːmaː], türk. //Kemal// <sub>D</sub>[kˈeːmaːl],
+  * kurz und gespannt in nichtakzentuierten offenen Silben, z. B. franz. //Simon// <sub>D</sub>[simˈõː], ital. //Livorno// <sub>D</sub>[livˈɔʶnoː],
+  * kurz und ungespannt in akzentuierten und nichtakzentuierten geschlossenen Silben, z. B. engl. //Backslash// <sub>D</sub>[bˈɛkslɛʃ], franz. //Laffitte// <sub>D</sub>[lafˈɪt], ital. //Brenta// <sub>D</sub>[bʁˈɛntaː].
+
+Zusätzlich zu den Gegebenheiten im Deutschen werden die in einigen Sprachen vorhandenen ungespannten langen Vokale (wie z. B. in engl. Sir <sub>D</sub>[sœːᵄ]) übernommen.
+
+Diese Regeln in Bezug auf die Akzent- und Silbenstruktur gelten nicht, wenn durch die Schreibung der Herkunftssprache eindeutig vorgegeben ist, ob es sich um lange oder kurze Vokale handelt, wie z. B. im Slowakischen: kurze Vokale sind hier grafisch unmarkiert (<u>), lange markiert (<ú>), z. B. //H**u**menné// <sub>D</sub>[hˈʊmɛnɛː], //P**ú**chov// <sub>D</sub>[pˈuːxɔʊ̯].
+
+Im Wortauslaut werden lange Vokale realisiert, auch wenn das in der Ausgangssprache nicht der Fall ist, z. B. franz. //Perrault// <sub>F</sub>[pɛʁˈo], eingedeutscht <sub>D</sub>[pɛʁˈoː].
+
+**Nasalierte Vokale**
+	
+Die in einigen Sprachen vorhandenen nasalierten Vokale werden nur teilweise übernommen, z. B. für Namen aus dem Französischen, z. B. //M**on**treux// <sub>D</sub>[mõtʁ̥ˈøː]. Akzentuierte nasalierte Vokale sind lang, z. B. franz. //Vaub**an**// <sub>D</sub>[vobˈɑ̃ː], //T**im**bre// <sub>D</sub>[tˈɛ̃ːbʁə]. In häufig gebrauchten und somit stark eingedeutschten Wörtern werden nasalierte Vokale durch die Verbindung Vokal + Nasal wiedergegeben, z. B. //Balkon// <sub>D</sub>[balkˈɔŋ]. 
+	
+**Konsonantenspannung**
+	
+Wie in deutschen Wörtern werden bei den Plosiven und Frikativen Fortis- und Lenis-Laute unterschieden. Diese können je nach Herkunft auch in Positionen übernommen werden, in denen sie im Deutschen nicht auftreten, z. B. [s] in franz. //Sou, Marseille//.
+	
+	
+**r-Laute**
+	
+Bei den r-Lauten werden wie im Deutschen folgende Positionen unterschieden und in Abhängigkeit davon konsonantische und vokalische Allophone verwendet:
+  * prävokalisch, auch nach Lenis-Plosiven und -Frikativen, wird ein Reibe-R realisiert, z. B. franz. //Roulette// <sub>D</sub>[ʁulˈɛt], russ. //Brodski(j)// <sub>D</sub>[bʁˈɔtskiː]; nach Fortis-Konsonanten wird das Reibe-R entstimmlicht, z. B. tschech. //Fráňa// <sub>D</sub>[fʁ̥aːnʝaː];
+  * nach kurzem Vokal sowie nach [aː] wird [ʶ] realisiert, z. B. norw. //Kærby// <sub>D</sub>[kˈɛʶbyː]; russ. //Barsow// <sub>D</sub>[bˈaːʶsɔf];
+  * nach langem Vokal, außer [aː] wird [ᵄ] realisiert, z. B. engl. //Sir// <sub>D</sub>[sœːᵄ];
+  * für <er> in nichtakzentuierten Affixen wird [ɐ] realisiert, z. B. engl. //Cluster// <sub>D</sub>[klˈastɐ].
+
+
+**Entstimmlichung von Lenis-Konsonanten**
+
+Es wird wie in deutschen Wörtern von einer progressiven Stimmlosigkeitsassimilation ausgegangen: Die einem Fortis-Konsonanten folgenden Lenis-Plosive und -Frikative werden dabei entstimmlicht, z. B. engl. //Breakdance// <sub>D</sub>[bʁˈeːkd̥ɛːns]. Gelegentlich tritt auch bei /ʒ/ eine Entstimmlichung auf, z. B. in //Musikjournal// <sub>D</sub>[muzˈiːkʒ̊ʊʶnaːl].
+
+Quelle: Krech, Eva-Maria / Stock, Eberhard / Hirschfeld, Ursula / Anders, Lutz Christian (2009): Deutsches Aussprachewörterbuch. Walter de Gruyter Berlin / New York.

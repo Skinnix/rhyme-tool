@@ -1,0 +1,232 @@
+===== Hinweise zur Transkription (= Lautschrift / Umschrift) =====
+
+Die //Deutsche Aussprachedatenbank// (DAD) ist aus dem Wörterverzeichnis des //Deutschen Aussprachewörterbuchs// (DAWB, Krech et al. 2009) hervorgegangen und verwendet die gleichen Transkriptionsregelungen. Neben der IPA-Transkription wird in der DAD zusätzlich die SAMPA-Transkription verwendet. Mit Hilfe der beiden Transkriptionen kann gesprochene Sprache verschriftlicht werden. Transliteration dagegen bedeutet die Wiedergabe von Schriftzeichen eines Schriftsystems (z. B. Kyrillisch) durch Schriftzeichen eines anderen Schriftsystems (z. B. Lateinisch).
+
+===== IPA-Transkription =====
+
+==== Vokale ====
+
+^ iː   | die Liebe          | diː lˈiːbə        |
+^ ɪ    | die Bitte | diː bˈɪtə           |
+^ i    | das Filet          | das filˈeː        |
+^ i̯    | die Lektion          | diː lɛktsˈi̯oːn        |
+^ eː   | das Leben          | das lˈeːbm̩        |
+^ ɛ    | die Welt          | diː vˈɛlt        |
+^ e    | ein Genie          | aɛ̯n ʒenˈiː        |
+^ ɛː   | der Käse          | deːᵄ kˈɛːzə        |
+^ aː   | der Tag          | deːᵄ tˈaːk        |
+^ a    | die Nacht          | diː nˈaxt        |
+^ yː   | die Übung          | diː ˈˀyːbʊŋ        |
+^ ʏ    | die Küche          | diː kˈʏçə        |
+^ y    | im Büro          | ɪm byʁˈoː        |
+^ y̆    | in Libyen          | ɪn lˈiːby̆ən       |
+^ øː   | ein Brötchen          | aɛ̯n bʁˈøːtçən        |
+^ œ    | der Löffel     | deːᵄ lˈœfl̩        |
+^ ø    | der Ökonom          | deːᵄ ˀøkonˈoːm        |
+^ uː   | ein Buch          | aɛ̯n bˈuːx        |
+^ ʊ    | die Butter          | diː bˈʊtɐ        |
+^ u    | das Futur          | das futˈuːᵄ        |
+^ u̯    | der Linguist          | deːᵄ lɪŋɡu̯ˈɪst        |
+^ oː   | ein Brot          | aɛ̯n bʁˈoːt        |
+^ ɔ    | der Osten          | deːᵄ ˈˀɔstn̩        |
+^ o    | die Olive          | diː ˀolˈiːvə        |
+^ ɔ̯    | die Toilette          | diː tɔ̯alˈɛtə        |
+^ ɔː   | Herr Shaw          | hɛʶ ʃˈɔː        |
+^ ə    | der Beruf          | deːᵄ bəʁˈuːf        |
+^ ᵄ    | die Uhr          | diː ˈˀuːᵄ        |
+^ ɐ    | der Vater          | deːᵄ fˈaːtɐ        |
+^ ɑ̃ː   | Frau Blanc          | fʁ̥aɔ̯ blɑ̃ː        |
+^ ɑ̃    | in Cambrai          | ɪn kɑ̃bʁˈɛː        |
+^ ɛ̃ː   | ein Gratin          | aɛ̯n ɡʁatˈɛ̃ː        |
+^ õː   | das Chanson          | deːᵄ ʃɑ̃sˈõː        |
+^ õ    | ein Bonmot          | aɛ̯n bõmˈoː        |
+^ œ̃ː   | in Verdun          | ɪn vɛʶdˈœ̃ː        |
+^ œ̃    | Herr Lundi          | hɛʶ lœ̃dˈiː        |
+^ aɔ̯   | der Baum          | deːᵄ bˈaɔ̯m        |
+^ aɛ̯   | die Zeit          | diː tsˈaɛ̯t        |
+^ ɔœ̯   | auf Deutsch          | aɔ̯f d̥ˈɔœ̯tʃ        |
+
+==== Konsonanten ====
+
+^ f    | am Freitag          | am fʁ̥ˈaɛ̯taːk        |
+^ v    | ein Wort | aɛ̯n vˈɔʶt     |
+^ v̥    | das Wort          | das v̥ˈɔʶt        |
+^ s    | das Haus          | das hˈaɔ̯s        |
+^ z    | ein Sofa          | aɛ̯n zˈoːfaː        |
+^ z̥    | das Sofa          | das͡ z̥ˈoːfaː        |
+^ θ    | in Southampton          | ɪn saɔ̯θˈɛmptn̩        |
+^ ð    | in Worthington          | ɪn vˈœːᵄðɪŋtn̩       |
+^ ʃ    | die Schule          | diː ʃˈuːlə        |
+^ ʒ    | ein Genie          | aɛ̯n ʒenˈiː        |
+^ ʒ̊    | das Genie          | das ʒ̊enˈiː        |
+^ ç    | das Licht          | das lˈɪçt        |
+^ ʝ    | ein Jahr          | aɛ̯n ʝˈaːʶ        |
+^ ʝ̊    | das Jahr          | das ʝ̊ˈaːʶ        |
+^ x    | ein Buch          | aɛ̯n bˈuːx        |
+^ ʁ    | ein Rad          | aɛ̯n ʁˈaːt        |
+^ ʁ̥    | das Rad          | das ʁ̥ˈaːt        |
+^ ʶ    | ein Jahr          | aɛ̯n ʝˈaːʶ        |
+^ h    | das Haus          | das hˈaɔ̯s        |
+^ p    | die Post          | diː pˈɔst        |
+^ b    | ein Buch          | aɛ̯n bˈuːx        |
+^ b̥    | das Buch          | das b̥ˈuːx        |
+^ t    | der Tag          | deːᵄ tˈaːk        |
+^ d    | ein Datum          | aɛ̯n dˈaːtʊm        |
+^ d̥    | das Datum          | das d̥ˈaːtʊm        |
+^ k    | der Käse          | deːᵄ kˈɛːzə        |
+^ ɡ    | kein Geld          | kaɛ̯n ɡˈɛlt        |
+^ ɡ̊    | das Geld          | das ɡ̊ˈɛlt        |
+^ l    | das Land          | das lˈant        |
+^ m    | der Mann          | deːᵄ mˈan        |
+^ n    | die Nacht          | diː nˈaxt        |
+^ ŋ    | der Anfang          | deːᵄ ˈˀanfaŋ        |
+^ ˀ    | der Verein          | deːᵄ fɐˈˀaɛ̯n        |
+
+==== Diakritika ====
+
+Weitere phonetische Merkmale können mit Hilfe folgender zusätzlicher Zeichen (Diakritika) angegeben werden (aus Krech 2009, 4):
+
+^ ˈ    | Akzent in Wort oder Wortgruppe   | Vater        | fˈaːtɐ        |
+^ :::    | ::: | mein Vater  | maɛ̯n fˈaːtɐ        |
+^ ˌ    | Nebenakzent in Wort oder Wortgruppe | die Hausaufgabe | diː hˈaɔ̯sˀaɔ̯fɡ̊ˌaːbə |
+^ :::    | :::          | ein halbvolles Glas | aɛ̯n hˌalpfɔləs ɡ̊lˈaːs |
+^ ː    | Länge des Vokals  | das Leben  | das lˈeːbm̩  |
+^ ̯   | Unsilbigkeit des Vokals | die Zeit   | diː tsˈaɛ̯t   |
+^ ̃   | Nasalierung des Vokals | der Chanson | deːᵄ ʃɑ̃sˈõː  |
+^ ̥  ̊ | Entstimmlichung von Konsonanten | das Wort | das v̥ˈɔʶt  |
+^ :::   | :::      | das Genie      | das ʒ̊enˈiː       |
+^ ̩   ̍     | Silbigkeit von Konsonanten | der Löffel       | deːᵄ lˈœfl̩      |
+^ :::   | :::          | der Regen        | deːᵄ ʁˈeːɡŋ̍       |
+^ ͡    ͜   | verschliffene Silben- bzw. Wortgrenze | die Tagessiegerin| diː tˈaːɡəs͡ z̥iːɡəʁɪn       |
+^ :::   | :::        | die Handtasche       | diː hˈant͜taʃə      |
+
+==== Anmerkungen zur Transkription ====
+(nach Krech et al. 2009, 5): 
+
+  - Das Akzentzeichen wird vor den akzentuierten Vokal, nicht – wie meist üblich – vor die akzentuierte Silbe gesetzt. Der Grund dafür ist, dass im Deutschen der Akzentvokal immer eindeutig bestimmbar ist, die Silbengrenze aber nicht. Sie liegt nach kurzen Vokalen innerhalb des folgenden ambisyllabischen, d. h. zu beiden Silben gehörenden Konsonanten, z. B. in //kassieren, Neuruppin//. Da das in der Transkription nicht angezeigt werden kann, wird [kasˈiːʁən], [nɔœ̯ʁʊpˈiːn] transkribiert. Dies ist auch in Zusammensetzungen und Wortruppen beim Zusammentreffen gleicher Konsonanten der Fall, z. B. //Hunderttausend// [hʊndɐt͜tˈaɔ̯zn̩t], //mein Name// [maɛ̯n͡ nˈaːmə].
+  - Der Glottisschlag wird im absoluten vokalischen Wortanlaut nicht transkribiert, z. B. //Abend// [aːbm̩t], //antworten// [ˈantv̥ɔʶtn̩]. Er wird nur im vokalischen Silbenanlaut nach Präfixen sowie in Zusammensetzungen und Wortgruppen angegeben, z. B. //beantworten// [bəˈˀantv̥ɔʶtn̩], //am Abend// [am ˈˀaːbm̩t], //Sonnabend// [zˈɔnˀaːbm̩t].
+  - Lange Vokale können in nichtakzentuierter Position stark verkürzt werden, z. B. in //Malerei// (gegenüber //Maler//). Das diakritische Zeichen [ː] wird jedoch beibehalten, unabhängig von der Akzentposition und von möglichen Kürzungen.
+  - Ein hochgestelltes Transkriptionszeichen signalisiert eine Abschwächung der Artikulation, z. B. das erste R in //servieren// [zɛʶvˈiːʁən].
+  - [ʁ] wird – wegen der optischen Nähe zum Schriftzeichen <R> – für den velaren Frikativ verwendet (statt [ɣ]).
+
+===== SAMPA-Transkription =====
+
+SAMPA ist die Abkürzung für Speech Assessment Methods Phonetic Alphabet. Es ist die Kurzbezeichnung für ein phonetisches Alphabet, für das die 127 Zeichen des ASCII-Zeichensatzes verwendet werden.
+
+In der DAD wird von folgenden IPA-SAMPA-KORRESPONDENZEN ausgegangen.
+
+|              ^ IPA  ^ SAMPA   ^ |              ^ IPA   ^ SAMPA  ^ 
+| gespannte Vokale | a  | a  | ungespannte Vokale | ɐ | 6 |
+| :::   | e  | e  | ::: | ə | @ |
+| :::   | ɛː | E: | ::: | ɛ | E |
+| :::   | i  | i  | ::: | ɪ | I |
+| :::   | y  | y  | ::: | ʏ | Y |
+| :::   | ø  | 2  | ::: | œ | 9 |
+| :::   | o  | o  | ::: | ɔ | O |
+| :::   | u  | u  | ::: | ʊ | U |
+| Längezeichen  | ː | :  | nasaliert |  ̃    | ~ |
+| Hauptakzent  | ˈ | " | Nebenakzent | ˌ | % |
+| Glottisschlag   | ˀ  | ? | |  |  |
+| Plosive stimmhaft | b  | b  | Plosive stimmlos | p | p |
+| :::  | d  | d  | ::: | t | t |
+| :::  | ɡ  | g  | ::: | k | k |
+| Frikative stimmhaft | v  | v | Frikative stimmlos | f | f |
+| :::  | ð  | D  | ::: | θ | T |
+| :::  | z  | z  | ::: | s | s |
+| :::  | ʒ  | Z  | ::: | ʃ | S |
+| :::  | ʝ  | j  | ::: | ç | C |
+| :::  | ʁ  | R  | ::: | x | x |
+| Nasale  | m  | m  | Nasale | ŋ | N |
+| :::  | n  | n  | Lateral | l | l |
+| verbundene Konsonanten  |  ͜    | _  | Entstimmlichung |  ̊  | 0 |
+| :::  |  ͡    | _  | ::: |  ̥  | 0 |
+| unsilbisch  |  ̯   | ̂   | silbisch |  ̩  | = |
+| hochgestellt  | ᵄ  | 6 ̂   | hochgestellt | ⁿ | n ̂  |
+| :::  | ʶ  | R ̂   | ::: | ˡ | l ̂  |
+
+===== Übersicht über Phonempaare (in Wort- und Namenbeispielen) =====
+
+==== Vokale: Qualität (gespannt – ungepannt) + Quantität (lang – kurz) ====
+
+^ [iː] – [ɪ]   | die Miete – die Mitte    | Herr Miehler – Frau Miller  |
+^ [yː] – [ʏ]    | die Hüte – die Hütte | Frau Mühler – Herr Müller  |
+^ [eː] – [ɛ]    | ein Beet – ein Bett   | Herr Mehler – Herr Meller  |
+^ [ɛː] – [ɛ]   | die Täler – die Teller   | Frau Mähler – Frau Meller   |
+^ [øː] – [œ]   | die Höhle – die Hölle | Herr Möhler – Frau Möller  |
+^ [aː] – [a]    | der Staat – die Stadt  | Herr Mahler – Herr Maller  |
+^ [uː] – [ʊ]    | der Ruhm – der Rum   | Frau Muhler – Frau Muller  |
+^ [oː] – [ɔ]   | die Schote – der Schotte  | Frau Mohler – Herr Moller  |
+^ [ə] – [ɐ]   | eine – einer         | Frau Mille – Herr Miller |
+
+==== lange Vokale: Qualität (gespannt – ungepannt) ====
+
+^ [iː] – [eː]   | vom Lieben – vom Leben    | Herr Miehler – Frau Mehler  |
+^ [iː] – [yː]    | ein Tier – eine Tür | Frau Miehler – Frau Mühler  |
+^ [eː] – [øː]    | zum Lesen – zum Lösen   | Frau Mehler – Herr Möhler  |
+^ [eː] – [ɛː]   | die Beeren – die Bären   | Herr Mehler – Herr Mähler   |
+^ [ɛː] – [aː]   | die Täler – der Taler | Herr Mähler – Herr Mahler  |
+^ [uː] – [oː]    | die Kur – der Chor  | Frau Muhler – Frau Mohler  |
+^ [yː] – [øː]    | der Kühler – der Köhler   | Herr Mühler – Frau Möhler  |
+^ [uː] – [yː]   | die Tuten – die Tüten  | Herr Muhler – Frau Mühler  |
+^ [oː] – [øː]   | ein Vogel – die Vögel   | Frau Mohler – Frau Möhler |
+^ [aː] – [oː]  | der Hase – die Hose  | Herr Mahler – Herr Mohler |
+
+==== kurze Vokale: Qualität (gespannt – ungepannt) ====
+
+^ [ɪ] – [ɛ]   | die Stirn – der Stern    | Herr Miller – Herr Meller  |
+^ [ɪ] – [ʏ]    | die Kiste – die Küste | Herr Miller – Frau Müller  |
+^ [ʏ] – [ʊ]    | ein Stück – der Stuck   | Frau Müller – Frau Muller  |
+^ [a] – [ɛ]   | der Kasten – die Kästen   | Frau Maller – Herr Meller   |
+^ [a] – [ɔ]   | die Tanne – die Tonne | Frau Maller – Herr Moller  |
+^ [ɛ] – [œ]    | der Kenner – der Könner   | Herr Meller – Frau Möller  |
+^ [ɔ] – [œ]    | der Hocker – der Höcker   | Herr Moller – Frau Möller  |
+^ [ɔ] – [ʊ]   | der Boss – der Bus  | Herr Moller – Frau Muller  |
+
+==== Diphthonge ====
+
+^ [aɛ̯] – [aɔ̯]   | der Reim – der Raum    | Familie Meile – Familie Maule  |
+^ [aɛ̯] – [ɔœ̯]    | die Reime – die Räume | Familie Meile – Familie Meule  |
+^ [aɔ̯] – [ɔœ̯]    | der Baum – die Bäume   | Familie Maule – Familie Meule |
+^ [aɔ̯] – [ʊɪ̯]   | der Pfau – Pfui!   | Familie Maule – Familie Muile   |
+
+==== Konsonenten: Plosive (fortis – lenis) ====
+
+^ [p] – [b]   | ein Paar – die Bar    | Herr Pohler – Herr Bohler  |
+^ [t] – [d]    | der Tank – der Dank | Frau Tohler – Frau Dohler  |
+^ [k] – [ɡ]    | die Karten – der Garten   | Herr Kohler – Frau Gohler |
+
+==== Konsonanten: Frikative (fortis – lenis) ====
+
+^ [f] – [v]   | ein Feld – die Welt     | Herr Fieler – Herr Wieler  |
+^ [f] – [s]    | der Lauf – die Laus | Frau Liffer – Frau Lisser  |
+^ [s] – [z]    | der Weise – die Weiße   | Herr Weiser – Herr Weißer |
+^ [z] – [ʒ]   | die Gase – die Gage    | Familie Pahse – Familie Page  |
+^ [z] – [ʃ]    | der Saal – der Schal | Herr Söhnlein – Herr Schönlein  |
+^ [ç] – [ʒ]    | die Chemie – ein Genie   | Frau Lecher – Frau Legère |
+^ [ç] – [ʝ]   | in China – in Jena    | Frau Herrches – Frau Herrjes  |
+^ [ç] – [x]    | das Kuhchen – der Kuchen | Familie Michen – Familie Mochen   |
+^ [ʃ] – [ç]    | die Kirsche – die Kirche   | Herr Riesche – Herr Rieche |
+^ [ʃ] – [x]   | der Rausch – der Rauch    | Frau Lausche – Frau Lauche  |
+^ [x] – [ʁ]    | die Wache – die Ware | Herr Fache – Herr Farre  |
+^ [v] – [ʝ]    | die Wolle – die Jolle   | Familie Woller – Familie Joller |
+^ [ʁ] – [ʝ]    | der Rubel – der Jubel   | Frau Runkel – Frau Junkel |
+
+==== Konsonanten: Verbindungen ====
+
+^ [pf] – [ts]   | der Tropf – der Trotz     | Frau Lupfe – Frau Lutze  |
+^ [ts] – [tʃ]    | der Putz – der Putsch | Herr Patzer – Herr Patscher  |
+^ [ks] – [tʃ]    | von Max – der Matsch   | Familie Flachse – Familie Flatsche |
+^ [ts] – [t]   | der Schutz – der Schutt    | Frau Letze – Frau Lette  |
+^ [ts] – [s]    | die Katze – die Kasse | Herr Wutzig – Herr Wussig  |
+^ [pf] – [p]    | ein Topf – ein Top   | Familie Pfaller – Familie Paller |
+^ [pf] – [f]   | das Pfund – der Fund    | Frau Pfilling – Frau Filling  |
+^ [ks] – [k]    | zu sechst – der Sekt | Herr Dexter – Herr Dekter   |
+^ [ks] – [s]    | der Text – der Test   | Familie Luchsing – Familie Lussing |
+^ [tʃ] – [t]   | die Matsche – die Matte    | Frau Mittsching – Frau Mitting |
+^ [tʃ] – [ʃ]    | die Matsche – die Masche | Herr Mittschler – Herr Mischler  |
+
+==== Konsonanten: Nasale ====
+
+^ [m] – [n]    | die Macht – die Nacht   | Familie Moller – Familie Noller |
+^ [n] – [ŋ]   | in Bonn – der Bon    | Frau Sinner – Frau Singer |
+^ [m] – [ŋ]    | das Schwimmen – das Schwingen | Herr Lammert – Herr Langert  |

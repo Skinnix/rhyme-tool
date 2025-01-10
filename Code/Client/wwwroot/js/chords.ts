@@ -1,11 +1,4 @@
-﻿declare class BlazorDotNetReference {
-	invokeMethod<T = any>(method: string, ...args: any[]): T;
-	invokeMethodAsync<T = any>(method: string, ...args: any[]): Promise<T>;
-}
-
-declare const bootstrap: any;
-
-declare interface NodeSelectionAnchor {
+﻿declare interface NodeSelectionAnchor {
 	node: Node,
 	offset: number,
 }

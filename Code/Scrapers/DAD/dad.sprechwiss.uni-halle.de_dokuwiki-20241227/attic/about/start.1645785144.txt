@@ -1,0 +1,84 @@
+Die Deutsche Aussprachedatenbank (DAD) ist Teil eines Forschungsprojekts an der Martin-Luther-Universität Halle-Wittenberg. Da sie aus dem Wörterverzeichnis des Deutschen Aussprachewörterbuchs (DAWB, Krech et al. 2009) hervorgegangen ist, gibt die Deutsche Aussprachedatenbank den aktuellen Stand der halleschen Aussprachekodifizierung wieder.
+
+===== Beschreibung und Zielgruppen =====
+
+
+Das **DAWB** besteht aus einem Wörterverzeichnis mit fast 800 Seiten. Zusätzlich gibt es einen umfangreichen theoretischen Einführungsteil von ca. 280 Seiten. Ergänzt wird der Einführungsteil durch eine CD mit Hörbeispielen. Er ist folgendermaßen gegliedert:
+
+A Die Standardaussprache in Deutschland
+  - Standardaussprache – Begriff und Funktionen
+  - Geschichte, Grundsätze und Methoden der Ausspracheregelung in Deutschland
+  - Struktur und Auswahl des Wortschatzes
+  - Phonologische und phonetische Grundlagen der Standardaussprache
+  - Ausspracheregeln
+  - Phonostilistische Differenzierungen der Standardaussprache
+  - Eindeutschung von Namen und Wörtern aus anderen Sprachen
+  - Literatur (Auswahl)
+B Die Standardaussprache in Österreich\\ 
+C Die Standardaussprache in der deutschsprachigen Schweiz\\ 
+Hinweise zum Gebrauch des Wörterverzeichnisses\\ 
+Abkürzungsverzeichnis
+
+==== Zielgruppen des DAWB ====
+(vgl. ebd. S. 6 f.): 
+
+Das Nachschlagewerk wendet sich vor allem an Berufssprecher*innen im engeren Sinn, also z. B. an Sprecher*innen in den überregionalen Rundfunkmedien, an Schauspieler*innen und Rezitator*innen. Ebenso gehören Lehrende im Bereich Deutsch als Fremdsprache, Sänger*innen und Gesangspädagog*innen sowie sprachheiltherapeutisch und -pädagogisch Tätige zur Zielgruppe. Ergänzend außerdem alle diejenigen, die die zuvor genannten auf phonetischem, rhetorischem und (sprech)künstlerischem Gebiet ausbilden. Das DAWB wendet sich auch an Berufssprecher*innen im weiteren Sinn, wie z. B. an Persönlichkeiten, die in Wissenschaft, Kultur, Wirtschaft und Politik in der Öffentlichkeit stehen. Gleichsam an Pädagog*innen aller Fachrichtungen und in allen Institutionen, aber auch an alle Nichtberufssprecher*innen, die sich für die Standardaussprache interessieren oder sie verwenden wollen. 
+Darüber hinaus ist es für Wissenschaftler*innen interessant, denn es dient der Dokumentation eines bestimmten Standes der Ausspracheentwicklung (der Standardsprache der Bundesrepublik Deutschland).
+
+Das DAWB-Wörterverzeichnis enthält ca. 130.000 Stichwörter mit IPA-Transkription. Diese phonetische Umschrift wurde nach ausgedehnten soziophonetischen und phonetischen Untersuchungen festgelegt und nach normphonetischen Regeln vorgenommen. Ergänzend sind im Wörterverzeichnis Infokästen eingefügt, die  Ausspracheregeln enthalten und auf die jeweiligen Abschnitte des theoretischen Teils verweisen.
+
+Die **DAD** ermöglicht eine differenzierte Nutzung des DAWB-Wörterverzeichnisses. Zu jedem der ca. 130.000 Stichwörter werden folgende Angaben gemacht:
+  * IPA-Transkription,
+  * SAMPA-Transkription, 
+  * Akzentabstufung, 
+  * Silbenzahl. 
+Weitere Veränderungen gegenüber dem DAWB sind die vollständige Transkription von Aussprachevarianten sowie die Korrektur von Transkriptionsfehlern. Es gibt bereits verschiedene Filter- und Suchfunktionen, die künftig noch erweitert werden sollen. Geplant ist die Stichwörter durch Sprachsynthese anhörbar zu machen. 
+
+Zielgruppen der DAD sind ebenfalls Berufssprecher*innen im engeren und im weiteren Sinn sowie Nichtberufssprecher*innen, die sich für die Standardaussprache interessieren. 
+Wie das DAWB dient sie der Dokumentation eines bestimmten Standes der Ausspracheentwicklung (der Standardsprache der Bundesrepublik Deutschland), wird aber weitergeführt und erlaubt ständige Ergänzungen und Erweiterungen. 
+
+==== Hinweise zum Stichwortverzeichnis der DAD ====
+(vgl. Krech et al. 2009, 278 f.)
+
+1. Alphabetische Aufnahme der Stichwörter
+  * Als Grundlage der alphabetischen Aufnahme dienen der Rechtschreib-Duden und die vom Programm WORD® vorgenommene Ordnung. 
+  * Dies betrifft auch Schriftzeichen mit Diakritika (z. B. //ś ŝ ş š//) sowie Wortgruppen mit identischem ersten Bestandteil (z. B. //a cunabilis, a dato, a due, a fortiori//), die in dieser Folge aufgenommen worden sind.
+  * Teilweise wird sowohl die neuere als auch eine ältere Schreibweise angegeben. Insbesondere bei einigen fachsprachlichen Termini findet sich entsprechend den Empfehlungen der Duden-Rechtschreibung aber nur die Angabe der konventionelleren Schreibweise (z. B. //Phonologie, Phonetik//).
+
+2. Aufnahme abgeleiteter Formen:
+  * Abgeleitete Formen werden exemplarisch aufgenommen. Vor allem, wenn Formen häufig gebraucht werden oder die phonetischen Erscheinungen relevant sind, werden Ableitungen angegeben. 
+  * Morphologisch different oder phonetisch interessant sein können Pluralformen (z. B. //Baum, Bäume//), Stammformen unregelmäßiger Verben (z. B. //gehen, ging, gegangen//), Steigerungsformen der Adjektive (z. B. //hoch, höher, höchste//). Jede Form bildet dabei ein eigenes Stichwort.
+
+3. Aufnahme von Komposita, weiteren Zusammensetzungen sowie Wortgruppen: 
+  * Komposita (z. B. //Tischtennis, Schranktür//), weitere Zusammensetzungen (z. B. //Mitmensch, Sofortkauf//) sowie Wortgruppen sind als Musterfälle aufgenommen. Zu den Wortgruppen zählen insbesondere mehrteilige Namen (z. B. //Nordrhein-Westfalen//) und als Zitierungen verwendete Wort¬gruppen lateinischer Herkunft (z. B. //cogito ergo sum//). 
+  * Auswahlkriterien für die Aufnahme ins Wörterverzeichnis sind vor allem veränderte Akzentstrukturen in der Zusammensetzung (Verwendung von Nebenakzenten). Ein weiteres Auswahlkriterium sind assimilatorische Erscheinungen an der Wortfuge, vor allem, wenn die Realisierung vom Einzelwort abweicht (z. B. //Haussegen// vs. //Segen//).
+
+4. Angabe der sprachlichen Herkunft
+  * Die Angaben bezeichnen nicht die geografische Herkunft, sondern geben die Herkunfts- bzw. ggf. die Mittlersprache des Wortes an.
+  * Die sprachliche Herkunft wird nur angegeben, wenn die Transkription nicht den deutschen Aussprache- oder Akzentuierungsregeln entspricht. Die Angabe erfolgt auch bei Komposita, die aus fremdsprachigen und deutschen Gliedern bestehen (z. B. //Supercupgewinner//).
+  * Bei älteren Entlehnungen aus dem Lateinischen und Altgriechischen wird die Herkunft nicht angegeben. 
+
+5. Bedeutungsangaben
+  * Die Bedeutung von Stichwörtern wird nur angegeben, wenn mehrere Ausspracheformen existieren, die bedeutungsabhängig divergieren (z. B. //modern// (Verb) vs. //modern// (Adjektiv)). Dies trifft auch auf Einträge aus fremden Sprachen zu.
+  * Tritt ein gleich geschriebenes aber verschieden ausgesprochenes Stichwort in  zwei Sprachen auf, wird keine Bedeutung angegeben (z. B. //Claret// in den Sprachen Englisch, Französisch und Spanisch).
+  * Wenn in einer Sprache zwei gleich geschriebene, aber verschieden ausgesprochene Varianten auftreten, wird die Bedeutung angegeben (z. B. zwei Einträge mit engl. als Herkunftsangabe: //Bury (Ort)// vs. //Bury (Name)//). Falls eine dieser Varianten in einer weiteren Sprache auftritt, wird hier keine Bedeutung angegeben (z. B. weiterer Eintrag zu Bury ohne Angabe der Herkunft oder Bedeutung).
+
+6. Transkription
+  * In der Regel wird **eine** Ausspracheform empfohlen und transkribiert.
+  * Die Angabe zweier alternativer Transkriptionsformen ("//oder//"-Formen) erfolgt vor allem bei schwankenden Akzenten (z. B. //somit//) bzw. schwankender Qualität und Quantität der Vokale (z. B. //duschen//). Ebenso werden bei mehr oder weniger stark eingedeutschten Formen zwei Varianten angegeben (z. B. //Gorbatschow//). An erster Stelle ist die präferierte Form aufgeführt. 
+  * Bei der Transkription lateinischer Namen, Wörter und Wortgruppen wird nicht die Wiedergabe der klassischen römischen Aussprache angestrebt, sondern die Transkription folgt weitgehend den deutschen Ausspracheregeln. 
+
+Zitierte Literatur: 
+Krech, Eva-Maria / Stock, Eberhard / Hirschfeld, Ursula / Anders, Lutz Christian (2009): Deutsches Aussprachewörterbuch. Walter de Gruyter Berlin / New York.
+
+==== Weiterführende Informationen über die Deutsche Aussprachedatenbank ====
+finden Sie in den hier verlinkten Publikationen:
+
+Ebel, Alexandra / Förster, Johannes / Walther, Mathias (2021): [[https://www.essv.de/essv2021/pdfs/34_ebel.pdf|Developing the German Pronunciation Database (DAD) – An online dictionary for spoken German]].
+
+Ebel, Alexandra / Hientz, Rudolf / Hirschfeld, Ursula / Skoczek, Robert (2021): [[https://www.frank-timme.de/fileadmin/docs/Voigt-Zimmermann_Miteinander_sprechen.pdf|Zur Transkription von Standardsprache in Aussprachedatenbanken. Konzepte, Probleme, Lösungen]]. In: Voigt-Zimmermann, Susanne (Hg.): Miteinander sprechen – verantwortlich, kompetent, reflektiert. Frank & Timme, S. 167–191. 
+
+Skoczek, Robert / Ebel, Alexandra (2021): [[http://dx.doi.org/10.17951/lsmll.2021.45.3.71-81|German Pronunciation Database and its Possible Applications in the Age of Homeschooling]]. In: Lublin Studies in Modern Languages and Literature, Vol. 45, No. 3, S. 117–127.
+
+Ebel, Alexandra / Skoczek, Robert (2021): [[https://doi.org/10.48694/tujournals-60|Die Deutsche Aussprachedatenbank (DAD) – Potenzial für Deutsch als Fremd-, Zweit- und Muttersprache]]. In: KorDaF, Vol 1, Issue 2.
+
