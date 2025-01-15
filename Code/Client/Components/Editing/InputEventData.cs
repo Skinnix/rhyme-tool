@@ -3,7 +3,7 @@ using Skinnix.RhymeTool.Data.Notation.Display;
 
 namespace Skinnix.RhymeTool.Client.Components.Editing;
 
-public record InputEventData(string InputType, string? Data, LineSelection Selection, LineSelection? EditRange, bool JustSelected);
+public record InputEventData(string InputType, string? Data, LineSelection Selection, LineSelection? EditRange, bool JustSelected, bool AfterCompose);
 
 public record LineSelection(LineSelectionAnchor Start, LineSelectionAnchor End)
 {

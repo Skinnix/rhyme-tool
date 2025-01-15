@@ -75,7 +75,7 @@ $separatorColor: #6c757d;
 	align-items: baseline;
 	padding: 1px 0;
 
-	&.refreshing[contenteditable] {
+	&.refreshing {
 		caret-color: transparent;
 	}
 

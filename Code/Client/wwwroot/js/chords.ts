@@ -260,6 +260,7 @@ function registerChordEditor(wrapper: HTMLElement, reference: BlazorDotNetRefere
 		const callback: EditorCallback = (editor, data, selectionRange) => {
 			//Warte auf vorherige Aktionen
 			console.log('awaiting queue');
+			let wasBusy = actionQueue.isBusy;
 			actionQueue.then(async () => {
 				console.log('queue finished');
 
@@ -268,19 +269,22 @@ function registerChordEditor(wrapper: HTMLElement, reference: BlazorDotNetRefere
 				if (!selection)
 					throw new Error("Keine Auswahl vorhanden.");
 
-				//Eventdaten
-				let editRange: AnchorSelection<MetalineLineAnchor> | null = data.editRangeStart == undefined || data.editRangeEnd == undefined ? null : {
-					start: {
-						metaline: selection.start.metaline,
-						line: selection.start.line,
-						offset: data.editRangeStart,
-					},
-					end: {
-						metaline: selection.end.metaline,
-						line: selection.end.line,
-						offset: data.editRangeEnd,
-					}
-				};
+				//Verwende EditRange, wenn beim Auslösen kein anderes Event mehr aktiv war
+				let editRange: AnchorSelection<MetalineLineAnchor> | null = selection;
+				if (!wasBusy) {
+					editRange = data.editRangeStart == undefined || data.editRangeEnd == undefined ? null : {
+						start: {
+							metaline: selection.start.metaline,
+							line: selection.start.line,
+							offset: data.editRangeStart,
+						},
+						end: {
+							metaline: selection.end.metaline,
+							line: selection.end.line,
+							offset: data.editRangeEnd,
+						}
+					};
+				}
 				let eventData = {
 					selection: selection,
 					editRange: editRange,
@@ -335,7 +339,7 @@ function registerChordEditor(wrapper: HTMLElement, reference: BlazorDotNetRefere
 				}
 
 				//Editor synchronisieren
-				editor.updateFromElement();
+				editor.updateFromElement(null, false);
 
 				//Benutzerdefinierte Auswahl aktualisieren
 				selectionObserver!.refreshSelection();

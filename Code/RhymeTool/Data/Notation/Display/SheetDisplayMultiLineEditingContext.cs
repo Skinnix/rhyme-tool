@@ -5,7 +5,7 @@ namespace Skinnix.RhymeTool.Data.Notation.Display;
 public record SheetDisplayMultiLineEditingContext(SheetDocument Document,
 	ISheetDisplayLineEditing StartLine, int SelectionStart,
 	ISheetDisplayLineEditing EndLine, int SelectionEnd,
-	bool JustSelected)
+	bool JustSelected, bool AfterComposition)
 {
 	public IReadOnlyList<SheetLine> LinesBetween { get; init; } = [];
 
@@ -15,7 +15,7 @@ public record SheetDisplayMultiLineEditingContext(SheetDocument Document,
 
 		//Trenne das Ende der ersten Zeile ab
 		var firstLineLineContext = contexts.First(c => c.Line == StartLine.Line);
-		var firstLineContext = new SheetDisplayLineEditingContext(firstLineLineContext, SimpleRange.AllFromStart(SelectionStart), JustSelected)
+		var firstLineContext = new SheetDisplayLineEditingContext(firstLineLineContext, SimpleRange.CursorAtEnd, SimpleRange.AllFromStart(SelectionStart), JustSelected, AfterComposition)
 		{
 			GetLineAfter = () => LinesBetween.Count == 0 ? EndLine.Line : LinesBetween[1],
 		};
@@ -25,7 +25,7 @@ public record SheetDisplayMultiLineEditingContext(SheetDocument Document,
 
 		//Trenne den Anfang der letzten Zeile ab
 		var lastLineLineContext = contexts.First(c => c.Line == EndLine.Line);
-		var lastLineContext = new SheetDisplayLineEditingContext(lastLineLineContext, SimpleRange.AllToEnd(SelectionEnd), JustSelected)
+		var lastLineContext = new SheetDisplayLineEditingContext(lastLineLineContext, SimpleRange.CursorAtStart, SimpleRange.AllToEnd(SelectionEnd), JustSelected, AfterComposition)
 		{
 			GetLineBefore = () => LinesBetween.Count == 0 ? StartLine.Line : LinesBetween[^1],
 		};
@@ -49,7 +49,7 @@ public record SheetDisplayMultiLineEditingContext(SheetDocument Document,
 		if (!lastLineExecuteResult.RemoveLine)
 		{
 			//Kombiniere die erste und letzte Zeile, indem am Anfang der letzten Zeile rückwärts gelöscht wird
-			combineResult = EndLine.DeleteContent(new SheetDisplayLineEditingContext(lastLineLineContext, SimpleRange.CursorAtStart, false)
+			combineResult = EndLine.DeleteContent(new SheetDisplayLineEditingContext(lastLineLineContext, SimpleRange.CursorAtStart, SimpleRange.CursorAtStart, false, AfterComposition)
 			{
 				GetLineBefore = () => StartLine.Line,
 			}, this, DeleteDirection.Backward, DeleteType.Character, formatter);
@@ -76,7 +76,7 @@ public record SheetDisplayMultiLineEditingContext(SheetDocument Document,
 
 		//Füge den neuen Content in die erste Zeile ein
 		var firstLineLineContext = contexts.First(c => c.Line == StartLine.Line);
-		var firstLineContext = new SheetDisplayLineEditingContext(firstLineLineContext, SimpleRange.AllFromStart(SelectionStart), JustSelected)
+		var firstLineContext = new SheetDisplayLineEditingContext(firstLineLineContext, SimpleRange.CursorAtStart, SimpleRange.AllFromStart(SelectionStart), JustSelected, AfterComposition)
 		{
 			GetLineAfter = () => LinesBetween.Count == 0 ? EndLine.Line : LinesBetween[1],
 		};
@@ -86,7 +86,7 @@ public record SheetDisplayMultiLineEditingContext(SheetDocument Document,
 
 		//Trenne den Anfang der letzten Zeile ab
 		var lastLineLineContext = contexts.First(c => c.Line == EndLine.Line);
-		var lastLineContext = new SheetDisplayLineEditingContext(lastLineLineContext, SimpleRange.AllToEnd(SelectionEnd), JustSelected)
+		var lastLineContext = new SheetDisplayLineEditingContext(lastLineLineContext, SimpleRange.CursorAtEnd, SimpleRange.AllToEnd(SelectionEnd), JustSelected, AfterComposition)
 		{
 			GetLineBefore = () => LinesBetween.Count == 0 ? StartLine.Line : LinesBetween[^1],
 		};
@@ -106,7 +106,7 @@ public record SheetDisplayMultiLineEditingContext(SheetDocument Document,
 			Document.Lines.Remove(lineBetween);
 
 		//Kombiniere die erste und letzte Zeile, indem am Anfang der letzten Zeile rückwärts gelöscht wird
-		var combineResult = EndLine.DeleteContent(new SheetDisplayLineEditingContext(lastLineLineContext, SimpleRange.CursorAtStart, false)
+		var combineResult = EndLine.DeleteContent(new SheetDisplayLineEditingContext(lastLineLineContext, SimpleRange.CursorAtStart, SimpleRange.CursorAtStart, false, AfterComposition)
 		{
 			GetLineBefore = () => StartLine.Line,
 		}, this, DeleteDirection.Backward, DeleteType.Character, formatter);

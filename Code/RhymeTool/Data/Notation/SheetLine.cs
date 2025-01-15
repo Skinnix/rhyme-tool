@@ -160,7 +160,7 @@ public class SheetEmptyLine() : SheetLine(LineType), ISelectableSheetLine, IShee
 		//Update den Context, damit die Auswahl immer auf Null steht
 		context = context with
 		{
-			SelectionRange = SimpleRange.CursorAtStart,
+			EditRange = SimpleRange.CursorAtStart,
 		};
 
 		//Ersetze die Zeile mit einer VarietyLine und füge dann den Content ein

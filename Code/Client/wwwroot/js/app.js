@@ -218,6 +218,7 @@ function registerChordEditor(wrapper, reference, callbackName) {
         var _this = this;
         var callback = function (editor, data, selectionRange) {
             console.log('awaiting queue');
+            var wasBusy = actionQueue.isBusy;
             actionQueue.then(function () { return __awaiter(_this, void 0, void 0, function () {
                 var selection, editRange, eventData, result, newSelection, currentSelectionRange, focusElement;
                 return __generator(this, function (_a) {
@@ -227,18 +228,21 @@ function registerChordEditor(wrapper, reference, callbackName) {
                             selection = editor.getCurrentSelection();
                             if (!selection)
                                 throw new Error("Keine Auswahl vorhanden.");
-                            editRange = data.editRangeStart == undefined || data.editRangeEnd == undefined ? null : {
-                                start: {
-                                    metaline: selection.start.metaline,
-                                    line: selection.start.line,
-                                    offset: data.editRangeStart,
-                                },
-                                end: {
-                                    metaline: selection.end.metaline,
-                                    line: selection.end.line,
-                                    offset: data.editRangeEnd,
-                                }
-                            };
+                            editRange = selection;
+                            if (!wasBusy) {
+                                editRange = data.editRangeStart == undefined || data.editRangeEnd == undefined ? null : {
+                                    start: {
+                                        metaline: selection.start.metaline,
+                                        line: selection.start.line,
+                                        offset: data.editRangeStart,
+                                    },
+                                    end: {
+                                        metaline: selection.end.metaline,
+                                        line: selection.end.line,
+                                        offset: data.editRangeEnd,
+                                    }
+                                };
+                            }
                             eventData = __assign({ selection: selection, editRange: editRange, justSelected: selectionObserver.triggerJustSelected() }, data);
                             wrapper.classList.add('refreshing');
                             selectionObserver.pauseObservation();
@@ -276,7 +280,7 @@ function registerChordEditor(wrapper, reference, callbackName) {
                                     newSelection.addRange(selectionRange);
                                 }
                             }
-                            editor.updateFromElement();
+                            editor.updateFromElement(null, false);
                             selectionObserver.refreshSelection();
                             for (focusElement = newSelection === null || newSelection === void 0 ? void 0 : newSelection.focusNode; focusElement && !('scrollIntoView' in focusElement); focusElement = focusElement.parentElement) { }
                             if (focusElement) {
@@ -453,22 +457,19 @@ var Debouncer = (function () {
 }());
 var ModificationEditor = (function () {
     function ModificationEditor(editor, callback) {
-        var _a, _b;
         this.editor = editor;
         this.callback = callback;
-        var selection = SelectionHelper.getGlobalOffset(getSelection(), editor);
-        this.editContext = new EditContext(this.currentState = {
-            text: editor.innerText,
-            selectionStart: (_a = selection === null || selection === void 0 ? void 0 : selection.start) !== null && _a !== void 0 ? _a : 0,
-            selectionEnd: (_b = selection === null || selection === void 0 ? void 0 : selection.end) !== null && _b !== void 0 ? _b : 0,
-        });
+        this.editContext = new EditContext();
+        this.updateFromElement();
         this.editContext.addEventListener('textupdate', this.handleTextUpdate.bind(this));
+        this.editContext.addEventListener('compositionend', this.handleCompositionEnd.bind(this));
         this.editor.addEventListener('keydown', this.handleKeyDown.bind(this));
         this.editor.addEventListener('paste', this.handlePaste.bind(this));
         this.editor.editContext = this.editContext;
     }
     ModificationEditor.prototype.destroy = function () {
         this.editContext.removeEventListener('textupdate', this.handleTextUpdate.bind(this));
+        this.editContext.removeEventListener('compositionend', this.handleCompositionEnd.bind(this));
         this.editor.removeEventListener('keydown', this.handleKeyDown.bind(this));
         this.editor.removeEventListener('paste', this.handlePaste.bind(this));
     };
@@ -483,28 +484,15 @@ var ModificationEditor = (function () {
         var inputType = event.text ? 'insertText'
             : event.updateRangeStart < this.currentState.selectionStart ? 'deleteContentBackward'
                 : 'deleteContentForward';
-        var lineStart = this.currentState.text.lastIndexOf('\n', event.updateRangeStart);
-        var lineEnd = this.currentState.text.lastIndexOf('\n', event.updateRangeEnd);
-        if (lineStart < 0) {
-            lineStart = 0;
-        }
-        else {
-            for (var current = lineStart; current > 0; current = this.currentState.text.lastIndexOf('\n', current - 1))
-                lineStart--;
-        }
-        if (lineEnd < 0) {
-            lineEnd = 0;
-        }
-        else {
-            for (var current = lineEnd; current > 0; current = this.currentState.text.lastIndexOf('\n', current - 1))
-                lineEnd--;
-        }
-        var lineOffsetStart = event.updateRangeStart - lineStart;
-        var lineOffsetEnd = event.updateRangeEnd - lineEnd;
+        var lineStart = this.currentState.text.lastIndexOf('\n', event.updateRangeStart - 1);
+        var lineEnd = this.currentState.text.lastIndexOf('\n', event.updateRangeEnd - 1);
+        var lineOffsetStart = event.updateRangeStart - lineStart - 1;
+        var lineOffsetEnd = event.updateRangeEnd - lineEnd - 1;
         this.callback(this, {
             inputType: inputType,
             editRangeStart: lineOffsetStart,
             editRangeEnd: lineOffsetEnd,
+            afterCompose: this.isAfterCompose,
             data: event.text
         }, currentRange);
     };
@@ -519,7 +507,8 @@ var ModificationEditor = (function () {
         if (event.key === "Enter") {
             this.callback(this, {
                 inputType: 'insertText',
-                data: '\n'
+                data: '\n',
+                afterCompose: false,
             }, currentRange);
         }
     };
@@ -534,21 +523,73 @@ var ModificationEditor = (function () {
             return;
         this.callback(this, {
             inputType: 'insertText',
-            data: text
+            data: text,
+            afterCompose: false,
         }, currentRange);
     };
+    ModificationEditor.prototype.handleCompositionEnd = function (event) {
+        var _this = this;
+        this.isAfterCompose = true;
+        requestIdleCallback(function () {
+            _this.isAfterCompose = false;
+        });
+    };
     ModificationEditor.prototype.updateFromElement = function (text, selection) {
+        var _this = this;
         if (text !== false) {
-            if (typeof text !== 'string')
-                text = this.editor.innerText;
+            if (typeof text !== 'string') {
+                text = '';
+                var lines = this.editor.querySelectorAll('.line');
+                this.lines = new Array(lines.length);
+                var i_1 = 0;
+                var currentOffset_1 = 0;
+                lines.forEach(function (l) {
+                    var content = l.textContent + "\n";
+                    text += content;
+                    _this.lines[i_1++] = {
+                        node: l,
+                        offset: currentOffset_1,
+                        length: content.length
+                    };
+                    currentOffset_1 += content.length;
+                });
+            }
             this.editContext.updateText(0, this.editContext.text.length, text);
+            console.log(text);
         }
         if (selection !== false) {
-            if (typeof selection !== 'object')
-                selection = getSelection();
-            var textSelection = SelectionHelper.getGlobalOffset(selection, this.editor);
-            if (textSelection) {
-                this.editContext.updateSelection(textSelection.start, textSelection.end);
+            if (selection instanceof Selection)
+                selection = this.getCurrentSelection(selection, true);
+            else
+                selection = this.getCurrentSelection(undefined, true);
+            if (selection) {
+                var startFound = false;
+                var endFound = false;
+                var start = selection.start.offset;
+                var end = selection.end.offset;
+                for (var i = 0; i < this.lines.length; i++) {
+                    var line = this.lines[i];
+                    if (line.node === selection.start.lineNode) {
+                        if (start >= line.length)
+                            start = line.length - 1;
+                        start += line.offset;
+                        startFound = true;
+                        if (endFound)
+                            break;
+                    }
+                    if (line.node === selection.end.lineNode) {
+                        if (end >= line.length)
+                            end = line.length - 1;
+                        end += line.offset;
+                        endFound = true;
+                        if (startFound)
+                            break;
+                    }
+                }
+                if (startFound && endFound) {
+                    this.editContext.updateSelection(start, end);
+                    console.log(this.editContext.text.substring(0, start) + '�' + this.editContext.text.substring(start));
+                }
             }
         }
         this.currentState = {
@@ -557,7 +598,7 @@ var ModificationEditor = (function () {
             selectionEnd: this.editContext.selectionEnd
         };
     };
-    ModificationEditor.prototype.getCurrentSelection = function (documentSelection) {
+    ModificationEditor.prototype.getCurrentSelection = function (documentSelection, includeNode) {
         var _a;
         if (documentSelection === undefined)
             documentSelection = getSelection() || undefined;
@@ -568,7 +609,7 @@ var ModificationEditor = (function () {
             return null;
         if (!this.editor.contains(range.startContainer) || !this.editor.contains(range.endContainer))
             return null;
-        return this.getLineSelection(range);
+        return this.getLineSelection(range, includeNode);
     };
     ModificationEditor.prototype.setCurrentSelection = function (lineSelection) {
         var documentSelection = getSelection();

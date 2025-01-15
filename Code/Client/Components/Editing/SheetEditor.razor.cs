@@ -152,19 +152,17 @@ partial class SheetEditor
 	{
 		if (Document is null) throw new InvalidOperationException("Editor nicht initialisiert");
 
-		//Wo findet die Bearbeitung statt?
-		var range = data.EditRange ?? data.Selection;
-
 		//Finde die Displayzeile
-		var line = FindLine(range.Start.Metaline, range.Start.Line);
+		var line = FindLine(data.Selection.Start.Metaline, data.Selection.Start.Line);
 		if (line is null)
 			return MetalineEditResult.Fail(LineNotFound);
 
 		//Auswahl
 		var lineContext = Document.Lines.GetContextFor(line.Editing.Line)
 			?? throw new InvalidOperationException("Kein Kontext");
-		var editRange = new SimpleRange(range.Start.Offset, range.End.Offset);
-		var context = new SheetDisplayLineEditingContext(lineContext, editRange, data.JustSelected)
+		var selectionRange = new SimpleRange(data.Selection.Start.Offset, data.Selection.End.Offset);
+		SimpleRange? editRange = data.EditRange is null ? null : new SimpleRange(data.EditRange.Start.Offset, data.EditRange.End.Offset);
+		var context = new SheetDisplayLineEditingContext(lineContext, selectionRange, editRange, data.JustSelected, data.AfterCompose)
 		{
 			GetLineBefore = () => Document.Lines.GetLineBefore(line.Editing.Line),
 			GetLineAfter = () => Document.Lines.GetLineAfter(line.Editing.Line),
@@ -203,7 +201,7 @@ partial class SheetEditor
 
 		//Erzeuge Kontext
 		var context = new SheetDisplayMultiLineEditingContext(Document, startLine.Editing, data.Selection.Start.Offset,
-			endLine.Editing, data.Selection.End.Offset, data.JustSelected);
+			endLine.Editing, data.Selection.End.Offset, data.JustSelected, data.AfterCompose);
 
 		//Sind Start- und Endzeile mit dem Kontext kompatibel?
 		var supportsEdit = context.StartLine.SupportsEdit(context);

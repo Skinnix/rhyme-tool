@@ -238,10 +238,10 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 			DeleteDirection direction, DeleteType type, ISheetEditorFormatter? formatter = null)
 		{
 			//Ist der Bereich leer?
-			if (context.SelectionRange.Length == 0)
+			if (context.EffectiveRange.Length == 0)
 			{
 				//Wird der Zeilenumbruch am Anfang entfernt?
-				if (context.SelectionRange.Start == 0 && direction == DeleteDirection.Backward)
+				if (context.EffectiveRange.Start == 0 && direction == DeleteDirection.Backward)
 				{
 					//Gibt es eine Zeile davor?
 					var lineBefore = context.GetLineBefore?.Invoke();
@@ -318,7 +318,7 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 
 				//Wird der Zeilenumbruch am Ende entfernt?
 				if (direction == DeleteDirection.Forward
-					&& (Line.components.Count == 0 || context.SelectionRange.End >= Line.components[^1].DisplayRenderBounds.EndOffset))
+					&& (Line.components.Count == 0 || context.EffectiveRange.End >= Line.components[^1].DisplayRenderBounds.EndOffset))
 				{
 					//Gibt es eine Zeile danach?
 					var lineAfter = context.GetLineAfter?.Invoke();
@@ -401,17 +401,17 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 				Component? nextComponent = null;
 				foreach (var component in Line.components)
 				{
-					if (component.DisplayRenderBounds.EndOffset == context.SelectionRange.Start)
+					if (component.DisplayRenderBounds.EndOffset == context.EffectiveRange.Start)
 					{
 						endComponent = component;
 					}
-					else if (component.DisplayRenderBounds.StartOffset == context.SelectionRange.Start)
+					else if (component.DisplayRenderBounds.StartOffset == context.EffectiveRange.Start)
 					{
 						startComponent = component;
 						nextComponent = component;
 						break;
 					}
-					else if (component.DisplayRenderBounds.StartOffset > context.SelectionRange.Start)
+					else if (component.DisplayRenderBounds.StartOffset > context.EffectiveRange.Start)
 					{
 						nextComponent = component;
 						break;
@@ -428,14 +428,14 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 					if (startComponent is not null && direction == DeleteDirection.Forward)
 					{
 						//Lösche die Komponente
-						context.SelectionRange = new SimpleRange(startComponent.DisplayRenderBounds.StartOffset, startComponent.DisplayRenderBounds.EndOffset);
+						context.EditRange = new SimpleRange(startComponent.DisplayRenderBounds.StartOffset, startComponent.DisplayRenderBounds.EndOffset);
 					}
 
 					//Steht der Cursor am Ende einer Komponente und soll diese gelöscht werden?
 					else if (endComponent is not null && direction == DeleteDirection.Backward)
 					{
 						//Lösche die vorherige Komponente
-						context.SelectionRange = new SimpleRange(endComponent.DisplayRenderBounds.StartOffset, endComponent.DisplayRenderBounds.EndOffset);
+						context.EditRange = new SimpleRange(endComponent.DisplayRenderBounds.StartOffset, endComponent.DisplayRenderBounds.EndOffset);
 					}
 
 					//Steht der Cursor mitten in einer Komponente?
@@ -445,12 +445,12 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 						if (direction == DeleteDirection.Forward)
 						{
 							//Kürze die Komponente nach dem Cursor
-							context.SelectionRange = new SimpleRange(context.SelectionRange.Start, previousComponent.DisplayRenderBounds.EndOffset);
+							context.EditRange = new SimpleRange(context.EffectiveRange.Start, previousComponent.DisplayRenderBounds.EndOffset);
 						}
 						else
 						{
 							//Kürze die Komponente vor dem Cursor
-							context.SelectionRange = new SimpleRange(previousComponent.DisplayRenderBounds.StartOffset, context.SelectionRange.Start);
+							context.EditRange = new SimpleRange(previousComponent.DisplayRenderBounds.StartOffset, context.EffectiveRange.Start);
 						}
 					}
 
@@ -469,21 +469,21 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 						if (endComponent is not null && nextComponent is not null)
 						{
 							//Lösche das erste Zeichen der ersten Komponente danach
-							context.SelectionRange = new SimpleRange(endComponent.DisplayRenderBounds.EndOffset, nextComponent.DisplayRenderBounds.StartOffset + 1);
+							context.EditRange = new SimpleRange(endComponent.DisplayRenderBounds.EndOffset, nextComponent.DisplayRenderBounds.StartOffset + 1);
 						}
 
 						//Steht der Cursor mitten in einem langgestreckten Leerzeichen?
-						else if (endComponent is null && previousComponent?.DisplayRenderBounds.EndOffset <= context.SelectionRange.Start && nextComponent is not null
+						else if (endComponent is null && previousComponent?.DisplayRenderBounds.EndOffset <= context.EffectiveRange.Start && nextComponent is not null
 							&& (previousComponent as VarietyComponent)?.Content.Type == ContentType.Space)
 						{
 							//Lösche das erste Zeichen der ersten Komponente nach dem Leerzeichen
-							context.SelectionRange = new SimpleRange(previousComponent.DisplayRenderBounds.EndOffset, nextComponent.DisplayRenderBounds.StartOffset + 1);
+							context.EditRange = new SimpleRange(previousComponent.DisplayRenderBounds.EndOffset, nextComponent.DisplayRenderBounds.StartOffset + 1);
 						}
 
 						//Erweitere einfach die Auswahl um ein Zeichen nach rechts
 						else
 						{
-							context.SelectionRange = new SimpleRange(context.SelectionRange.Start, context.SelectionRange.Start + 1);
+							context.EditRange = new SimpleRange(context.EffectiveRange.Start, context.EffectiveRange.Start + 1);
 						}
 					}
 					else
@@ -492,21 +492,21 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 						if (startComponent is not null && previousComponent is not null)
 						{
 							//Lösche das letzte Zeichen der ersten Komponente davor
-							context.SelectionRange = new SimpleRange(previousComponent.DisplayRenderBounds.EndOffset - 1, startComponent.DisplayRenderBounds.StartOffset);
+							context.EditRange = new SimpleRange(previousComponent.DisplayRenderBounds.EndOffset - 1, startComponent.DisplayRenderBounds.StartOffset);
 						}
 
 						//Steht der Cursor mitten in einem langgestreckten Leerzeichen?
-						else if (startComponent is null && previousComponent?.DisplayRenderBounds.EndOffset < context.SelectionRange.Start && prepreviousComponent is not null
+						else if (startComponent is null && previousComponent?.DisplayRenderBounds.EndOffset < context.EffectiveRange.Start && prepreviousComponent is not null
 							&& (previousComponent as VarietyComponent)?.Content.Type == ContentType.Space)
 						{
 							//Lösche das letzte Zeichen der ersten Komponente vor dem Leerzeichen
-							context.SelectionRange = new SimpleRange(previousComponent.DisplayRenderBounds.StartOffset, prepreviousComponent.DisplayRenderBounds.EndOffset - 1);
+							context.EditRange = new SimpleRange(previousComponent.DisplayRenderBounds.StartOffset, prepreviousComponent.DisplayRenderBounds.EndOffset - 1);
 						}
 
 						//Erweitere einfach die Auswahl um ein Zeichen nach links
 						else
 						{
-							context.SelectionRange = new SimpleRange(context.SelectionRange.Start - 1, context.SelectionRange.Start);
+							context.EditRange = new SimpleRange(context.EffectiveRange.Start - 1, context.EffectiveRange.Start);
 						}
 					}
 				}
@@ -523,11 +523,11 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 			if (content == "\n")
 			{
 				//Dabei Inhalt überschreiben ist nicht erlaubt
-				if (context.SelectionRange.Length > 0)
+				if (context.EffectiveRange.Length > 0)
 					return DelayedMetalineEditResult.Fail(CannotDeleteWithLinebreak);
 
 				//Am Anfang?
-				if (context.SelectionRange.Start == 0 && context.SelectionRange.End == 0)
+				if (context.EffectiveRange.Start == 0 && context.EffectiveRange.End == 0)
 				{
 					//Erzeuge eine neue leere Zeile
 					var newEmptyLine = new SheetEmptyLine();
@@ -551,17 +551,17 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 					foreach (var component in Line.components)
 					{
 						//Liegt die Komponente komplett vor dem Bereich?
-						if (component.DisplayRenderBounds.EndOffset <= context.SelectionRange.Start)
+						if (component.DisplayRenderBounds.EndOffset <= context.EffectiveRange.Start)
 						{
 							index++;
 							continue;
 						}
 
 						//Liegt der Bereich in der Komponente?
-						if (component.DisplayRenderBounds.StartOffset < context.SelectionRange.Start)
+						if (component.DisplayRenderBounds.StartOffset < context.EffectiveRange.Start)
 						{
 							//Teile die Komponente
-							var splitOffset = component.DisplayRenderBounds.GetContentOffset(context.SelectionRange.Start);
+							var splitOffset = component.DisplayRenderBounds.GetContentOffset(context.EffectiveRange.Start);
 							var end = component.SplitEnd(splitOffset.ContentOffset, formatter);
 
 							//Füge das Ende in die neue Zeile ein
@@ -613,7 +613,7 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 		private MetalineEditResult DeleteAndInsertContent(SheetDisplayLineEditingContext context,
 			ISheetEditorFormatter? formatter, string? content, DeleteDirection direction)
 		{
-			var selectionRange = context.SelectionRange;
+			var selectionRange = context.EffectiveRange;
 			if (selectionRange.End == -1 && Line.components.Count != 0)
 				selectionRange = new(selectionRange.Start, Line.components[^1].DisplayRenderBounds.EndOffset);
 
@@ -1181,15 +1181,15 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 			DeleteDirection direction, DeleteType type, ISheetEditorFormatter? formatter = null)
 		{
 			//Ist der Bereich leer?
-			if (context.SelectionRange.Length == 0)
+			if (context.EffectiveRange.Length == 0)
 			{
 				//Wird ein Wort gelöscht?
 				if (type == DeleteType.Word)
 				{
 					//Finde das nächste/vorherige Attachment
 					var attachment = direction == DeleteDirection.Forward
-						? FindAttachmentsInRange(SimpleRange.AllFromStart(context.SelectionRange.Start), formatter).FirstOrDefault()
-						: FindAttachmentsInRange(SimpleRange.AllToEnd(context.SelectionRange.Start), formatter).LastOrDefault();
+						? FindAttachmentsInRange(SimpleRange.AllFromStart(context.EffectiveRange.Start), formatter).FirstOrDefault()
+						: FindAttachmentsInRange(SimpleRange.AllToEnd(context.EffectiveRange.Start), formatter).LastOrDefault();
 
 					//Attachment nicht gefunden?
 					if (attachment.Component is null)
@@ -1215,26 +1215,26 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 
 				//Erweitere einfach die Auswahl um ein Zeichen nach rechts oder links
 				if (direction == DeleteDirection.Forward)
-					context.SelectionRange = new SimpleRange(context.SelectionRange.Start, context.SelectionRange.Start + 1);
+					context.EditRange = new SimpleRange(context.EffectiveRange.Start, context.EffectiveRange.Start + 1);
 				else
-					context.SelectionRange = new SimpleRange(context.SelectionRange.Start - 1, context.SelectionRange.Start);
+					context.EditRange = new SimpleRange(context.EffectiveRange.Start - 1, context.EffectiveRange.Start);
 			}
 
 			//Finde alle Attachments im Bereich
-			var attachments = FindAttachmentsInRange(context.SelectionRange, formatter).ToList();
+			var attachments = FindAttachmentsInRange(context.EffectiveRange, formatter).ToList();
 
 			//Liegt genau ein Attachment im Bereich?
 			if (attachments.Count == 1)
 			{
 				//Bearbeite das Attachment
-				return TryEditAttachment(context, attachments[0].Component, attachments[0].Attachment, context.SelectionRange, null, formatter);
+				return TryEditAttachment(context, attachments[0].Component, attachments[0].Attachment, context.EffectiveRange, null, formatter);
 			}
 
 			//Liegen mehrere Attachments im Bereich?
 			if (attachments.Count > 1)
 			{
 				//Liegen sie nicht alle komplett im Bereich?
-				if (!attachments.All(a => a.Attachment.RenderBounds.StartOffset >= context.SelectionRange.Start && a.Attachment.RenderBounds.AfterOffset <= context.SelectionRange.End))
+				if (!attachments.All(a => a.Attachment.RenderBounds.StartOffset >= context.EffectiveRange.Start && a.Attachment.RenderBounds.AfterOffset <= context.EffectiveRange.End))
 					return DelayedMetalineEditResult.Fail(CannotPartiallyEditAttachments);
 
 				//Bearbeitung wird funktionieren
@@ -1246,25 +1246,25 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 
 					//Modified-Event
 					Line.RaiseModifiedAndInvalidateCache();
-					return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAt(context.SelectionRange.Start)));
+					return new MetalineEditResult(new MetalineSelectionRange(this, SimpleRange.CursorAt(context.EffectiveRange.Start)));
 				});
 			}
 
 			//Finde das nächste Attachment und verschiebe es nach links
-			return TryFindAndMoveNextAttachment(context.SelectionRange, 0, formatter);
+			return TryFindAndMoveNextAttachment(context.EffectiveRange, 0, formatter);
 		}
 
 		public DelayedMetalineEditResult TryInsertContent(SheetDisplayLineEditingContext context, SheetDisplayMultiLineEditingContext? multilineContext,
 			string content, ISheetEditorFormatter? formatter)
 		{
 			//Finde alle Attachments im Bereich
-			var attachments = FindAttachmentsInRange(context.SelectionRange, formatter).ToList();
+			var attachments = FindAttachmentsInRange(context.EffectiveRange, formatter).ToList();
 
 			//Liegt genau ein Attachment im Bereich?
 			if (attachments.Count == 1)
 			{
 				//Bearbeite das Attachment
-				return TryEditAttachment(context, attachments[0].Component, attachments[0].Attachment, context.SelectionRange, content, formatter);
+				return TryEditAttachment(context, attachments[0].Component, attachments[0].Attachment, context.EffectiveRange, content, formatter);
 			}
 
 			//Liegt mehr als ein Attachment im Bereich?
@@ -1278,22 +1278,22 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 			if (string.IsNullOrWhiteSpace(content))
 			{
 				//Finde das nächste Attachment und verschiebe es
-				return TryFindAndMoveNextAttachment(context.SelectionRange, content.Length, formatter);
+				return TryFindAndMoveNextAttachment(context.EffectiveRange, content.Length, formatter);
 			}
 
 			//Ist der Bereich eine Selektion?
-			if (context.SelectionRange.Length > 0)
+			if (context.EffectiveRange.Length > 0)
 				return DelayedMetalineEditResult.Fail(CannotInsertAttachmentsIntoRange);
 
 			//Finde die Komponente, in der der Inhalt eingefügt werden soll
 			var component = Line.components.OfType<VarietyComponent>()
-				.FirstOrDefault(c => c.DisplayRenderBounds.StartOffset <= context.SelectionRange.Start && c.DisplayRenderBounds.EndOffset > context.SelectionRange.End);
+				.FirstOrDefault(c => c.DisplayRenderBounds.StartOffset <= context.EffectiveRange.Start && c.DisplayRenderBounds.EndOffset > context.EffectiveRange.End);
 			if (component is null)
 				return DelayedMetalineEditResult.Fail(NoComponentFoundHere);
 
 			//Liegt ein Attachment direkt vor oder hinter der Position?
-			var before = component.Attachments.OfType<VarietyComponent.VarietyAttachment>().LastOrDefault(a => a.RenderBounds.AfterOffset == context.SelectionRange.Start - 1);
-			var after = component.Attachments.OfType<VarietyComponent.VarietyAttachment>().FirstOrDefault(a => a.RenderBounds.StartOffset == context.SelectionRange.End);
+			var before = component.Attachments.OfType<VarietyComponent.VarietyAttachment>().LastOrDefault(a => a.RenderBounds.AfterOffset == context.EffectiveRange.Start);
+			var after = component.Attachments.OfType<VarietyComponent.VarietyAttachment>().FirstOrDefault(a => a.RenderBounds.StartOffset == context.EffectiveRange.End);
 			if (before is not null)
 			{
 				//Bearbeitung wird funktionieren
@@ -1334,7 +1334,7 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 				return new DelayedMetalineEditResult(() =>
 				{
 					//Erzeuge ein neues Attachment
-					var componentOffset = component.DisplayRenderBounds.GetContentOffset(context.SelectionRange.Start);
+					var componentOffset = component.DisplayRenderBounds.GetContentOffset(context.EffectiveRange.Start);
 					var newAttachment = VarietyComponent.VarietyAttachment.FromString(componentOffset.ContentOffset, content, formatter);
 					component.AddAttachment(newAttachment);
 
@@ -1414,8 +1414,8 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 				doRemove = attachment.TryRemoveContent(attachmentOffset, selectionContentLength, formatter);
 				if (doRemove is null)
 					return DelayedMetalineEditResult.Fail(RemovingFromAttachmentFailed);
-				else if (content is null)
-					removedLength = selectionRange.Length;
+				
+				removedLength = selectionRange.Length;
 			}
 
 			//Bearbeitung wird funktionieren

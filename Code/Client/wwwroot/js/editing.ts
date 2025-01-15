@@ -46,7 +46,7 @@ declare interface LineNodeAnchor {
 	lineNode: Node;
 }
 
-declare type InputType = 'insertText' | 'deleteContentBackward' | 'deleteContentForward' | 'deleteByDrag';
+declare type InputType = 'insertText' | 'deleteContentBackward' | 'deleteContentForward' | 'deleteByDrag' | 'insertTextAfterCompose' | 'deleteContentAfterCompose';
 
 declare interface ModificationData {
 	inputType: InputType,
@@ -54,6 +54,7 @@ declare interface ModificationData {
 	editRangeStart?: number,
 	editRangeEnd?: number,
 	editRange?: AnchorSelection<MetalineLineAnchor> | null,
+	afterCompose: boolean,
 }
 
 declare interface MetalineEditResult {
@@ -131,16 +132,17 @@ class ModificationEditor implements Destructible {
 
 	private currentState: EditContextState;
 	private editContext: EditContext;
+	private lines: { node: HTMLElement, offset: number, length: number }[];
+
+	private isAfterCompose: boolean;
 
 	constructor(public editor: HTMLElement, private callback: EditorCallback) {
-		let selection = SelectionHelper.getGlobalOffset(getSelection(), editor);
-		this.editContext = new EditContext(this.currentState = {
-			text: editor.innerText,
-			selectionStart: selection?.start ?? 0,
-			selectionEnd: selection?.end ?? 0,
-		});
+		//let selection = SelectionHelper.getGlobalOffset(getSelection(), editor);
+		this.editContext = new EditContext();
+		this.updateFromElement();
 
 		this.editContext.addEventListener('textupdate', this.handleTextUpdate.bind(this));
+		this.editContext.addEventListener('compositionend', this.handleCompositionEnd.bind(this));
 		this.editor.addEventListener('keydown', this.handleKeyDown.bind(this));
 		this.editor.addEventListener('paste', this.handlePaste.bind(this));
 
@@ -149,6 +151,7 @@ class ModificationEditor implements Destructible {
 
 	public destroy() {
 		this.editContext.removeEventListener('textupdate', this.handleTextUpdate.bind(this));
+		this.editContext.removeEventListener('compositionend', this.handleCompositionEnd.bind(this));
 		this.editor.removeEventListener('keydown', this.handleKeyDown.bind(this));
 		this.editor.removeEventListener('paste', this.handlePaste.bind(this));
 	}
@@ -171,22 +174,10 @@ class ModificationEditor implements Destructible {
 			: 'deleteContentForward';
 
 		//Finde Range
-		let lineStart = this.currentState.text.lastIndexOf('\n', event.updateRangeStart);
-		let lineEnd = this.currentState.text.lastIndexOf('\n', event.updateRangeEnd);
-		if (lineStart < 0) {
-			lineStart = 0;
-		} else {
-			for (var current = lineStart; current > 0; current = this.currentState.text.lastIndexOf('\n', current - 1))
-				lineStart--;
-		}
-		if (lineEnd < 0) {
-			lineEnd = 0;
-		} else {
-			for (var current = lineEnd; current > 0; current = this.currentState.text.lastIndexOf('\n', current - 1))
-				lineEnd--;
-		}
-		let lineOffsetStart = event.updateRangeStart - lineStart;
-		let lineOffsetEnd = event.updateRangeEnd - lineEnd;
+		let lineStart = this.currentState.text.lastIndexOf('\n', event.updateRangeStart - 1);
+		let lineEnd = this.currentState.text.lastIndexOf('\n', event.updateRangeEnd - 1);
+		let lineOffsetStart = event.updateRangeStart - lineStart - 1;
+		let lineOffsetEnd = event.updateRangeEnd - lineEnd - 1;
 
 		//Führe die Bearbeitung durch
 		this.callback(this, {
@@ -194,6 +185,7 @@ class ModificationEditor implements Destructible {
 			//editRange: this.getLineSelection(currentRange, false),
 			editRangeStart: lineOffsetStart,
 			editRangeEnd: lineOffsetEnd,
+			afterCompose: this.isAfterCompose,
 			data: event.text
 		}, currentRange);
 	}
@@ -215,7 +207,8 @@ class ModificationEditor implements Destructible {
 			//Führe die Bearbeitung durch
 			this.callback(this, {
 				inputType: 'insertText',
-				data: '\n'
+				data: '\n',
+				afterCompose: false,
 			}, currentRange);
 		}
 	}
@@ -236,25 +229,86 @@ class ModificationEditor implements Destructible {
 		//Führe die Bearbeitung durch
 		this.callback(this, {
 			inputType: 'insertText',
-			data: text
+			data: text,
+			afterCompose: false,
 		}, currentRange);
 	}
 
-	public updateFromElement(text?: string | null | boolean, selection?: Selection | null | boolean): void {
+	private handleCompositionEnd(event: CompositionEvent) {
+		this.isAfterCompose = true;
+		requestIdleCallback(() => {
+			this.isAfterCompose = false;
+		});
+	}
+
+	public updateFromElement(text?: string | null | boolean, selection?: Selection | AnchorSelection<MetalineLineAnchor> | null | boolean): void {
 		if (text !== false) {
-			if (typeof text !== 'string')
-				text = this.editor.innerText;
+			if (typeof text !== 'string') {
+				text = '';
+				let lines = this.editor.querySelectorAll('.line');
+				this.lines = new Array(lines.length);
+				let i = 0;
+				let currentOffset = 0;
+				lines.forEach(l => {
+					let content = l.textContent + "\n";
+					/*if (content === "\n\n")
+						content = "\n";*/
+
+					text += content;
+					this.lines[i++] = {
+						node: l as HTMLElement,
+						offset: currentOffset,
+						length: content.length
+					};
+					currentOffset += content.length;
+				});
+			}
 
 			this.editContext.updateText(0, this.editContext.text.length, text);
+			console.log(text);
 		}
 
 		if (selection !== false) {
-			if (typeof selection !== 'object')
-				selection = getSelection();
+			if (selection instanceof Selection)
+				selection = this.getCurrentSelection(selection, true);
+			else
+				selection = this.getCurrentSelection(undefined, true);
 
-			let textSelection = SelectionHelper.getGlobalOffset(selection, this.editor);
-			if (textSelection) {
-				this.editContext.updateSelection(textSelection.start, textSelection.end);
+			if (selection) {
+				let startFound = false;
+				let endFound = false;
+				let start = selection.start.offset;
+				let end = selection.end.offset;
+				for (var i = 0; i < this.lines.length; i++) {
+					let line = this.lines[i];
+					if (line.node === selection.start.lineNode) {
+						if (start >= line.length)
+							start = line.length - 1;
+
+						start += line.offset;
+						startFound = true;
+
+						if (endFound)
+							break;
+					}
+
+					if (line.node === selection.end.lineNode) {
+						if (end >= line.length)
+							end = line.length - 1;
+
+						end += line.offset;
+						endFound = true;
+
+						if (startFound)
+							break;
+					}
+				}
+
+				if (startFound && endFound) {
+					this.editContext.updateSelection(start, end);
+
+					console.log(this.editContext.text.substring(0, start) + '§' + this.editContext.text.substring(start));
+				}
 			}
 		}
 
@@ -265,7 +319,7 @@ class ModificationEditor implements Destructible {
 		};
 	}
 
-	public getCurrentSelection(documentSelection?: Selection | undefined): AnchorSelection<MetalineLineAnchor> | null {
+	public getCurrentSelection(documentSelection?: Selection | undefined, includeNode?: boolean): AnchorSelection<MetalineLineAnchor> | null {
 		if (documentSelection === undefined)
 			documentSelection = getSelection() || undefined;
 
@@ -278,7 +332,7 @@ class ModificationEditor implements Destructible {
 		if (!this.editor.contains(range.startContainer) || !this.editor.contains(range.endContainer))
 			return null;
 
-		return this.getLineSelection(range);
+		return this.getLineSelection(range, includeNode);
 	}
 
 	public setCurrentSelection(lineSelection: AnchorSelection<MetalineLineAnchor> | null): Selection | null {
