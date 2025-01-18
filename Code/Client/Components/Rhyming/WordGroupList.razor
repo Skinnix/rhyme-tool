@@ -1,0 +1,26 @@
+﻿@using Skinnix.RhymeTool.Client.Rhyming
+@using Skinnix.RhymeTool.Rhyming
+@using System.Diagnostics.CodeAnalysis
+
+@if (Group is not null)
+{
+    <div class="word-list">
+        @foreach (var result in Group.Results)
+        {
+            <div class="word-list-item">
+                @result.WordResult.Word
+            </div>
+
+            @*@foreach (var extension in result.ExtensionWords)
+            {
+                <div class="extension-word">
+                    <span>@extension.Word[..^result.Word.Word.Length]</span><span>@extension.Word[^result.Word.Word.Length..]</span>
+                </div>
+            }*@
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public RhymeHelper.WordGroup<RhymeHelper.SimpleWord>? Group { get; set; }
+}

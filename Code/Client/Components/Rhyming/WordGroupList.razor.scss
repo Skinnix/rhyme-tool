@@ -1,0 +1,33 @@
+.word-list {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-start;
+	align-items: baseline;
+	row-gap: 0.8em;
+
+	& > * {
+		margin-right: 0.8em;
+
+		&:has(+ .extension-word) {
+			margin-right: 0;
+		}
+	}
+
+	.word-list-item {
+		background-color: #f0f0f0;
+		border-radius: 5px;
+		padding: 0.5em;
+	}
+
+	.extension-word {
+		background-color: #f0f0f0;
+		border-radius: 5px;
+		padding: 0.5em;
+		font-size: 0.8em;
+	}
+	/**:has(+ .extension-word) {
+		&::after {
+			content: '-'
+		}
+	}*/
+}

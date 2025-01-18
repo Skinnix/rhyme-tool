@@ -1,12 +1,16 @@
 ﻿// See https://aka.ms/new-console-template for more information
+using System.Text;
 using CsvReader;
 
 Console.WriteLine("Hello, World!");
 
 //var input = @"C:\Users\Hendrik\Downloads\de.csv";
 var input = @"C:\Users\Hendrik\Downloads\DAWB_words1.txt";
+var frequencies = @"C:\Users\Hendrik\Downloads\dwds_lemmata_2025-01-16.csv";
+var output = @"C:\Users\Hendrik\Downloads\DAWB_words2.txt";
 
 IpaRhymeList words;
+var wordFrequencies = new Dictionary<string, int>();
 
 using (var wordsBuilder = new IpaRhymeList.Builder<IWordIpa>())
 using (var reader = new StreamReader(input))
@@ -18,7 +22,7 @@ using (var reader = new StreamReader(input))
 		if (split.Length < 2)
 			continue;
 
-		var key = split[0];
+		var key = split[0].Trim();
 		var value = split[1].Trim('/');
 
 		if (string.IsNullOrWhiteSpace(key) || string.IsNullOrWhiteSpace(value))
@@ -28,6 +32,35 @@ using (var reader = new StreamReader(input))
 	}
 
 	words = wordsBuilder.Build();
+}
+
+using (var reader = new StreamReader(frequencies))
+{
+	reader.ReadLine();
+	string? line;
+	while ((line = reader.ReadLine()) != null)
+	{
+		var split = line.Split("\",\"");
+		if (split.Length < 6)
+			continue;
+
+		var word = split[0].TrimStart('"');
+		if (!int.TryParse(split[5].TrimEnd('"'), out var frequency))
+			continue;
+
+		wordFrequencies[word] = frequency;
+	}
+}
+
+using (var writer = new StreamWriter(output, false, Encoding.UTF8))
+{
+	foreach (var word in words)
+	{
+		if (!wordFrequencies.TryGetValue(word.Word, out var frequency))
+			frequency = -1;
+
+		writer.WriteLine($"{word.Word};{word.Ipa};{frequency}");
+	}
 }
 
 GC.Collect();

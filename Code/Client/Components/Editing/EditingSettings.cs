@@ -45,6 +45,13 @@ public class EditingSettings : IConfigurable
 		};
 	}
 
+	[Configurable(Name = "Eindeutschen", Toggleable = true)]
+	public GermanNoteMode GermanMode
+	{
+		get => Formatter.GermanMode;
+		set => Formatter = Formatter with { GermanMode = value };
+	}
+
 	[Configurable(Name = "Leere Akkordzeilen anzeigen")]
 	public bool ShowEmptyChordLines
 	{

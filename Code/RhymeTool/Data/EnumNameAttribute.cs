@@ -23,6 +23,19 @@ public class EnumNameAttribute : Attribute
 		AlternativeNames = alternativeNames.Prepend(name).ToArray();
 	}
 
+	public static string GetDisplayName(Type type, object value)
+	{
+		var name = value.ToString();
+		if (name is null)
+			throw new ArgumentException($"Enum {type.Name} has no field {name}");
+		var field = type.GetField(name);
+		if (field is null)
+			throw new ArgumentException($"Enum {type.Name} has no field {name}");
+
+		var attribute = field.GetCustomAttribute<EnumNameAttribute>(false);
+		return attribute?.PreferredName ?? name;
+	}
+
 	public static string GetDisplayName<T>(T value)
 		where T : struct, Enum
 	{

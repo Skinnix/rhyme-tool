@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.Hosting;
 using Skinnix.RhymeTool.Client;
+using Skinnix.RhymeTool.Client.Rhyming;
 using Skinnix.RhymeTool.Client.Services;
 using Skinnix.RhymeTool.Client.Updating;
 using Skinnix.RhymeTool.Data.Notation;
+using Skinnix.RhymeTool.Web.Rhyming;
 
 var builder = WebApplication.CreateBuilder(args);
 

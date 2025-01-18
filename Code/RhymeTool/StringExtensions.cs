@@ -55,4 +55,21 @@ public static class StringExtensions
 		if (lastOffset < s.Length)
 			yield return s[lastOffset..];
 	}
+
+	public static string Reverse(this string s)
+	{
+		var arr = s.ToCharArray();
+		Array.Reverse(arr);
+		return new string(arr);
+	}
+
+	public static string ToLowerFirst(this string s)
+	{
+		if (s.Length == 0)
+			return s;
+		else if (s.Length == 1)
+			return char.ToLowerInvariant(s[0]).ToString();
+
+		return char.ToLowerInvariant(s[0]) + s[1..];
+	}
 }

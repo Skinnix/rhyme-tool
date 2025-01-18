@@ -8,6 +8,7 @@
 @using Skinnix.RhymeTool.Data.Notation
 @using Skinnix.RhymeTool.Data.Notation.Display
 @using Skinnix.RhymeTool.Client.Components.Editing
+@using Skinnix.RhymeTool.Rhyming
 
 @layout RendererLayout
 
@@ -20,7 +21,7 @@
         <i class="fas fa-arrow-left"></i>
     </a>
 
-    <div class="navbar-brand me-auto">
+    <div class="navbar-brand me-auto text-truncate">
         @document?.Label
     </div>
 
@@ -46,6 +47,12 @@
         <h4>Tools</h4>
         <ConfigurationGrid Settings="settings" />
 
+        <div class="mx-1 my-3 d-grid gap-2">
+            <button class="btn btn-secondary text-truncate mt-2" role="button" data-bs-toggle="modal" data-bs-target="#rhymeDialog">
+                Reime
+            </button>
+        </div>
+
         <h4>Navigation</h4>
         <nav class="nav nav-pills flex-column overflow-x-hidden text-break" id="pageNavigation">
             @foreach (var segment in document.FindSegments())
@@ -62,6 +69,21 @@
 <div class="chord-sheet-wrapper@(IsDebug ? " debug" : null)" style="--font-percent: @settings.FontSize;">
     <SheetEditor Document="document" Formatter="settings.Formatter" />
 </div>
+
+<div class="modal" tabindex="-1" id="rhymeDialog">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Reimsuche</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <Skinnix.RhymeTool.Client.Components.Rhyming.TermSearch />
+            </div>
+        </div>
+    </div>
+</div>
+
 
 @code {
     private static readonly bool IsDebug =

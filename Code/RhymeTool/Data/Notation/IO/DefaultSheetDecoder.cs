@@ -354,7 +354,7 @@ public class DefaultSheetDecoder(ISheetEditorFormatter? formatter = null) : Shee
 		var offset = length;
 		while (offset < line.Length && line[offset] == ' ')
 			offset++;
-		if (line[offset] != '|')
+		if (offset >= line.Length || line[offset] != '|')
 			return false;
 
 		//Gibt es schon eine aktuelle Tabulaturzeile?
@@ -408,15 +408,18 @@ public class DefaultSheetDecoder(ISheetEditorFormatter? formatter = null) : Shee
 			if (contentLength <= 0 || content is null)
 				break;
 
-			//Stehen zwei Akkorde direkt hintereinander?
+			//Stehen zwei Wörter/Akkorde direkt hintereinander?
 			if (contents.Count > 0)
 			{
 				var previousContent = contents[^1];
-				if (previousContent.Content.Type == SheetVarietyLine.ContentType.Chord && content.Value.Type == SheetVarietyLine.ContentType.Chord)
+				if (previousContent.Content.Type is SheetVarietyLine.ContentType.Chord or SheetVarietyLine.ContentType.Word
+					&& content.Value.Type is SheetVarietyLine.ContentType.Chord or SheetVarietyLine.ContentType.Word)
 				{
 					//Füge die Akkorde als Text zusammen und ersetze die vorherige Komponente
 					var combinedText = new string(line[previousContent.Offset.Value..(offset + contentLength)]);
 					contents[^1] = new(new SheetVarietyLine.ComponentContent(combinedText), combinedText, previousContent.Offset, previousContent.Length + new ContentOffset(contentLength));
+					offset += contentLength;
+					continue;
 				}
 			}
 
@@ -425,14 +428,37 @@ public class DefaultSheetDecoder(ISheetEditorFormatter? formatter = null) : Shee
 			offset += contentLength;
 		}
 
+		//Berechne das Verhältnis Akkorde/Wortlänge
+		var wordLength = 0;
+		var chordLength = 0;
+		var weight = 0;
+		for (var i = contents.Count - 1; i >= 0; i--)
+		{
+			var content = contents[i];
+			switch (content.Content.Type)
+			{
+				case SheetVarietyLine.ContentType.Word:
+					wordLength += weight * content.Length.Value;
+					break;
+				case SheetVarietyLine.ContentType.Chord:
+					weight++;
+					chordLength += weight * content.Length.Value;
+					break;
+				default:
+					continue;
+			}
+		}
+		canBeAttachmentLine = chordLength > 0 && wordLength / chordLength <= 1;
+		canBeChordOnlyLine = false;
+
 		//Kann die Zeile eine reine Akkordzeile sein?
-		var hasChords = contents.Any(c => c.Content.Type == SheetVarietyLine.ContentType.Chord);
+		/*var hasChords = contents.Any(c => c.Content.Type == SheetVarietyLine.ContentType.Chord);
 		var hasWords = contents.Any(c => c.Content.Type == SheetVarietyLine.ContentType.Word);
 		canBeAttachmentLine = hasChords && !hasWords;
-		canBeChordOnlyLine = false;
+		canBeChordOnlyLine = false;*/
 		if (canBeAttachmentLine)
-			//Sind alle Leerkomponenten nur ein Zeichen lang?
-			if (contents.All(c => c.Content.Type != SheetVarietyLine.ContentType.Space || c.Length == ContentOffset.One))
+			//Sind alle Leerkomponenten maximal drei Zeichen lang?
+			if (contents.All(c => c.Content.Type != SheetVarietyLine.ContentType.Space || c.Length.Value <= 3))
 				canBeChordOnlyLine = true;
 
 		return contents;

@@ -1,0 +1,106 @@
+﻿@using Skinnix.RhymeTool.Client.Rhyming
+@using Skinnix.RhymeTool.Client.Services
+@using Skinnix.RhymeTool.Rhyming
+
+@inject IRhymeLoadingService rhymeLoadingService
+
+@if (rhymeHelper is null)
+{
+    if (loadingHelper)
+    {
+        <div class="alert alert-warning" role="alert">
+            Wortliste wird geladen...
+        </div>
+    }
+    else
+    {
+        <div class="d-grid gap-2">
+            <button class="btn btn-primary" role="button" @onclick="LoadHelper">Wortliste laden</button>
+        </div>
+    }
+}
+else
+{
+    <form class="input-group mb-3" onsubmit="return false">
+        <input type="text" class="form-control" placeholder="Word suchen" @bind="searchTerm" />
+
+        <button class="btn btn-primary" type="submit" @onclick="Search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+        </button>
+    </form>
+
+    @if (notFound)
+    {
+        <div class="alert alert-warning" role="alert">
+            Wort nicht gefunden
+        </div>
+    }
+    else if (rhymeSearchResult is not null)
+    {
+        <RhymeSearchResults SearchResult="rhymeSearchResult" />
+    }
+    else if (suffixSearchResult is not null)
+    {
+        <WordGroupList Group="suffixSearchResult" />
+    }
+}
+
+@code {
+    private RhymeHelper? rhymeHelper;
+    private bool loadingHelper = false;
+
+    private string searchTerm = string.Empty;
+    private RhymeHelper.RhymeSearchResult? rhymeSearchResult;
+    private RhymeHelper.WordGroup<RhymeHelper.SimpleWord>? suffixSearchResult;
+    private bool notFound = false;
+
+    private Task LoadHelper()
+    {
+        loadingHelper = true;
+
+        return Task.Run(async () =>
+        {
+            rhymeHelper = await rhymeLoadingService.LoadRhymeHelperAsync();
+            loadingHelper = false;
+            StateHasChanged();
+        });
+    }
+
+    private void Search()
+    {
+        if (rhymeHelper is null || string.IsNullOrWhiteSpace(searchTerm))
+        {
+            rhymeSearchResult = default;
+            suffixSearchResult = default;
+            notFound = false;
+            return;
+        }
+
+        if (searchTerm.StartsWith("-"))
+        {
+            suffixSearchResult = rhymeHelper.FindBySuffix(searchTerm[1..]);
+            rhymeSearchResult = default;
+            notFound = false;
+        }
+        else
+        {
+            suffixSearchResult = default;
+            var words = rhymeHelper.FindAll(searchTerm).ToArray();
+            switch (words.Length)
+            {
+                case 0:
+                    rhymeSearchResult = null;
+                    notFound = true;
+                    break;
+                case 1:
+                    rhymeSearchResult = words[0].FindRhymes();
+                    notFound = false;
+                    break;
+                default:
+                    rhymeSearchResult = RhymeHelper.RhymeSearchResult.Merge(words.Select(w => w.FindRhymes()));
+                    notFound = false;
+                    break;
+            }
+        }
+    }
+}

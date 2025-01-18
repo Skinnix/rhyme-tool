@@ -1,0 +1,46 @@
+﻿@namespace Skinnix.RhymeTool.Client.Components.Configuration
+
+@using Skinnix.RhymeTool.Data
+
+@inherits PropertyEditorBase<Enum>
+
+@if (Property is not null)
+{
+    <div class="mb-3">
+        @if (Property.IsToggleable)
+        {
+            <button class="btn btn-sm rounded" data-bs-toggle="collapse" data-bs-target="#property-@(EditorId)">
+                <i class="fas fa-toggle-off"></i>
+            </button>
+        }
+
+        <label class="form-label" for="@(EditorId)-editor">
+            @Property.Name
+        </label>
+
+        <div class="collapse show" id="property-@(EditorId)">
+            <div class="input-group" role="group">
+                <select class="form-select" id="@(EditorId)-editor" @onchange="OnChange">
+                    @foreach (var value in Enum.GetValues(Property.Type))
+                    {
+                        <option value="@value" selected="@(value == Property.Value)">@EnumNameAttribute.GetDisplayName(Property.Type, value)</option>
+                    }
+                </select>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private void OnChange(ChangeEventArgs e)
+    {
+        if (Property is null)
+            return;
+
+        var stringValue = (string?)e.Value;
+        if (stringValue is null)
+            return;
+
+        Property.Value = Enum.Parse(Property.Type, stringValue);
+    }
+}

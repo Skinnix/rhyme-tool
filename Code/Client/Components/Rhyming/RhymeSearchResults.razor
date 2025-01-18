@@ -1,0 +1,70 @@
+﻿@using Skinnix.RhymeTool.Client.Rhyming
+@using Skinnix.RhymeTool.Rhyming
+@using System.Diagnostics.CodeAnalysis
+
+@if (SearchResult is not null)
+{
+    <ul class="nav nav-tabs">
+        @foreach (var group in SearchResult.SyllableRhymes)
+        {
+            <li class="nav-item">
+                <button class="nav-link@(group == currentGroup ? " active" : group.IsEmpty ? " disabled" : null)" @onclick="() => SelectGroup(group)">
+                    @if (group.Favorite)
+                    {
+                        <i class="fa-solid fa-star"></i>
+                        <text> </text>
+                    }
+
+                    @group.Term
+                </button>
+            </li>
+        }
+
+        @foreach (var group in SearchResult.WordExtensions)
+        {
+            <li class="nav-item">
+                <button class="nav-link@(group == currentGroup ? " active" : group.IsEmpty ? " disabled" : null)" @onclick="() => SelectGroup(group)">
+                    @if (group.Favorite)
+                    {
+                        <i class="fa-solid fa-star"></i>
+                        <text> </text>
+                    }
+
+                    @group.Term
+                </button>
+            </li>
+        }
+    </ul>
+
+    <div class="tab-content mt-3">
+        @if (currentGroup is not null)
+        {
+            <WordGroupList Group="currentGroup" />
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public RhymeHelper.RhymeSearchResult? SearchResult { get; set; }
+
+    private RhymeHelper.WordGroup<RhymeHelper.SimpleWord>? currentGroup;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        if (SearchResult is null)
+        {
+            currentGroup = null;
+            return;
+        }
+
+        currentGroup = SearchResult.SyllableRhymes.Where(g => g.Favorite).MaxBy(g => g.Results.Count)
+            ?? SearchResult.WordExtensions.Where(g => g.Favorite).MaxBy(g => g.Results.Count);
+    }
+
+    private void SelectGroup(RhymeHelper.WordGroup<RhymeHelper.SimpleWord> group)
+    {
+        currentGroup = group;
+    }
+}

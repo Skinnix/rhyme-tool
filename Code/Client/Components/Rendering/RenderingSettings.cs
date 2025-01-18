@@ -47,13 +47,14 @@ public class RenderingSettings : IConfigurable
 	public int Transpose
 	{
 		get => Formatter.Transformation?.Transpose ?? 0;
-		set
-		{
-			Formatter = Formatter with
-			{
-				Transformation = new SheetTransformation(value)
-			};
-		}
+		set => Formatter = Formatter with { Transformation = new SheetTransformation(value) };
+	}
+
+	[Configurable(Name = "Eindeutschen", Toggleable = true)]
+	public GermanNoteMode GermanMode
+	{
+		get => Formatter.GermanMode;
+		set => Formatter = Formatter with { GermanMode = value };
 	}
 
 	private void Set<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)

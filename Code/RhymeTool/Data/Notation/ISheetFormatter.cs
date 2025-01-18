@@ -76,11 +76,22 @@ public interface ISheetEditorFormatter : ISheetBuilderFormatter
 
 public enum GermanNoteMode
 {
+	[EnumName("B, B♭")]
 	AlwaysB,
+
+	[EnumName("H, B")]
 	German,
-	AlwaysH,
+
+	[EnumName("H, B♭")]
 	Descriptive,
+
+	[EnumName("H, H♭")]
+	AlwaysH,
+
+	[EnumName("B♮, H♭")]
 	ExplicitB,
+
+	[EnumName("H♮, H♭")]
 	ExplicitH,
 }
 

@@ -38,6 +38,7 @@
     {
         var componentType = property.Type == typeof(int) ? typeof(IntEditor)
             : property.Type == typeof(bool) ? typeof(BoolEditor)
+            : property.Type.IsEnum ? typeof(EnumEditor)
             : null;
 
         if (componentType is null)

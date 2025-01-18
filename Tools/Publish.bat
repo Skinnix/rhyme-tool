@@ -40,12 +40,12 @@ tar -a -c -f ..\Build\Publish\wwwroot\update\version\%assemblyVersion%\app.zip -
 echo [Platform:windows]>> ..\Build\Publish\wwwroot\update\check
 echo Label=Windows>> ..\Build\Publish\wwwroot\update\check
 echo Version=%version%>> ..\Build\Publish\wwwroot\update\check
-echo URL=version/%assemblyVersion%/app.zip>> ..\Build\Publish\wwwroot\update\check
+echo URL=update/version/%assemblyVersion%/app.zip>> ..\Build\Publish\wwwroot\update\check
 echo.>> ..\Build\Publish\wwwroot\update\check
 echo [Platform:android]>> ..\Build\Publish\wwwroot\update\check
 echo Label=Android>> ..\Build\Publish\wwwroot\update\check
 echo Version=%version%>> ..\Build\Publish\wwwroot\update\check
-echo URL=version/%assemblyVersion%/app.apk>> ..\Build\Publish\wwwroot\update\check
+echo URL=update/version/%assemblyVersion%/app.apk>> ..\Build\Publish\wwwroot\update\check
 
 pause
 

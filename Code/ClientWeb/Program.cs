@@ -3,9 +3,11 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using Skinnix.RhymeTool;
 using Skinnix.RhymeTool.Client;
+using Skinnix.RhymeTool.Client.Rhyming;
 using Skinnix.RhymeTool.Client.Services;
 using Skinnix.RhymeTool.Client.Services.Files;
 using Skinnix.RhymeTool.Client.Updating;
+using Skinnix.RhymeTool.Web.Rhyming;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
@@ -18,6 +20,12 @@ builder.Services.AddRhymeToolClient();
 
 //HTTP-Client
 builder.Services.AddScoped(_ => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
+
+//Worker
+//builder.Services.AddWorkerFactory();
+
+//Reime
+builder.Services.AddSingleton<IRhymeLoadingService, WebRhymeLoadingService>();
 
 //Update-Service
 builder.Services.AddScoped<IUpdateService, UpdateService>();

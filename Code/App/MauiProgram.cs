@@ -1,10 +1,12 @@
 ﻿using CommunityToolkit.Maui;
 using Microsoft.Extensions.Logging;
 using Skinnix.RhymeTool.Client;
+using Skinnix.RhymeTool.Client.Rhyming;
 using Skinnix.RhymeTool.Client.Services;
 using Skinnix.RhymeTool.Client.Services.Files;
 using Skinnix.RhymeTool.Client.Services.Preferences;
 using Skinnix.RhymeTool.Client.Updating;
+using Skinnix.RhymeTool.MauiBlazor.Rhyming;
 using Skinnix.RhymeTool.MauiBlazor.Services;
 using Skinnix.RhymeTool.MauiBlazor.Updating;
 
@@ -30,6 +32,9 @@ public static class MauiProgram
 
 		//HTTP-Client
 		builder.Services.AddScoped(_ => new HttpClient());
+
+		//Reime
+		builder.Services.AddSingleton<IRhymeLoadingService, MauiRhymeLoadingService>();
 
 		//Update-Service
 		builder.Services.AddScoped<IUpdateService, MauiUpdateService>();
