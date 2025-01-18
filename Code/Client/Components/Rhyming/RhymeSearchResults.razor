@@ -2,6 +2,26 @@
 @using Skinnix.RhymeTool.Rhyming
 @using System.Diagnostics.CodeAnalysis
 
+@{
+    void RenderIpa(string term)
+    {
+        var parts = term.Split('1');
+        if (parts.Length == 0)
+            return;
+
+        <text>@parts[0]</text>
+
+        foreach (var nextPart in parts[1..])
+        {
+            if (nextPart.Length == 0)
+                continue;
+
+            <sup>@nextPart[0]</sup>
+            <text>@nextPart[1..]</text>
+        }
+    }
+}
+
 @if (SearchResult is not null)
 {
     <ul class="nav nav-tabs">
@@ -15,7 +35,7 @@
                         <text> </text>
                     }
 
-                    @group.Term
+                    @{ RenderIpa(group.Term); }
                 </button>
             </li>
         }

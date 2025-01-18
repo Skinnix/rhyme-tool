@@ -62,7 +62,7 @@ else
         {
             rhymeHelper = await rhymeLoadingService.LoadRhymeHelperAsync();
             loadingHelper = false;
-            StateHasChanged();
+            await InvokeAsync(StateHasChanged);
         });
     }
 

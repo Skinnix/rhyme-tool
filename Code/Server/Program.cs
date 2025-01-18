@@ -24,6 +24,9 @@ builder.Services.AddServerSideBlazor()
 
 builder.Services.AddRhymeToolClient();
 
+//Reime
+builder.Services.AddSingleton<IRhymeLoadingService, ServerSideRhymeLoadingService>();
+
 //Update-Service
 builder.Services.AddScoped<IUpdateService, UpdateService>();
 

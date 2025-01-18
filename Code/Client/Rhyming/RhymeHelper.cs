@@ -56,9 +56,7 @@ public class RhymeHelper
 		{
 			var word = WordResult.Word;
 			var ipa = WordResult.Ipa;
-			var ipaSuffix = WordResult.IpaSyllables
-				.TakeLast(maxSyllables)
-				.ToArray();
+			var ipaSuffix = IpaHelper.GetRhymeSuffixArray(WordResult.Ipa, maxSyllables);
 			var ipaSuffixLength = ipaSuffix.Length;
 			if (ipaSuffixLength != 0 && !ipaSuffix[0].Any(IpaHelper.IsVowel))
 				ipaSuffixLength--;

@@ -9,22 +9,8 @@ using Skinnix.RhymeTool.Rhyming;
 
 namespace Skinnix.RhymeTool.Web.Rhyming;
 
-//public class WebRhymeLoadingService(HttpClient http) : IRhymeLoadingService
-//{
-//	private const string RHYME_DATA_PATH = "Data/Dictionaries/DAWB_words3.bin";
-
-//	public async Task<RhymeHelper> LoadRhymeHelperAsync()
-//	{
-//		using (var reader = new BinaryReader(await http.GetStreamAsync(RHYME_DATA_PATH)))
-//		{
-//			var wordList = WordList.Read(reader);
-//			return new RhymeHelper(wordList);
-//		}
-//	}
-//}
-
 [DataContract]
-public class WebRhymeLoadingService(HttpClient http) : RhymeLoadingServiceBase
+public class ServerSideRhymeLoadingService(HttpClient http) : RhymeLoadingServiceBase
 {
 	private const string RHYME_DATA_PATH = "Data/Dictionaries/DAWB_words2.txt";
 

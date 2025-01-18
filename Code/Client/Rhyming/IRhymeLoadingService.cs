@@ -41,12 +41,30 @@ public abstract class RhymeLoadingServiceBase : IRhymeLoadingService
 					continue;
 
 				var word = split[0];
-				var ipa = split[1].Trim('/');
+				var ipas = split[1].Trim('/');
 
-				if (string.IsNullOrWhiteSpace(word) || string.IsNullOrWhiteSpace(ipa) || !byte.TryParse(split[2], out var frequency))
+				if (string.IsNullOrWhiteSpace(word) || string.IsNullOrWhiteSpace(ipas) || !byte.TryParse(split[2], out var frequency))
 					continue;
 
-				wordsBuilder.TryAdd(new IpaWord(word, ipa), new(frequency));
+				var ipaSplit = ipas.Split('§', StringSplitOptions.RemoveEmptyEntries);
+				string? lastFullIpa = null;
+				foreach (var ipa in ipaSplit)
+				{
+					var useIpa = ipa;
+					if (ipa.Contains("..."))
+					{
+						if (lastFullIpa is null)
+							continue;
+
+						useIpa = $"{lastFullIpa}§{useIpa}";
+					}
+					else
+					{
+						lastFullIpa = ipa;
+					}
+
+					wordsBuilder.TryAdd(new IpaWord(word, useIpa), new(frequency));
+				}
 			}
 
 			return helper = await CreateRhymeHelper(wordsBuilder.Build());
