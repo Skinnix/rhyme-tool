@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Skinnix.Dictionaries.Rhyming;
 
 namespace Skinnix.RhymeTool.Rhyming;
 
@@ -18,12 +19,12 @@ public class WordList : IpaRhymeList<RhymeListWordData>
 	public static WordList Read(BinaryReader reader)
 		=> new(Read(reader, r => new RhymeListWordData(r.ReadSByte())));
 
-	public class Builder : Builder<IWordIpa>
+	public new class Builder : IpaRhymeList<RhymeListWordData>.Builder
 	{
 		public new WordList Build()
 			=> (WordList)base.Build();
 
-		private protected override WordList CreateInstance(InstanceData data)
+		protected override WordList CreateInstance(InstanceData data)
 			=> new WordList(data);
 	}
 }

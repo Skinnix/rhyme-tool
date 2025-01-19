@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Linq;
 using System.Text;
-using Skinnix.RhymeTool.Rhyming;
+
+namespace Skinnix.Dictionaries.Rhyming;
 
 public class IpaReplacer
 {

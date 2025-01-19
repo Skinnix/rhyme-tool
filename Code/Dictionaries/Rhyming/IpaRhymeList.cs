@@ -11,7 +11,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Sources;
 
-namespace Skinnix.RhymeTool.Rhyming;
+namespace Skinnix.Dictionaries.Rhyming;
 
 public class IpaRhymeList<TAdditionalData> : IReadOnlyList<IpaRhymeList<TAdditionalData>.Result>
 {
@@ -124,8 +124,7 @@ public class IpaRhymeList<TAdditionalData> : IReadOnlyList<IpaRhymeList<TAdditio
 		return new InstanceDataImplementation(entries, ipaMap, reverseMap);
 	}
 
-	public class Builder<TIpaDetail> : IDisposable
-		where TIpaDetail : IWordIpa
+	public class Builder : IDisposable
 	{
 		private List<EntryWrapper>? entries = new(); //new(Entry.NonCollidingWordComparer.Instance);
 		private List<EntryWrapper>? ipaEntries = new(); //new(Entry.NonCollidingIpaComparer.Instance);
@@ -133,17 +132,12 @@ public class IpaRhymeList<TAdditionalData> : IReadOnlyList<IpaRhymeList<TAdditio
 
 		private bool disposed;
 
-		public bool TryAdd<TWord>(TWord word, TAdditionalData additionalData)
-			where TWord : IRhymableWord
+		public bool TryAdd(string word, string ipa, TAdditionalData additionalData)
 		{
 			if (entries is null || ipaEntries is null || reverseEntries is null)
-				throw new ObjectDisposedException(nameof(Builder<TIpaDetail>));
+				throw new ObjectDisposedException(nameof(Builder));
 
-			var ipa = word.TryGetDetail<TIpaDetail>()?.Ipa;
-			if (ipa is null)
-				return false;
-
-			var entry = new Entry(word.Word, ipa, additionalData);
+			var entry = new Entry(word, ipa, additionalData);
 
 			if (entries.Count != 0 && entries[^1].Equals(entry))
 				return false;
@@ -162,7 +156,7 @@ public class IpaRhymeList<TAdditionalData> : IReadOnlyList<IpaRhymeList<TAdditio
 		public IpaRhymeList<TAdditionalData> Build()
 		{
 			if (entries is null || ipaEntries is null || reverseEntries is null)
-				throw new ObjectDisposedException(nameof(Builder<TIpaDetail>));
+				throw new ObjectDisposedException(nameof(Builder));
 
 			entries.Sort(Entry.WordComparer.IgnoreCase);
 			ipaEntries.Sort(Entry.IpaComparer.Default);
@@ -193,14 +187,10 @@ public class IpaRhymeList<TAdditionalData> : IReadOnlyList<IpaRhymeList<TAdditio
 				reverseMap[i++] = index;
 			}
 
-			var result = CreateInstance(new InstanceDataImplementation(resultEntries, ipaMap, reverseMap));
-
-			File.WriteAllLines(@"C:\Users\Hendrik\Desktop\ipaSorted", result.ipaAdapter.Select(e => e.Ipa + ";" + e.Word));
-
-			return result;
+			return CreateInstance(new InstanceDataImplementation(resultEntries, ipaMap, reverseMap));
 		}
 
-		private protected virtual IpaRhymeList<TAdditionalData> CreateInstance(InstanceData data)
+		protected virtual IpaRhymeList<TAdditionalData> CreateInstance(InstanceData data)
 			=> new(data);
 
 		protected virtual void Dispose(bool disposing)

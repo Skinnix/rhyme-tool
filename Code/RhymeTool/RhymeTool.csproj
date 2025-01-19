@@ -14,4 +14,8 @@
 		<OutputPath>..\..\Build\$(Configuration)\</OutputPath>
 	</PropertyGroup>
 
+	<ItemGroup>
+	  <ProjectReference Include="..\Dictionaries\Dictionaries.csproj" />
+	</ItemGroup>
+
 </Project>

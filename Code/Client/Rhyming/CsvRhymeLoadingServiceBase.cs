@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using Skinnix.Dictionaries.Rhyming;
 using Skinnix.RhymeTool.Rhyming;
 
 namespace Skinnix.RhymeTool.Client.Rhyming;
@@ -60,7 +61,7 @@ public abstract class CsvRhymeLoadingServiceBase : IRhymeLoadingService
 						lastFullIpa = ipa;
 					}
 
-					wordsBuilder.TryAdd(new IpaWord(word, useIpa), new(frequency));
+					wordsBuilder.TryAdd(word, useIpa, new(frequency));
 				}
 			}
 
