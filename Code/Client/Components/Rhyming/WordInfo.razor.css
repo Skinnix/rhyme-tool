@@ -1,0 +1,1 @@
+.word-info-list{display:flex;flex-wrap:wrap;justify-content:flex-start;align-items:baseline;gap:.8em}.word-info-list .word-info-list-item{background-color:#f0f0f0;border-radius:5px;padding:.5em}.word-info-list .word-info-list-item .word-ipa::before,.word-info-list .word-info-list-item .word-ipa::after{content:"/"}

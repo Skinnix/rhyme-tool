@@ -1,0 +1,20 @@
+﻿@using Skinnix.RhymeTool.Client.Rhyming
+@using Skinnix.RhymeTool.Rhyming
+@using System.Diagnostics.CodeAnalysis
+
+@if (Words is not null)
+{
+    <div class="word-info-list">
+        @foreach (var word in Words)
+        {
+            <div class="word-info-list-item">
+                <span class="word">@word.WordResult.Word</span>
+                <span class="word-ipa">@word.WordResult.Ipa</span>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public IReadOnlyCollection<RhymeHelper.Word>? Words { get; set; }
+}

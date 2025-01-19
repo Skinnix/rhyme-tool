@@ -12,6 +12,8 @@ public static class IpaHelper
 	private const string VOWELS = "iyɨʉɯuɪʏʊeøɘɵɤoəɛœɜɞʌɔæɐaɶɑɒ";
 	private const char SYLLABLE_MARKER = '̩';
 
+	public static bool IsLetter(char c) => c is ' ' || (char.IsLetter(c) && c is not 'ˈ' and not 'ˌ' and not 'ʔ' and not 'ː');
+
 	public static bool IsVowel(char c)
 	{
 		var normalized = c.ToString().Normalize(NormalizationForm.FormD);

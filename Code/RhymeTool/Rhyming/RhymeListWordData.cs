@@ -6,4 +6,4 @@ using System.Threading.Tasks;
 
 namespace Skinnix.RhymeTool.Rhyming;
 
-public readonly record struct RhymeListWordData(int Frequency);
+public readonly record struct RhymeListWordData(sbyte Frequency);

@@ -25,6 +25,15 @@
 @if (SearchResult is not null)
 {
     <ul class="nav nav-tabs">
+        @if (allFavorites is not null)
+        {
+            <li class="nav-item">
+                <button class="nav-link@(allFavorites == currentGroup ? " active" : null)" @onclick="() => SelectGroup(allFavorites)">
+                    <i class="fa-solid fa-star"></i>
+                </button>
+            </li>
+        }
+
         @foreach (var group in SearchResult.SyllableRhymes)
         {
             <li class="nav-item">
@@ -68,6 +77,7 @@
     [Parameter] public RhymeHelper.RhymeSearchResult? SearchResult { get; set; }
 
     private RhymeHelper.WordGroup<RhymeHelper.SimpleWord>? currentGroup;
+    private RhymeHelper.WordGroup<RhymeHelper.SimpleWord>? allFavorites;
 
     protected override void OnParametersSet()
     {
@@ -76,11 +86,35 @@
         if (SearchResult is null)
         {
             currentGroup = null;
+            allFavorites = null;
             return;
         }
 
-        currentGroup = SearchResult.SyllableRhymes.Where(g => g.Favorite).MaxBy(g => g.Results.Count)
-            ?? SearchResult.WordExtensions.Where(g => g.Favorite).MaxBy(g => g.Results.Count);
+        var favoriteGroups = SearchResult.SyllableRhymes.Concat(SearchResult.WordExtensions)
+            .Where(g => g.Favorite)
+            .ToArray();
+
+        if (favoriteGroups.Length < 2)
+        {
+            allFavorites = null;
+            currentGroup = SearchResult.SyllableRhymes.Where(g => g.Favorite && !g.IsEmpty).MaxBy(g => g.Results.Count)
+                ?? SearchResult.WordExtensions.Where(g => g.Favorite && !g.IsEmpty).MaxBy(g => g.Results.Count)
+                ?? SearchResult.SyllableRhymes.Where(g => !g.IsEmpty).MaxBy(g => g.Results.Count)
+                ?? SearchResult.WordExtensions.Where(g => !g.IsEmpty).MaxBy(g => g.Results.Count);
+        }
+        else
+        {
+            var allFavoriteWords = favoriteGroups.SelectMany(g => g.Results).Concat(SearchResult.WordExtensions.SelectMany(g => g.Results)).Distinct();
+            allFavorites = new(string.Empty, [..allFavoriteWords])
+            {
+                Favorite = true,
+            };
+
+            if (allFavorites.IsEmpty)
+                allFavorites = null;
+
+            currentGroup = allFavorites;
+        }
     }
 
     private void SelectGroup(RhymeHelper.WordGroup<RhymeHelper.SimpleWord> group)

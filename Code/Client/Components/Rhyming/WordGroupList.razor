@@ -5,7 +5,7 @@
 @if (Group is not null)
 {
     <div class="word-list">
-        @foreach (var result in Group.Results)
+        @foreach (var result in Group.Results.DistinctBy(r => r.WordResult.Word))
         {
             <div class="word-list-item">
                 @result.WordResult.Word

@@ -218,9 +218,5 @@ public class RhymeHelper
 				syllableRhymes.Select(g => new WordGroup<SimpleWord>(g.Term, g.Results) { Favorite = g.Favorites.Count != 0 }).ToArray(),
 				wordExtensions.Select(g => new WordGroup<SimpleWord>(g.Term, g.Results) { Favorite = g.Favorites.Count != 0 }).ToArray());
 		}
-
-		private class Box<T>
-		{
-		}
 	}
 }

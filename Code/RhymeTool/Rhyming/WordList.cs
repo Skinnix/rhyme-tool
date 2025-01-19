@@ -12,8 +12,11 @@ public class WordList : IpaRhymeList<RhymeListWordData>
 		: base(data)
 	{ }
 
+	public void Write(BinaryWriter writer)
+		=> Write(writer, (w, d) => w.Write(d.Frequency));
+
 	public static WordList Read(BinaryReader reader)
-		=> new(Read(reader, r => new RhymeListWordData(r.ReadByte())));
+		=> new(Read(reader, r => new RhymeListWordData(r.ReadSByte())));
 
 	public class Builder : Builder<IWordIpa>
 	{

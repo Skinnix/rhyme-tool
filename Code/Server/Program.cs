@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.ResponseCompression;
+﻿using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.Hosting;
 using Skinnix.RhymeTool.Client;
 using Skinnix.RhymeTool.Client.Rhyming;

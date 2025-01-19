@@ -9,38 +9,33 @@ using Skinnix.RhymeTool.Rhyming;
 
 namespace Skinnix.RhymeTool.Web.Rhyming;
 
-//public class WebRhymeLoadingService(HttpClient http) : IRhymeLoadingService
-//{
-//	private const string RHYME_DATA_PATH = "Data/Dictionaries/DAWB_words3.bin";
+public class WebRhymeLoadingService(HttpClient http) : BinaryRhymeLoadingServiceBase
+{
+	private const string RHYME_DATA_PATH = "Data/Dictionaries/DAWB_words4.bin";
 
-//	public async Task<RhymeHelper> LoadRhymeHelperAsync()
+	protected override async Task<BinaryReader> GetReaderAsync()
+		=> new BinaryReader(await http.GetStreamAsync(RHYME_DATA_PATH));
+}
+
+//public class WebRhymeLoadingService(HttpClient http) : RhymeLoadingServiceBase
+//{
+//	private const string RHYME_DATA_PATH = "Data/Dictionaries/DAWB_words3.txt";
+
+//	protected override async Task<StreamReader> CreateWordDataReaderAsync()
+//		=> new StreamReader(await http.GetStreamAsync(RHYME_DATA_PATH));
+
+//	protected override Task<RhymeHelper> CreateRhymeHelper(WordList wordList)
 //	{
-//		using (var reader = new BinaryReader(await http.GetStreamAsync(RHYME_DATA_PATH)))
+//		var result = base.CreateRhymeHelper(wordList);
+
+//		var characters = new string(wordList.SelectMany(w => w.Ipa).Distinct().ToArray());
+
+//		using (var stream = File.OpenWrite(@"%userprofile%\Desktop\words3.bin"))
+//		using (var writer = new BinaryWriter(stream))
 //		{
-//			var wordList = WordList.Read(reader);
-//			return new RhymeHelper(wordList);
+//			wordList.Write(writer, (w, d) => writer.Write((byte)d.Frequency));
 //		}
+
+//		return result;
 //	}
 //}
-
-[DataContract]
-public class WebRhymeLoadingService(HttpClient http) : RhymeLoadingServiceBase
-{
-	private const string RHYME_DATA_PATH = "Data/Dictionaries/DAWB_words2.txt";
-
-	protected override async Task<StreamReader> CreateWordDataReaderAsync()
-		=> new StreamReader(await http.GetStreamAsync(RHYME_DATA_PATH));
-
-	protected override Task<RhymeHelper> CreateRhymeHelper(WordList wordList)
-	{
-		var result = base.CreateRhymeHelper(wordList);
-
-		using (var stream = File.OpenWrite(@"C:\Users\Hendrik\Desktop\words3.bin"))
-		using (var writer = new BinaryWriter(stream))
-		{
-			wordList.Write(writer, (w, d) => writer.Write((byte)d.Frequency));
-		}
-
-		return result;
-	}
-}

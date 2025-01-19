@@ -9,12 +9,13 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Threading.Tasks.Sources;
 
 namespace Skinnix.RhymeTool.Rhyming;
 
 public class IpaRhymeList<TAdditionalData> : IReadOnlyList<IpaRhymeList<TAdditionalData>.Result>
 {
-	private const string IPA_IGNORE = "1ˈˌ";
+	public const string IPA_IGNORE = "1ˈˌ§.̩̯̥̊̃̍̆͜͡";
 
 	private readonly Entry[] entries;
 	private readonly MapAdapter ipaAdapter;
@@ -63,7 +64,7 @@ public class IpaRhymeList<TAdditionalData> : IReadOnlyList<IpaRhymeList<TAdditio
 		for (var i = middle; i >= 0; i--)
 		{
 			var entry = entries[i];
-			if (entry.CompareTo(searchEntry) != 0)
+			if (Entry.WordComparer.IgnoreCase.Compare(entry, searchEntry) != 0)
 				break;
 			yield return new Result(this, i);
 		}
@@ -72,7 +73,7 @@ public class IpaRhymeList<TAdditionalData> : IReadOnlyList<IpaRhymeList<TAdditio
 		for (var i = middle + 1; i < Count; i++)
 		{
 			var entry = entries[i];
-			if (entry.CompareTo(searchEntry) != 0)
+			if (Entry.WordComparer.IgnoreCase.Compare(entry, searchEntry) != 0)
 				break;
 			yield return new Result(this, i);
 		}
@@ -126,9 +127,9 @@ public class IpaRhymeList<TAdditionalData> : IReadOnlyList<IpaRhymeList<TAdditio
 	public class Builder<TIpaDetail> : IDisposable
 		where TIpaDetail : IWordIpa
 	{
-		private List<Entry>? entries = new(); //new(Entry.NonCollidingWordComparer.Instance);
-		private List<Entry>? ipaEntries = new(); //new(Entry.NonCollidingIpaComparer.Instance);
-		private List<Entry>? reverseEntries = new();
+		private List<EntryWrapper>? entries = new(); //new(Entry.NonCollidingWordComparer.Instance);
+		private List<EntryWrapper>? ipaEntries = new(); //new(Entry.NonCollidingIpaComparer.Instance);
+		private List<EntryWrapper>? reverseEntries = new();
 
 		private bool disposed;
 
@@ -151,9 +152,10 @@ public class IpaRhymeList<TAdditionalData> : IReadOnlyList<IpaRhymeList<TAdditio
 			if (reverseEntries.Count != 0 && reverseEntries[^1].Equals(entry))
 				return false;
 
-			entries.Add(entry);
-			ipaEntries.Add(entry);
-			reverseEntries.Add(entry);
+			var wrapper = new EntryWrapper(entry, entries.Count);
+			entries.Add(wrapper);
+			ipaEntries.Add(wrapper);
+			reverseEntries.Add(wrapper);
 			return true;
 		}
 
@@ -162,18 +164,24 @@ public class IpaRhymeList<TAdditionalData> : IReadOnlyList<IpaRhymeList<TAdditio
 			if (entries is null || ipaEntries is null || reverseEntries is null)
 				throw new ObjectDisposedException(nameof(Builder<TIpaDetail>));
 
-			entries.Sort(Entry.WordComparer.NonCollidingIgnoreCase);
-			ipaEntries.Sort(Entry.IpaComparer.NonColliding);
-			reverseEntries.Sort(Entry.ReverseWordComparer.NonCollidingIgnoreCase);
+			entries.Sort(Entry.WordComparer.IgnoreCase);
+			ipaEntries.Sort(Entry.IpaComparer.Default);
+			reverseEntries.Sort(Entry.ReverseWordComparer.IgnoreCase);
 
 			var resultEntries = new Entry[entries.Count];
-			entries.CopyTo(resultEntries, 0);
+			var resultMap = new int[entries.Count];
+			var i = 0;
+			foreach (var entry in entries)
+			{
+				resultMap[entry.Id] = i;
+				resultEntries[i++] = entry.Entry;
+			}
 
 			var ipaMap = new int[entries.Count];
-			var i = 0;
+			i = 0;
 			foreach (var ipaEntry in ipaEntries)
 			{
-				var index = Array.BinarySearch(resultEntries, ipaEntry);
+				var index = resultMap[ipaEntry.Id];
 				ipaMap[i++] = index;
 			}
 
@@ -181,7 +189,7 @@ public class IpaRhymeList<TAdditionalData> : IReadOnlyList<IpaRhymeList<TAdditio
 			i = 0;
 			foreach (var reverseEntry in reverseEntries)
 			{
-				var index = Array.BinarySearch(resultEntries, reverseEntry);
+				var index = resultMap[reverseEntry.Id];
 				reverseMap[i++] = index;
 			}
 
@@ -297,18 +305,18 @@ public class IpaRhymeList<TAdditionalData> : IReadOnlyList<IpaRhymeList<TAdditio
 
 	private readonly record struct Entry(string Word, string Ipa, TAdditionalData AdditionalData) : IComparable<Entry>
 	{
-		public int CompareTo(Entry other)
-			=> WordComparer.IgnoreCase.Compare(this, other);
-
 		public IEnumerable<char> FilterIpa(bool reverse) => FilterIpa(Ipa, reverse);
 
 		public static IEnumerable<char> FilterIpa(string ipa, bool reverse)
-			=> (reverse ? ipa.Reverse() : ipa).Where(c => !IPA_IGNORE.Contains(c));
+			=> (reverse ? ipa.ReverseEnumerator() : ipa).Where(c => !IPA_IGNORE.Contains(c));
 
-		public static int CompareStrings(IEnumerable<char> x, IEnumerable<char> y, bool ignoreCase, CultureInfo? culture = null)
+		public int CompareTo(Entry other)
+			=> WordComparer.IgnoreCase.Compare(this, other);
+
+		public static int CompareStrings(IEnumerable<char>? x, IEnumerable<char>? y, bool ignoreCase, CultureInfo? culture = null)
 		{
-			var xEnumerator = x.GetEnumerator();
-			var yEnumerator = y.GetEnumerator();
+			var xEnumerator = (x ?? []).GetEnumerator();
+			var yEnumerator = (y ?? []).GetEnumerator();
 			bool hasX, hasY;
 
 			while ((hasX = xEnumerator.MoveNext()) & (hasY = yEnumerator.MoveNext()))
@@ -316,8 +324,8 @@ public class IpaRhymeList<TAdditionalData> : IReadOnlyList<IpaRhymeList<TAdditio
 				var charX = xEnumerator.Current;
 				var charY = yEnumerator.Current;
 				var comparison = culture is null
-					? !ignoreCase ? charX - charY
-					: string.Compare(charX.ToString(), charY.ToString(), true)
+					? (!ignoreCase ? charX - charY
+					: string.Compare(charX.ToString(), charY.ToString(), true))
 					: culture.CompareInfo.Compare(
 						new ReadOnlySpan<char>(ref charX), new ReadOnlySpan<char>(ref charY),
 						ignoreCase ? CompareOptions.IgnoreCase : CompareOptions.None);
@@ -356,74 +364,53 @@ public class IpaRhymeList<TAdditionalData> : IReadOnlyList<IpaRhymeList<TAdditio
 			return x.Length - y.Length;
 		}
 
-		public class WordComparer(bool avoidCollisions, bool ignoreCase, CultureInfo? culture) : IComparer<Entry>
+		public class WordComparer(bool ignoreCase, CultureInfo? culture) : IComparer<string>, IComparer<Entry>, IComparer<EntryWrapper>
 		{
-			public static readonly WordComparer Strict = new(false, false, CultureInfo.InvariantCulture);
-			public static readonly WordComparer NonCollidingStrict = new(true, false, CultureInfo.InvariantCulture);
-			public static readonly WordComparer IgnoreCase = new(false, true, CultureInfo.InvariantCulture);
-			public static readonly WordComparer NonCollidingIgnoreCase = new(true, true, CultureInfo.InvariantCulture);
+			public static readonly WordComparer IgnoreCase = new(true, CultureInfo.InvariantCulture);
+
+			public int Compare(string? x, string? y)
+				=> CompareStrings(x, y, ignoreCase, culture);
 
 			public int Compare(Entry x, Entry y)
-			{
-				var result = CompareStrings(x.Word, y.Word, ignoreCase, culture);
-				if (avoidCollisions && result == 0 && x.Ipa != y.Ipa)
-				{
-					result = CompareStrings(x.FilterIpa(reverse: true), y.FilterIpa(reverse: true), false);
-					if (result == 0)
-						result = CompareStrings(x.Word, y.Word, false, culture);
+				=> CompareStrings(x.Word, y.Word, ignoreCase, culture);
 
-					return result;
-				}
-
-				return result;
-			}
+			public int Compare(EntryWrapper x, EntryWrapper y)
+				=> x.Id == y.Id ? 0
+				: CompareStrings(x.Entry.Word, y.Entry.Word, ignoreCase, culture);
 		}
 
-		public class ReverseWordComparer(bool avoidCollisions, bool ignoreCase, CultureInfo? culture) : IComparer<Entry>
+		public class ReverseWordComparer(bool ignoreCase, CultureInfo? culture) : IComparer<Entry>, IComparer<EntryWrapper>
 		{
-			public static readonly ReverseWordComparer Strict = new(false, false, CultureInfo.InvariantCulture);
-			public static readonly ReverseWordComparer NonCollidingStrict = new(true, false, CultureInfo.InvariantCulture);
-			public static readonly ReverseWordComparer IgnoreCase = new(false, true, CultureInfo.InvariantCulture);
-			public static readonly ReverseWordComparer NonCollidingIgnoreCase = new(true, true, CultureInfo.InvariantCulture);
+			public static readonly ReverseWordComparer IgnoreCase = new(true, CultureInfo.InvariantCulture);
 
 			public int Compare(Entry x, Entry y)
-			{
-				var result = CompareReverseStrings(x.Word, y.Word, ignoreCase, culture);
-				if (avoidCollisions && result == 0)
-				{
-					result = CompareStrings(x.FilterIpa(reverse: true), y.FilterIpa(reverse: true), false);
-					if (result == 0 && ignoreCase)
-						result = CompareReverseStrings(x.Word, y.Word, false, culture);
+				=> CompareStrings(x.Word.ReverseEnumerator(), y.Word.ReverseEnumerator(), ignoreCase, culture);
 
-					return result;
-				}
-
-				return result;
-			}
+			public int Compare(EntryWrapper x, EntryWrapper y)
+				=> x.Id == y.Id ? 0
+				: CompareStrings(x.Entry.Word.ReverseEnumerator(), y.Entry.Word.ReverseEnumerator(), ignoreCase, culture);
 		}
 
-		public class IpaComparer(bool avoidCollisions, CultureInfo? culture) : IComparer<Entry>
+		public class IpaComparer : IComparer<Entry>, IComparer<EntryWrapper>
 		{
-			public static readonly IpaComparer Default = new(false, CultureInfo.InvariantCulture);
-			public static readonly IpaComparer NonColliding = new(true, CultureInfo.InvariantCulture);
-
+			public static readonly IpaComparer Default = new();
+			
 			public int Compare(Entry x, Entry y)
-			{
-				var result = CompareStrings(x.FilterIpa(reverse: true), y.FilterIpa(reverse: true), false);
-				if (avoidCollisions && result == 0)
-				{
-					result = CompareStrings(x.Ipa, y.Ipa, false);
-					if (result == 0)
-					{
-						result = CompareStrings(x.Word, y.Word, true, culture);
-						if (result == 0)
-							result = CompareStrings(x.Word, y.Word, false, culture);
-					}
-				}
+				=> CompareStrings(x.FilterIpa(true), y.FilterIpa(true), false);
 
-				return result;
-			}
+			public int Compare(EntryWrapper x, EntryWrapper y)
+				=> x.Id == y.Id ? 0
+				: CompareStrings(x.Entry.FilterIpa(true), y.Entry.FilterIpa(true), false);
 		}
+	}
+
+	private readonly record struct EntryWrapper(Entry Entry, int Id)
+	{
+		public bool Equals(EntryWrapper other)
+			=> other.Id == Id;
+
+		public override int GetHashCode()
+			=> Id;
 	}
 
 	private class MapAdapter : IReadOnlyList<Entry>

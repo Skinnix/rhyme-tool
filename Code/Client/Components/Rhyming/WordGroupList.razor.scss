@@ -3,15 +3,15 @@
 	flex-wrap: wrap;
 	justify-content: flex-start;
 	align-items: baseline;
-	row-gap: 0.8em;
+	gap: 0.8em;
 
-	& > * {
+	/*& > * {
 		margin-right: 0.8em;
 
 		&:has(+ .extension-word) {
 			margin-right: 0;
 		}
-	}
+	}*/
 
 	.word-list-item {
 		background-color: #f0f0f0;

@@ -8,10 +8,10 @@ using Skinnix.RhymeTool.Rhyming;
 
 namespace Skinnix.RhymeTool.MauiBlazor.Rhyming;
 
-public class MauiRhymeLoadingService : RhymeLoadingServiceBase
+public class MauiRhymeLoadingService : BinaryRhymeLoadingServiceBase
 {
-	private const string RHYME_DATA_PATH = "Dictionaries/DAWB_words2.txt";
+	private const string RHYME_DATA_PATH = "Dictionaries/DAWB_words4.bin";
 
-	protected override async Task<StreamReader> CreateWordDataReaderAsync()
-		=> new StreamReader(await FileSystem.OpenAppPackageFileAsync(RHYME_DATA_PATH));
+	protected override async Task<BinaryReader> GetReaderAsync()
+		=> new BinaryReader(await FileSystem.OpenAppPackageFileAsync(RHYME_DATA_PATH));
 }

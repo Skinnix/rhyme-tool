@@ -28,21 +28,25 @@ else
             <i class="fa-solid fa-magnifying-glass"></i>
         </button>
     </form>
+    
+    <div class="d-grid gap-2">
+        @if (notFound)
+        {
+            <div class="alert alert-warning" role="alert">
+                Wort nicht gefunden
+            </div>
+        }
+        else if (rhymeSearchResult is not null)
+        {
+            <WordInfo Words="rhymeSearchResult.Words" />
 
-    @if (notFound)
-    {
-        <div class="alert alert-warning" role="alert">
-            Wort nicht gefunden
-        </div>
-    }
-    else if (rhymeSearchResult is not null)
-    {
-        <RhymeSearchResults SearchResult="rhymeSearchResult" />
-    }
-    else if (suffixSearchResult is not null)
-    {
-        <WordGroupList Group="suffixSearchResult" />
-    }
+            <RhymeSearchResults SearchResult="rhymeSearchResult" />
+        }
+        else if (suffixSearchResult is not null)
+        {
+            <WordGroupList Group="suffixSearchResult" />
+        }
+    </div>
 }
 
 @code {
@@ -54,16 +58,19 @@ else
     private RhymeHelper.WordGroup<RhymeHelper.SimpleWord>? suffixSearchResult;
     private bool notFound = false;
 
-    private Task LoadHelper()
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        rhymeHelper = rhymeLoadingService.LoadedRhymeHelper;
+    }
+
+    private async void LoadHelper()
     {
         loadingHelper = true;
-
-        return Task.Run(async () =>
-        {
-            rhymeHelper = await rhymeLoadingService.LoadRhymeHelperAsync();
-            loadingHelper = false;
-            await InvokeAsync(StateHasChanged);
-        });
+        rhymeHelper = await rhymeLoadingService.LoadRhymeHelperAsync();
+        loadingHelper = false;
+        StateHasChanged();
     }
 
     private void Search()
