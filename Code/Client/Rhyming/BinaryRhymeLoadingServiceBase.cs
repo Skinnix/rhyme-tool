@@ -11,11 +11,12 @@ public abstract class BinaryRhymeLoadingServiceBase : RhymeLoadingServiceBase
 {
 	protected override async Task<RhymeHelper> LoadInner()
 	{
-		using (var reader = await GetReaderAsync())
+		using (var reader = await GetRhymeReaderAsync())
 		{
-			return new(WordList.Read(reader));
+			throw new NotImplementedException();
+			return new(RhymeWordList.Read(reader), null, null);
 		}
 	}
 
-	protected abstract Task<BinaryReader> GetReaderAsync();
+	protected abstract Task<BinaryReader> GetRhymeReaderAsync();
 }

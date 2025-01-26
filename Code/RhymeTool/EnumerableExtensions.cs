@@ -52,7 +52,8 @@ public static class EnumerableExtensions
 		return -1;
 	}
 
-	public static int BinarySearchWeak<T>(this IReadOnlyList<T> list, Func<T, int> comparer)
+	public static int BinarySearchWeak<TSource, T>(this TSource list, Func<T, int> comparer)
+		where TSource : IReadOnlyList<T>
 	{
 		if (list.Count == 0)
 			return -1;

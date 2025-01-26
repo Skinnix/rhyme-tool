@@ -47,4 +47,16 @@
     <ProjectReference Include="..\RhymeTool\RhymeTool.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Update="wwwroot\Data\Dictionaries\DAWB_words3.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Update="wwwroot\Data\Dictionaries\de-DE.aff.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Update="wwwroot\Data\Dictionaries\de-DE.dic.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
 </Project>

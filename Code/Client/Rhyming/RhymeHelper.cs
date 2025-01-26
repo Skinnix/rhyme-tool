@@ -13,62 +13,131 @@ public class RhymeHelper
 {
 	public const int MAX_RESULTS = 300;
 
-	private readonly WordList wordList;
+	private readonly RhymeWordList rhymeWordList;
+	//private readonly SpellingList spellingList;
+	private readonly WordFormList wordFormList;
+	private readonly ComparisonWordList comparisonWordList;
 
-	public RhymeHelper(WordList wordList)
+	public RhymeHelper(RhymeWordList rhymeWordList, WordFormList wordFormList, ComparisonWordList comparisonWordList)
 	{
-		this.wordList = wordList;
+		this.rhymeWordList = rhymeWordList;
+		this.wordFormList = wordFormList;
+		this.comparisonWordList = comparisonWordList;
 	}
 
-	public Word? Find(string word, int maxRhymeSyllables = 3)
+	public WordBase? Find(string word, int maxRhymeSyllables = 3)
 	{
-		var result = wordList.FindWord(word);
-		if (result.IsEmpty)
+		var result = rhymeWordList.FindWord(word);
+		if (!result.Success)
 			return null;
 
-		return new SimpleWord(result, maxRhymeSyllables);
+		return new SimpleWord(this, result, maxRhymeSyllables);
 	}
 
-	public IEnumerable<Word> FindAll(string word, int maxRhymeSyllables = 3)
-		=> wordList.FindAllWords(word)
-			.Select(r => new SimpleWord(r, maxRhymeSyllables));
+	public IEnumerable<WordBase> FindAll(string word, int maxRhymeSyllables = 3)
+	{
+		//Suche die Worte
+		var words = rhymeWordList.FindAllWords(word).ToArray();
+
+		//Finde den Wortstamm
+		var stems = wordFormList.FindAllForms(word).Select(r => r.Stem).Where(s => s.HasValue).Select(s => s!.Value).Distinct().ToArray();
+		if (stems.Length != 0)
+		{
+			//Suche die Wortstämme in der Vergleichsliste
+			var candidateFound = false;
+			RhymeWordList.Result stemWord = default;
+			ComparisonWordList.Result comparisonWord = default;
+			foreach (var stem in stems)
+			{
+				//Wenn der Stamm identisch zum Wort ist, überspringe
+				if (stem.Form == word)
+					continue;
+
+				if (!candidateFound)
+				{
+					//Suche den Stamm in der Wortliste
+					stemWord = rhymeWordList.FindWord(stem.Form);
+					if (!stemWord.Success)
+						break;
+
+					//Suche das Wort in der Vergleichsliste
+					comparisonWord = comparisonWordList.FindWord(word);
+					if (!comparisonWord.Success)
+						break;
+
+					candidateFound = true;
+				}
+
+				//Suche den Stamm in der Vergleichsliste
+				var comparisonStem = comparisonWordList.FindWord(stem.Form);
+				if (comparisonStem.Success)
+				{
+					//Prüfe alle möglichen Aussprachen
+					foreach (var wordIpa in comparisonWord.Ipas)
+					{
+						foreach (var stemIpa in comparisonStem.Ipas)
+						{
+							//Finde Stem in Word
+							var match = IpaReplacer.FindBestMatch(wordIpa, stemIpa, false, false, tolerance: 3, preferShorter: true);
+							if (match.index >= 0 && match.levenshtein <= 3)
+							{
+								//Matche die Stämme
+								var comparisonMatch = IpaReplacer.FindBestMatch(stemWord.Ipa, stemIpa[0..match.length], true, false, preferShorter: true);
+								if (comparisonMatch.index >= 0)
+								{
+									//Ersetze die IPA des Stamms im ComparisonWord durch die des ursprünglichen Wortstamms
+									var cutIpa = stemWord.Ipa[comparisonMatch.index..(comparisonMatch.index + comparisonMatch.length)];
+									var newIpa = wordIpa[0..match.index] + cutIpa + wordIpa[(match.index + match.length)..];
+									if (newIpa == wordIpa)
+										continue;
+
+									yield return new InflectedWord(this, word, newIpa, maxRhymeSyllables);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		foreach (var w in words)
+			yield return new SimpleWord(this, w, maxRhymeSyllables);
+	}
 
 	public WordGroup<SimpleWord> FindBySuffix(string suffix, int maxRhymeSyllables = 3)
 	{
-		var results = wordList.FindBySuffix(suffix)
-			.OrderByDescending(r => r.AdditionalData.Frequency)
-			.Select(g => new SimpleWord(g, maxRhymeSyllables))
+		var results = rhymeWordList.FindBySuffix(suffix)
+			.OrderByDescending(r => r.Frequency)
+			.Select(g => new SimpleWord(this, g, maxRhymeSyllables))
 			.Take(MAX_RESULTS)
 			.ToArray();
 
 		return new(suffix, results);
 	}
 
-	public abstract record Word(WordList.Result WordResult, int MaxRhymeSyllables)
+	public abstract record WordBase(RhymeHelper Helper, string Word, string Ipa, int MaxRhymeSyllables)
 	{
 		private int stressedSyllableIndexFromEnd = -1;
 
 		public int RhymeSyllables
 			=> stressedSyllableIndexFromEnd != -1 ? stressedSyllableIndexFromEnd
-			: stressedSyllableIndexFromEnd = IpaHelper.GetRhymeSuffixArray(WordResult.Ipa, MaxRhymeSyllables).Length;
+			: stressedSyllableIndexFromEnd = IpaHelper.GetRhymeSuffixArray(Ipa, MaxRhymeSyllables).Length;
 
 		public RhymeSearchResult FindRhymes(int maxSyllables = 3)
 		{
-			var word = WordResult.Word;
-			var ipa = WordResult.Ipa;
-			var ipaSuffix = IpaHelper.GetRhymeSuffixArray(WordResult.Ipa, maxSyllables);
+			var ipaSuffix = IpaHelper.GetRhymeSuffixArray(Ipa, maxSyllables);
 			var ipaSuffixLength = ipaSuffix.Length;
 			if (ipaSuffixLength != 0 && !ipaSuffix[0].Any(IpaHelper.IsVowel))
 				ipaSuffixLength--;
 
-			var bestSuffixLength = IpaHelper.GetRhymeSuffixArray(ipa, maxSyllables).Length;
+			var bestSuffixLength = IpaHelper.GetRhymeSuffixArray(Ipa, maxSyllables).Length;
 			var rhymeGroups = new WordGroup<SimpleWord>?[ipaSuffixLength];
-			var composite = new List<IpaRhymeList<RhymeListWordData>.Result>();
+			var composite = new List<RhymeWordList.Result>();
 			for (var i = ipaSuffixLength; i >= 1; i--)
 			{
 				var suffix = string.Join(null, ipaSuffix.TakeLast(i));
-				var results = new List<IpaRhymeList<RhymeListWordData>.Result>();
-				foreach (var result in WordResult.EnumerateGroup(i).Take(MAX_RESULTS))
+				var results = new List<RhymeWordList.Result>();
+				foreach (var result in Helper.rhymeWordList.EnumerateRhymes(Ipa, i).Take(MAX_RESULTS))
 				{
 					if (rhymeGroups.Any(g => g?.IsEmpty == false && g.Results.Any(r => r.WordResult == result)))
 						continue;
@@ -76,26 +145,26 @@ public class RhymeHelper
 					if (composite.Contains(result))
 						continue;
 
-					if (result.Word.EndsWith(word, StringComparison.InvariantCultureIgnoreCase)
-						&& result.Ipa.EndsWith(ipa, StringComparison.OrdinalIgnoreCase))
+					if (result.Word.EndsWith(Word, StringComparison.InvariantCultureIgnoreCase)
+						&& result.Ipa.EndsWith(Ipa, StringComparison.OrdinalIgnoreCase))
 						composite.Add(result);
 					else
 						results.Add(result);
 				}
 
-				rhymeGroups[i - 1] = Group($"/{suffix}/", results, MaxRhymeSyllables, i == bestSuffixLength);
+				rhymeGroups[i - 1] = Group(Helper, $"/{suffix}/", results, MaxRhymeSyllables, i == bestSuffixLength);
 			}
 
-			var compositeGroup = Group("-" + word.ToLowerFirst(), composite, MaxRhymeSyllables, false);
+			var compositeGroup = Group(Helper, "-" + Word.ToLowerFirst(), composite, MaxRhymeSyllables, false);
 
 			return new RhymeSearchResult([this], rhymeGroups!, compositeGroup.IsEmpty ? [] : [compositeGroup]);
 		}
 
-		private static WordGroup<SimpleWord> Group(string term, List<WordList.Result> results, int maxRhymeSyllables, bool favorite)
+		private static WordGroup<SimpleWord> Group(RhymeHelper helper, string term, List<RhymeWordList.Result> results, int maxRhymeSyllables, bool favorite)
 		{
 			var words = results
-				.OrderByDescending(r => r.AdditionalData.Frequency)
-				.Select(g => new SimpleWord(g, maxRhymeSyllables))
+				.OrderByDescending(r => r.Frequency)
+				.Select(g => new SimpleWord(helper, g, maxRhymeSyllables))
 				.ToArray();
 			return new(term, words)
 			{
@@ -103,19 +172,19 @@ public class RhymeHelper
 			};
 		}
 
-		private static WordGroup<WordWithExtensions> GroupWithExtensions(string suffix, List<WordList.Result> results, int maxRhymeSyllables, bool favorite)
+		private static WordGroup<WordWithExtensions> GroupWithExtensions(RhymeHelper helper, string suffix, List<RhymeWordList.Result> results, int maxRhymeSyllables, bool favorite)
 		{
-			var groupedResults = new List<(WordList.Result Word, List<WordList.Result> ExtensionWords)>();
+			var groupedResults = new List<(RhymeWordList.Result Word, List<RhymeWordList.Result> ExtensionWords)>();
 			while (results.Count != 0)
 			{
 				var result = results[^1];
 				results.RemoveAt(results.Count - 1);
 
-				var extensionWords = new List<WordList.Result>();
+				var extensionWords = new List<RhymeWordList.Result>();
 				results.RemoveAll(r =>
 				{
 					if (r.Word.EndsWith(result.Word, StringComparison.InvariantCultureIgnoreCase)
-						&& r.AdditionalData.Frequency <= result.AdditionalData.Frequency)
+						&& r.Frequency <= result.Frequency)
 					{
 						extensionWords.Add(r);
 						return true;
@@ -126,7 +195,7 @@ public class RhymeHelper
 				groupedResults.RemoveAll(g =>
 				{
 					if (g.Word.Word.EndsWith(result.Word, StringComparison.InvariantCultureIgnoreCase)
-						&& g.Word.AdditionalData.Frequency <= result.AdditionalData.Frequency)
+						&& g.Word.Frequency <= result.Frequency)
 					{
 						extensionWords.Add(g.Word);
 						extensionWords.AddRange(g.ExtensionWords);
@@ -140,8 +209,8 @@ public class RhymeHelper
 			}
 
 			var groups = groupedResults
-				.OrderByDescending(r => r.Word.AdditionalData.Frequency)
-				.Select(g => new WordWithExtensions(g.Word, maxRhymeSyllables, g.ExtensionWords.OrderByDescending(w => w.AdditionalData.Frequency).ToArray()))
+				.OrderByDescending(r => r.Word.Frequency)
+				.Select(g => new WordWithExtensions(helper, g.Word, maxRhymeSyllables, g.ExtensionWords.OrderByDescending(w => w.Frequency).ToArray()))
 				.ToArray();
 			return new(suffix, groups)
 			{
@@ -150,29 +219,33 @@ public class RhymeHelper
 		}
 	}
 
-	public sealed record SimpleWord(WordList.Result WordResult, int MaxRhymeSyllables) : Word(WordResult, MaxRhymeSyllables);
+	public sealed record InflectedWord(RhymeHelper Helper, string Word, string Ipa, int MaxRhymeSyllables) :
+		WordBase(Helper, Word, Ipa, MaxRhymeSyllables);
 
-	public record WordWithExtensions(WordList.Result WordResult, int MaxRhymeSyllables, IReadOnlyCollection<WordList.Result> ExtensionWords) :
-		Word(WordResult, MaxRhymeSyllables)
+	public sealed record SimpleWord(RhymeHelper Helper, RhymeWordList.Result WordResult, int MaxRhymeSyllables) :
+		WordBase(Helper, WordResult.Word, WordResult.Ipa, MaxRhymeSyllables);
+
+	public record WordWithExtensions(RhymeHelper Helper, RhymeWordList.Result WordResult, int MaxRhymeSyllables, IReadOnlyCollection<RhymeWordList.Result> ExtensionWords) :
+		WordBase(Helper, WordResult.Word, WordResult.Ipa, MaxRhymeSyllables)
 	{
-		public bool IsOrContains(WordList.Result result) => WordResult == result || ExtensionWords.Contains(result);
+		public bool IsOrContains(RhymeWordList.Result result) => WordResult == result || ExtensionWords.Contains(result);
 	}
 
 	public record WordGroup<TWord>(string Term, IReadOnlyCollection<TWord> Results)
-		where TWord : Word
+		where TWord : WordBase
 	{
 		public bool IsEmpty => Term is null || Results is null || Results.Count == 0;
 
 		public bool Favorite { get; init; }
 	}
 
-	public record RhymeSearchResult(IReadOnlyCollection<Word> Words,
+	public record RhymeSearchResult(IReadOnlyCollection<WordBase> Words,
 		IReadOnlyList<WordGroup<SimpleWord>> SyllableRhymes,
 		IReadOnlyList<WordGroup<SimpleWord>> WordExtensions)
 	{
 		public static RhymeSearchResult Merge(IEnumerable<RhymeSearchResult> results)
 		{
-			var words = new List<Word>();
+			var words = new List<WordBase>();
 			var syllableRhymes = new List<(string Term, List<SimpleWord> Results, List<WordGroup<SimpleWord>> Favorites)>();
 			var wordExtensions = new List<(string Term, List<SimpleWord> Results, List<WordGroup<SimpleWord>> Favorites)>();
 			foreach (var result in results)

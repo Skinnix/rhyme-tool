@@ -14,4 +14,12 @@
 		<OutputPath>..\..\Build\$(Configuration)\</OutputPath>
 	</PropertyGroup>
 
+	<ItemGroup>
+	  <PackageReference Include="WeCantSpell.Hunspell" Version="5.2.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\..\Dependencies\HunspellSharp\HunspellSharp.csproj" />
+	</ItemGroup>
+
 </Project>

@@ -27,4 +27,8 @@
     <ProjectReference Include="..\ClientWeb\RhymeTool.Client.Web.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="wwwroot\Data\" />
+  </ItemGroup>
+
 </Project>

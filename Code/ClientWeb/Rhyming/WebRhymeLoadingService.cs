@@ -13,29 +13,24 @@ public class WebRhymeLoadingService(HttpClient http) : BinaryRhymeLoadingService
 {
 	private const string RHYME_DATA_PATH = "Data/Dictionaries/DAWB_words4.bin";
 
-	protected override async Task<BinaryReader> GetReaderAsync()
+	protected override async Task<BinaryReader> GetRhymeReaderAsync()
 		=> new BinaryReader(await http.GetStreamAsync(RHYME_DATA_PATH));
 }
 
-//public class WebRhymeLoadingService(HttpClient http) : RhymeLoadingServiceBase
+//public class WebRhymeLoadingService(HttpClient http) : CsvRhymeLoadingServiceBase
 //{
 //	private const string RHYME_DATA_PATH = "Data/Dictionaries/DAWB_words3.txt";
+//	private const string SPELLING_DIC_PATH = "Data/Dictionaries/de-DE.dic";
+//	private const string SPELLING_AFF_PATH = "Data/Dictionaries/de-DE.aff";
 
-//	protected override async Task<StreamReader> CreateWordDataReaderAsync()
+//	protected override async Task<StreamReader> GetRhymeReaderAsync()
 //		=> new StreamReader(await http.GetStreamAsync(RHYME_DATA_PATH));
 
-//	protected override Task<RhymeHelper> CreateRhymeHelper(WordList wordList)
+//	protected override async Task<(Stream dictionary, Stream affix)> GetSpellingStreamsAsync()
 //	{
-//		var result = base.CreateRhymeHelper(wordList);
-
-//		var characters = new string(wordList.SelectMany(w => w.Ipa).Distinct().ToArray());
-
-//		using (var stream = File.OpenWrite(@"%userprofile%\Desktop\words3.bin"))
-//		using (var writer = new BinaryWriter(stream))
-//		{
-//			wordList.Write(writer, (w, d) => writer.Write((byte)d.Frequency));
-//		}
-
-//		return result;
+//		var dicTask = http.GetStreamAsync(SPELLING_DIC_PATH);
+//		var affTask = http.GetStreamAsync(SPELLING_AFF_PATH);
+//		await Task.WhenAll(dicTask, affTask);
+//		return (dicTask.Result, affTask.Result);
 //	}
 //}

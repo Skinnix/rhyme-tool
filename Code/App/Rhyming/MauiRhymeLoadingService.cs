@@ -12,6 +12,6 @@ public class MauiRhymeLoadingService : BinaryRhymeLoadingServiceBase
 {
 	private const string RHYME_DATA_PATH = "Dictionaries/DAWB_words4.bin";
 
-	protected override async Task<BinaryReader> GetReaderAsync()
+	protected override async Task<BinaryReader> GetRhymeReaderAsync()
 		=> new BinaryReader(await FileSystem.OpenAppPackageFileAsync(RHYME_DATA_PATH));
 }

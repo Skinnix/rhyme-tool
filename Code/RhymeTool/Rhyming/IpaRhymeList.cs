@@ -438,7 +438,7 @@ public class IpaRhymeList<TAdditionalData> : IReadOnlyList<IpaRhymeList<TAdditio
 
 		public IEnumerable<Result> FindAll(string term, Func<string, Entry, int> comparer)
 		{
-			var middle = this.BinarySearchWeak(e => comparer(term, e)); // string.Compare(getValue(e), 0, prefix, 0, prefix.Length, comparison));
+			var middle = this.BinarySearchWeak((Entry e) => comparer(term, e)); // string.Compare(getValue(e), 0, prefix, 0, prefix.Length, comparison));
 			if (middle < 0)
 				yield break;
 

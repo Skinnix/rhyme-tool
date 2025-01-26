@@ -111,10 +111,10 @@ public static class IpaHelper
 			lastSyllables.RemoveRange(0, stressedSyllableIndex);
 
 		//Setze die Silben wieder zusammen
-		var vowelIndex = lastSyllables[0].Select((c, i) => (Char: c, Index: i))
-			.First(c => IsVowel(c.Char))
-			.Index;
-		lastSyllables[0] = lastSyllables[0][vowelIndex..];
+		var vowel = lastSyllables[0].Select((c, i) => (Char: c, Index: i))
+			.FirstOrDefault(c => IsVowel(c.Char));
+		if (vowel.Char != default)
+			lastSyllables[0] = lastSyllables[0][vowel.Index..];
 		return lastSyllables;
 	}
 }

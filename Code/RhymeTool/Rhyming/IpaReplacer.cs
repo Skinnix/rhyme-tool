@@ -5,7 +5,8 @@ using Skinnix.RhymeTool.Rhyming;
 
 public class IpaReplacer
 {
-	public static (int index, int length) FindBestMatch(string haystack, string needle, bool fixStart, bool fixEnd, int start = 0)
+	public static (int index, int length, int levenshtein) FindBestMatch(string haystack, string needle, bool fixStart, bool fixEnd, int start = 0, int tolerance = 3,
+		bool preferLonger = false, bool preferShorter = false, bool preferNewer = false)
 	{
 		int bestMatchIndex = -1;
 		int bestMatchDistance = int.MaxValue;
@@ -14,8 +15,8 @@ public class IpaReplacer
 		// Iterate over possible starting positions in haystack
 		for (int i = start; fixStart ? i == start : i < haystack.Length; i++)
 		{
-			// For each possible substring length from (needle.Length - 3) to (needle.Length + 3)
-			for (int lengthOffset = -3; lengthOffset <= 3; lengthOffset++)
+			// For each possible substring length from (needle.Length - tolerance) to (needle.Length + tolerance)
+			for (int lengthOffset = -tolerance; lengthOffset <= tolerance; lengthOffset++)
 			{
 				// Calculate the new length for the substring
 				int substringLength = needle.Length + lengthOffset;
@@ -34,18 +35,50 @@ public class IpaReplacer
 				// Calculate the Levenshtein distance
 				int distance = LevenshteinDistance(substring, needle);
 
-				// If this substring has a smaller distance, or if it's the same distance but longer, update the best match
-				if (distance < bestMatchDistance || (distance == bestMatchDistance && substringLength > bestMatchLength))
+				// If this substring has a smaller distance, or if it's the same distance but is preferred, update the best match
+				if (distance < bestMatchDistance)
 				{
 					bestMatchIndex = i;
 					bestMatchDistance = distance;
 					bestMatchLength = substringLength;
 				}
+				else if (distance == bestMatchDistance)
+				{
+					if (preferLonger)
+					{
+						if (substringLength > bestMatchLength
+							|| (preferNewer && substringLength == bestMatchLength))
+						{
+							bestMatchIndex = i;
+							bestMatchDistance = distance;
+							bestMatchLength = substringLength;
+						}
+					}
+					else if (preferShorter)
+					{
+						if (substringLength < bestMatchLength
+							|| (preferNewer && substringLength == bestMatchLength))
+						{
+							bestMatchIndex = i;
+							bestMatchDistance = distance;
+							bestMatchLength = substringLength;
+						}
+					}
+					else if (preferNewer)
+					{
+						if (substringLength == bestMatchLength)
+						{
+							bestMatchIndex = i;
+							bestMatchDistance = distance;
+							bestMatchLength = substringLength;
+						}
+					}
+				}
 			}
 		}
 
 		// Return the index and length of the best match
-		return (bestMatchIndex, bestMatchLength);
+		return (bestMatchIndex, bestMatchLength, bestMatchDistance);
 	}
 
 	// Levenshtein distance function
@@ -93,7 +126,8 @@ public class IpaReplacer
 			needle = needle[firstLetterIndex..(lastLetterIndex + 1)];
 
 			var endPart = fixEnd && index == parts.Length - 1;
-			var result = FindBestMatch(current, needle, fixStart: index == 0 && fixStart.HasValue, fixEnd: endPart, start: fixStart ?? 0);
+			var result = FindBestMatch(current, needle, fixStart: index == 0 && fixStart.HasValue, fixEnd: endPart, start: fixStart ?? 0,
+				preferLonger: true);
 
 			if (result.index == -1)
 				return null;

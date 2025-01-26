@@ -8,13 +8,13 @@
         @foreach (var word in Words)
         {
             <div class="word-info-list-item">
-                <span class="word">@word.WordResult.Word</span>
-                <span class="word-ipa">@word.WordResult.Ipa</span>
+                <span class="word">@word.Word</span>
+                <span class="word-ipa">@word.Ipa</span>
             </div>
         }
     </div>
 }
 
 @code {
-    [Parameter] public IReadOnlyCollection<RhymeHelper.Word>? Words { get; set; }
+    [Parameter] public IReadOnlyCollection<RhymeHelper.WordBase>? Words { get; set; }
 }
