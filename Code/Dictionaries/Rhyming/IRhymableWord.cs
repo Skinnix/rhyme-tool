@@ -1,5 +1,6 @@
-﻿namespace Skinnix.RhymeTool.Rhyming;
+﻿namespace Skinnix.Dictionaries.Rhyming;
 
+[Obsolete]
 public interface IRhymableWord
 {
 	string Word { get; }

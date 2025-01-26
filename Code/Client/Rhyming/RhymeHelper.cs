@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Components;
+using Skinnix.Dictionaries;
+using Skinnix.Dictionaries.Rhyming;
 using Skinnix.RhymeTool.Rhyming;
 
 namespace Skinnix.RhymeTool.Client.Rhyming;

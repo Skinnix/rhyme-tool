@@ -38,6 +38,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DawsScraper", "Scrapers\Daw
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CsvReader", "Scrapers\CsvReader\CsvReader.csproj", "{F96E9B45-D303-4379-81C8-B8209A9B27C0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dictionaries", "Dictionaries\Dictionaries.csproj", "{AA0FB6D0-156A-4ABA-AC05-CDC51D3DA5FC}"
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Libraries", "Libraries", "{3AC62F89-8D8D-4EAD-A2FB-213F03BF8BD3}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HunspellSharp", "..\Dependencies\HunspellSharp\HunspellSharp.csproj", "{9F4E1289-EE33-44F3-A837-BC721B13C14D}"
@@ -118,12 +120,6 @@ Global
 		{F96E9B45-D303-4379-81C8-B8209A9B27C0}.Release|Any CPU.Build.0 = Release|Any CPU
 		{F96E9B45-D303-4379-81C8-B8209A9B27C0}.Server Side|Any CPU.ActiveCfg = Debug|Any CPU
 		{F96E9B45-D303-4379-81C8-B8209A9B27C0}.Server Side|Any CPU.Build.0 = Debug|Any CPU
-		{9F4E1289-EE33-44F3-A837-BC721B13C14D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{9F4E1289-EE33-44F3-A837-BC721B13C14D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{9F4E1289-EE33-44F3-A837-BC721B13C14D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{9F4E1289-EE33-44F3-A837-BC721B13C14D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{9F4E1289-EE33-44F3-A837-BC721B13C14D}.Server Side|Any CPU.ActiveCfg = Debug|Any CPU
-		{9F4E1289-EE33-44F3-A837-BC721B13C14D}.Server Side|Any CPU.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -22,4 +22,8 @@
 	  <ProjectReference Include="..\..\Dependencies\HunspellSharp\HunspellSharp.csproj" />
 	</ItemGroup>
 
+	<ItemGroup>
+	  <ProjectReference Include="..\Dictionaries\Dictionaries.csproj" />
+	</ItemGroup>
+
 </Project>
