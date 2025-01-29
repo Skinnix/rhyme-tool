@@ -14,4 +14,8 @@
 		<OutputPath>..\..\Build\$(Configuration)\</OutputPath>
 	</PropertyGroup>
 
+	<ItemGroup>
+	  <ProjectReference Include="..\..\Dependencies\Konves.ChordPro\src\Konves.ChordPro\Konves.ChordPro.csproj" />
+	</ItemGroup>
+
 </Project>

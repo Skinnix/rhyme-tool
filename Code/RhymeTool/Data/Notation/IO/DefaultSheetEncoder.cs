@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Skinnix.RhymeTool.Data.Notation.IO;
 
-public class DefaultSheetEncoder(ISheetBuilderFormatter? formatter = null) : SheetEncoderBase(formatter ?? DefaultWriterFormatter.Instance)
+public class DefaultSheetEncoder(ISheetBuilderFormatter? formatter = null) : SheetEncoderBase<string>(formatter ?? DefaultWriterFormatter.Instance)
 {
 	public DefaultSheetEncoder() : this(null) { }
 

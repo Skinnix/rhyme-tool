@@ -1,42 +1,87 @@
-﻿
-namespace Skinnix.RhymeTool.Data.Notation.IO;
+﻿namespace Skinnix.RhymeTool.Data.Notation.IO;
 
-public class SheetEncoderWriter
+public abstract class SheetEncoderWriter : SheetWriterBase
 {
-	public static SheetEncoderWriter<DefaultSheetEncoder> Default { get; } = new();
-
-	public void WriteSheet(TextWriter writer, SheetEncoderBase encoder, SheetDocument document)
-	{
-		foreach (var part in encoder.ProcessLines(document))
-		{
-			if (part is null)
-				writer.WriteLine();
-			else
-				writer.Write(part);
-		}
-	}
-
-	public async Task WriteSheetAsync(TextWriter writer, SheetEncoderBase encoder, SheetDocument document, CancellationToken cancellation = default)
-	{
-		cancellation.ThrowIfCancellationRequested();
-		foreach (var part in encoder.ProcessLines(document))
-		{
-			cancellation.ThrowIfCancellationRequested();
-			if (part is null)
-				await writer.WriteLineAsync();
-			else
-				await writer.WriteAsync(part);
-			cancellation.ThrowIfCancellationRequested();
-		}
-	}
+	public static SheetEncoderStringWriter<DefaultSheetEncoder> Default { get; } = new();
 }
 
-public class SheetEncoderWriter<TEncoder> : SheetEncoderWriter
-	where TEncoder : SheetEncoderBase, new()
+public abstract class SheetEncoderWriter<TLine> : SheetEncoderWriter
 {
-	public void WriteSheet(TextWriter writer, SheetDocument document)
-		=> WriteSheet(writer, new TEncoder(), document);
+	protected virtual IEnumerable<TLine?> ProcessLines(SheetEncoderBase<TLine> encoder, SheetDocument document)
+		=> encoder.ProcessLines(document);
+}
 
-	public Task WriteSheetAsync(TextWriter writer, SheetDocument document, CancellationToken cancellation = default)
-		=> WriteSheetAsync(writer, new TEncoder(), document, cancellation);
+public abstract class SheetEncoderWriter<TLine, TEncoder> : SheetEncoderWriter<TLine>
+	where TEncoder : SheetEncoderBase<TLine>
+{
+}
+
+public abstract class SheetEncoderWriter<TLine, TEncoder, TState> : SheetEncoderWriter<TLine, TEncoder>
+	where TEncoder : SheetEncoderBase<TLine>
+{
+	public override void WriteSheet(Stream stream, SheetDocument document, bool leaveOpen = false)
+	{
+		var state = Open(stream, leaveOpen);
+		try
+		{
+			WriteSheet(state, GetEncoder(), document);
+		}
+		finally
+		{
+			(state as IDisposable)?.Dispose();
+		}
+	}
+
+	public override async Task WriteSheetAsync(Stream stream, SheetDocument document, bool leaveOpen = false, CancellationToken cancellation = default)
+	{
+		cancellation.ThrowIfCancellationRequested();
+		var state = await OpenAsync(stream, leaveOpen, cancellation);
+		cancellation.ThrowIfCancellationRequested();
+
+		try
+		{
+			await WriteSheetAsync(state, GetEncoder(), document, cancellation);
+		}
+		finally
+		{
+			if (state is IAsyncDisposable asyncDisposable)
+				await asyncDisposable.DisposeAsync();
+			else if (state is IDisposable disposable)
+				disposable.Dispose();
+		}
+	}
+
+	protected abstract TEncoder GetEncoder();
+
+	protected abstract TState Open(Stream stream, bool leaveOpen = false);
+	protected abstract Task<TState> OpenAsync(Stream stream, bool leaveOpen = false, CancellationToken cancellation = default);
+
+	protected abstract void WriteLine(TState state, TLine? line);
+	protected abstract Task WriteLineAsync(TState state, TLine? line, CancellationToken cancellation = default);
+
+	protected abstract void Finalize(TState state, TEncoder encoder);
+	protected abstract Task FinalizeAsync(TState state, TEncoder encoder, CancellationToken cancellation = default);
+
+	public virtual void WriteSheet(TState state, TEncoder encoder, SheetDocument document)
+	{
+		foreach (var line in ProcessLines(encoder, document))
+		{
+			WriteLine(state, line);
+		}
+
+		Finalize(state, encoder);
+	}
+
+	public async Task WriteSheetAsync(TState state, TEncoder encoder, SheetDocument document, CancellationToken cancellation = default)
+	{
+		foreach (var line in ProcessLines(encoder, document))
+		{
+			cancellation.ThrowIfCancellationRequested();
+			await WriteLineAsync(state, line, cancellation);
+			cancellation.ThrowIfCancellationRequested();
+		}
+
+		cancellation.ThrowIfCancellationRequested();
+		await FinalizeAsync(state, encoder, cancellation);
+	}
 }

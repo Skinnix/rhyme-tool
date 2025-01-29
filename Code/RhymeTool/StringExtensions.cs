@@ -78,4 +78,14 @@ public static class StringExtensions
 
 		return char.ToLowerInvariant(s[0]) + s[1..];
 	}
+
+	public static string ToUpperFirst(this string s)
+	{
+		if (s.Length == 0)
+			return s;
+		else if (s.Length == 1)
+			return char.ToUpperInvariant(s[0]).ToString();
+
+		return char.ToUpperInvariant(s[0]) + s[1..];
+	}
 }

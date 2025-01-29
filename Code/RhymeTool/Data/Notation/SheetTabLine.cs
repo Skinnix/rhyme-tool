@@ -41,8 +41,8 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 			if (value == barLength)
 				return;
 
-			if (value < 1)
-				throw new ArgumentOutOfRangeException(nameof(BarLength), "Mindestens eine Note pro Takt erforderlich");
+			if (value < 0)
+				throw new ArgumentOutOfRangeException(nameof(BarLength), "Keine negativen Taktlängen möglich");
 
 			Set(ref barLength, value);
 		}
@@ -122,11 +122,11 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 
 	private IEnumerable<SheetDisplayLine> CreateDisplayLinesCore(ISheetBuilderFormatter? formatter)
 	{
-		var bars = (Components.Count + BarLength) / BarLength;
+		var bars = BarLength == 0 ? 1 : (Components.Count + BarLength) / BarLength;
 		if (bars < 1)
 			bars = 1;
 		var builder = new Builder(Lines, formatter, barLineEditIndexes = new());
-		var totalNotes = bars * BarLength;
+		var totalNotes = BarLength == 0 ? Components.Count : bars * BarLength;
 		indexBounds = new(totalNotes + 1);
 
 		//Stimmung
@@ -166,7 +166,7 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 			index++;
 
 			//Neuer Takt?
-			if (currentBarLength >= BarLength)
+			if (BarLength != 0 && currentBarLength >= BarLength)
 			{
 				builder.AddBarLine();
 				currentBarLength = 1;
@@ -219,7 +219,7 @@ public class SheetTabLine : SheetLine, ISelectableSheetLine
 		}
 
 		//Mache den aktuellen Takt voll
-		while (currentBarLength < BarLength)
+		while (BarLength != 0 && currentBarLength < BarLength)
 		{
 			index++;
 			var renderOffset = builder.Builders[0].CurrentLength;

@@ -3,6 +3,7 @@ using System.Buffers;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Metrics;
 using System.Linq;
 using System.Net.Mail;
@@ -20,6 +21,9 @@ namespace Skinnix.RhymeTool.Data.Notation;
 
 public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 {
+	public const char TITLE_START_DELIMITER = '#';
+	public const char TITLE_END_DELIMITER = '#';
+
 	public static SheetLineType LineType { get; } = SheetLineType.Create<SheetVarietyLine>("Text");
 
 	public event EventHandler? IsTitleLineChanged;
@@ -65,6 +69,8 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 
 		return [SheetLineConversion.Simple<SheetTabLine>.Instance];
 	}
+
+	public IEnumerable<Component> GetComponents() => components;
 
 	#region Display
 	public override IEnumerable<SheetDisplayLine> CreateDisplayLines(SheetLineContext context, ISheetBuilderFormatter? formatter = null)
@@ -147,15 +153,16 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 	#endregion
 
 	#region Title
-	public bool IsTitleLine(out string? title)
+	public bool IsTitleLine([NotNullWhen(true)] out string? title)
 		=> CheckTitleLine(out title, out _, out _);
 
-	private bool CheckTitleLine(out string? title, out IReadOnlyList<VarietyComponent> titleComponents, out int afterTitleIndex)
+	private bool CheckTitleLine([NotNullWhen(true)] out string? title, out IReadOnlyList<VarietyComponent> titleComponents, out int afterTitleIndex)
 	{
 		//Alles, was von Klammern umschlossen ist und keine Attachments hat, ist es ein Titel
 		var titleBuilder = new StringBuilder();
 		var titleComponentsList = new List<VarietyComponent>();
 		titleComponents = titleComponentsList;
+		afterTitleIndex = 0;
 		var i = -1;
 		foreach (var component in components)
 		{
@@ -169,8 +176,8 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 				return false;
 			}
 
-			//Erste Komponente muss mit öffnender Klammer beginnen
-			if (i == 0 && !variety.Content.Text.StartsWith('['))
+			//Erste Komponente muss mit delimiter beginnen
+			if (i == 0 && !variety.Content.Text.StartsWith(TITLE_START_DELIMITER))
 			{
 				title = null;
 				afterTitleIndex = 0;
@@ -180,7 +187,7 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 			//Baue den Titel zusammen
 			titleBuilder.Append(variety.Content.Text);
 			titleComponentsList.Add(variety);
-			if (variety.Content.Text.EndsWith(']'))
+			if (variety.Content.Text.EndsWith(TITLE_END_DELIMITER))
 			{
 				//Titel gefunden
 				title = titleBuilder.ToString(1, titleBuilder.Length - 2);
@@ -189,9 +196,15 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 			}
 		}
 
-		title = null;
-		afterTitleIndex = 0;
-		return false;
+		if (titleBuilder.Length == 0)
+		{
+			title = null;
+			return false;
+		}
+
+		title = titleBuilder.ToString();
+		afterTitleIndex = i;
+		return true;
 	}
 	#endregion
 
@@ -2409,11 +2422,11 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 			var contentOffset = element.Slice?.ContentOffset ?? ContentOffset.Zero;
 			if (!isCurrentlyWritingTitle)
 			{
-				if (!text.StartsWith('['))
+				if (!text.StartsWith(TITLE_START_DELIMITER))
 					yield break; //nur Text
 				
 				//Trenne öffnende Klammer
-				yield return new SheetDisplayLineSegmentTitleBracket("[", true)
+				yield return new SheetDisplayLineSegmentTitleBracket(TITLE_START_DELIMITER.ToString(), true)
 				{
 					Slice = textElement.Slice,
 				};
@@ -2427,7 +2440,7 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 			}
 
 			//Ist die Komponente auch das Ende des Titels?
-			if (text.EndsWith(']'))
+			if (text.EndsWith(TITLE_END_DELIMITER))
 			{
 				//Trenne den Text
 				var titleText = text[..^1];
@@ -2441,7 +2454,7 @@ public class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetTitleLine
 				contentOffset += new ContentOffset(titleText.Length);
 
 				//Trenne schließende Klammer
-				yield return new SheetDisplayLineSegmentTitleBracket("]", false)
+				yield return new SheetDisplayLineSegmentTitleBracket(TITLE_END_DELIMITER.ToString(), false)
 				{
 					Slice = textElement.Slice!.Value with
 					{
