@@ -1,0 +1,3 @@
+[submodule "Dependencies/Konves.ChordPro"]
+	path = Dependencies/Konves.ChordPro
+	url = https://github.com/Skinnix/Konves.ChordPro.git
