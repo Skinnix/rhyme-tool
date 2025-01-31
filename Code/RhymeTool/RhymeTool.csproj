@@ -11,8 +11,12 @@
 	<Import Project="..\Common.targets" />
 
 	<PropertyGroup>
-		<OutputPath>..\..\Build\$(Configuration)\</OutputPath>
+		<OutputPath>..\..\Build\$(Configuration)\$(AssemblyName)</OutputPath>
 	</PropertyGroup>
+
+	<ItemGroup>
+	  <ProjectReference Include="..\..\Dependencies\Konves.ChordPro\src\Konves.ChordPro\Konves.ChordPro.csproj" />
+	</ItemGroup>
 
 	<ItemGroup>
 	  <PackageReference Include="WeCantSpell.Hunspell" Version="5.2.1" />

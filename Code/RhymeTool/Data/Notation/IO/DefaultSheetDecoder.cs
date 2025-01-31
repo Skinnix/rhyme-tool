@@ -4,12 +4,12 @@ using System.Xml.Linq;
 
 namespace Skinnix.RhymeTool.Data.Notation.IO;
 
-public class DefaultSheetDecoder(ISheetEditorFormatter? formatter = null) : SheetDecoderBase(formatter ?? DefaultReaderFormatter.Instance)
+public class DefaultSheetDecoder(ISheetEditorFormatter? formatter = null) : SheetDecoderBase<string>(formatter ?? DefaultReaderFormatter.Instance)
 {
 	private readonly List<SheetLine> lines = new();
 
 	private List<ContentInLine>? lastAttachmentLine = null;
-	private List<(Note? Tuning, Queue<TabLineElement> Elements)>? currentTab = null;
+	private List<(Note? Tuning, Queue<SheetDecoderHelper.TabLineElement> Elements)>? currentTab = null;
 
 	public DefaultSheetDecoder() : this(null) { }
 
@@ -31,7 +31,7 @@ public class DefaultSheetDecoder(ISheetEditorFormatter? formatter = null) : Shee
 			if (currentTab is not null)
 			{
 				//Finalisiere die Tabulaturzeile
-				var tabLine = CreateTabLine(currentTab);
+				var tabLine = SheetDecoderHelper.CreateTabLine(currentTab);
 				lines.Add(tabLine);
 				currentTab = null;
 			}
@@ -42,7 +42,8 @@ public class DefaultSheetDecoder(ISheetEditorFormatter? formatter = null) : Shee
 		}
 
 		//Ist die Zeile eine Tabulaturzeile?
-		if (TryParseTabLine(line))
+		var tabLineRead = SheetDecoderHelper.TryParseTabLine(line, Formatter);
+		if (tabLineRead is not null)
 		{
 			//Wurde vorher schon eine Akkordzeile gelesen?
 			if (lastAttachmentLine != null)
@@ -52,6 +53,8 @@ public class DefaultSheetDecoder(ISheetEditorFormatter? formatter = null) : Shee
 				lines.Add(newChordLine);
 				lastAttachmentLine = null;
 			}
+
+			(currentTab ??= new()).Add(tabLineRead.Value);
 			return;
 		}
 
@@ -59,7 +62,7 @@ public class DefaultSheetDecoder(ISheetEditorFormatter? formatter = null) : Shee
 		if (currentTab is not null)
 		{
 			//Finalisiere die Tabulaturzeile
-			var tabLine = CreateTabLine(currentTab);
+			var tabLine = SheetDecoderHelper.CreateTabLine(currentTab);
 			lines.Add(tabLine);
 			currentTab = null;
 		}
@@ -105,166 +108,6 @@ public class DefaultSheetDecoder(ISheetEditorFormatter? formatter = null) : Shee
 		var textLine = CreateTextLine(contentLine, lastAttachmentLine);
 		lines.Add(textLine);
 		lastAttachmentLine = null;
-	}
-
-	private SheetTabLine CreateTabLine(IReadOnlyList<(Note? Tuning, Queue<TabLineElement> Elements)> lines)
-	{
-		//Erzeuge die Tabulaturzeile
-		var tabLine = new SheetTabLine(lines.Select((l, i) => l.Tuning ?? i switch
-		{
-			0 => Note.E,
-			1 => Note.A,
-			2 => Note.D,
-			3 => Note.G,
-			4 => Note.B,
-			_ => Note.E
-		}));
-
-		//Lies alle Zeilen gleichzeitig von links nach rechts
-		var currentBarLength = 0;
-		var currentIndex = 0;
-		while (lines.All(l => l.Elements.Count > 0))
-		{
-			//Lies die jeweils ersten Elemente
-			var elements = lines.Select(l => l.Elements.Dequeue()).ToArray();
-
-			//Sind die Elemente unterschiedlich breit?
-			var maxWidth = elements.Max(e => e.Width);
-			var checkMaxWidthAgain = false;
-			if (maxWidth > 1)
-				maxWidth = ExtendToWidthWhileNecessary(lines, elements, maxWidth);
-
-			//Enthält die nächste Spalte (nicht nur) Leerzeichen?
-			while (lines.Count(l => l.Elements.TryPeek(out var next) && next.Type == TabLineElementType.Space) is int spaceLines
-				&& spaceLines > 0 && spaceLines < lines.Count)
-			{
-				//Erweitere alle Elemente um die nächste Spalte
-				var i = 0;
-				maxWidth = 0;
-				foreach (var line in lines)
-				{
-					if (line.Elements.TryDequeue(out var next))
-						elements[i] = elements[i].Append(next);
-					var width = elements[i].Width;
-					if (width > maxWidth)
-						maxWidth = width;
-					i++;
-				}
-
-				maxWidth = ExtendToWidthWhileNecessary(lines, elements, maxWidth);
-			}
-
-			//Sind alle Elemente Leerzeichen?
-			while (lines.Any(l => l.Elements.Count != 0) && elements.All(e => e.Type == TabLineElementType.Space))
-			{
-				//Erweitere sie alle um das jeweils nächste Element, bis wieder nur Leerzeichen gelesen wurden
-				bool onlySpaces;
-				do
-				{
-					onlySpaces = true;
-					elements = elements
-						.Zip(lines)
-						.Select(p =>
-						{
-							if (!p.Second.Elements.TryDequeue(out var next))
-								return p.First;
-
-							//Taktstriche gehen auch, müssen aber dann wieder hinzugefügt werden, um den Takt zu zählen
-							if (next.Type == TabLineElementType.BarLine)
-								p.Second.Elements.Enqueue(next);
-							else if (next.Type != TabLineElementType.Space)
-								onlySpaces = false;
-
-							return p.First.Append(next);
-						})
-						.ToArray();
-					checkMaxWidthAgain = true;
-				}
-				while (!onlySpaces);
-			}
-
-			//Sind immer noch alle Elemente Leerzeichen (und damit die Queues leer)?
-			if (elements.All(e => e.Type == TabLineElementType.Space))
-				break;
-
-			//Muss die Breite nochmal geprüft werden?
-			if (checkMaxWidthAgain)
-			{
-				//Sind die Elemente unterschiedlich breit?
-				maxWidth = ExtendToWidthWhileNecessary(lines, elements, elements.Max(e => e.Width));
-			}
-
-			//Ist ein Element ein Taktstrich?
-			if (elements.Any(e => e.Type == TabLineElementType.BarLine))
-			{
-				//(Alle Elemente müssen Taktstriche sein)
-				/*var errorIndex = Array.FindIndex(elements, e => (e.Type == TabLineElementType.BarLine) != (elements[0].Type == TabLineElementType.BarLine));
-				if (errorIndex >= 0)
-				{
-					//Lies die gültigen und ungültigen Zeilen separat
-					var validElements = lines.Take(errorIndex).ToList();
-					var invalidElements = lines.Skip(errorIndex).ToList();
-					return CreateTabLines(validElements).Concat(CreateTabLines(invalidElements));
-				}*/
-
-				//Lege die Taktlänge fest und beginne einen neuen Takt
-				tabLine.BarLength = currentBarLength;
-				currentBarLength = 0;
-				continue;
-			}
-
-			//Erzeuge die Komponente
-			if (elements.Any(e => e.Note?.IsEmpty == false))
-			{
-				var component = new SheetTabLine.Component(elements.Select(e => e.Note ?? TabNote.Empty));
-				tabLine.Components[currentIndex] = component;
-			}
-
-			//Erhöhe den Index und die Taktlänge
-			currentIndex++;
-			currentBarLength++;
-		}
-
-		return tabLine;
-
-		static int ExtendToWidthWhileNecessary(IReadOnlyList<(Note? Tuning, Queue<TabLineElement> Elements)> lines, TabLineElement[] elements, int maxWidth)
-		{
-			var checkMaxWidthAgain = ExtendToWidth(lines, elements, maxWidth);
-			while (checkMaxWidthAgain)
-			{
-				maxWidth = elements.Max(e => e.Width);
-				checkMaxWidthAgain = ExtendToWidth(lines, elements, maxWidth);
-			}
-			return maxWidth;
-		}
-
-		static bool ExtendToWidth(IReadOnlyList<(Note? Tuning, Queue<TabLineElement> Elements)> lines, TabLineElement[] elements, int maxWidth)
-		{
-			var extended = false;
-			if (maxWidth > 1)
-			{
-				//Erweitere alle Elemente um die nächste Spalte
-				var i = 0;
-				foreach (var line in lines)
-				{
-					//Ist das Element zu schmal?
-					var element = elements[i];
-					while (element.Width < maxWidth)
-					{
-						//Hole das nächste Element
-						if (!line.Elements.TryDequeue(out var nextElement))
-							break;
-
-						//Füge es hinzu
-						element = element.Append(nextElement);
-						extended = true;
-					}
-					elements[i++] = element;
-				}
-			}
-
-			return extended;
-		}
 	}
 
 	private SheetVarietyLine CreateChordLine(IEnumerable<ContentInLine> chords)
@@ -345,59 +188,6 @@ public class DefaultSheetDecoder(ISheetEditorFormatter? formatter = null) : Shee
 		return new SheetVarietyLine(components);
 	}
 
-	private bool TryParseTabLine(ReadOnlySpan<char> line)
-	{
-		//Beginnt die Zeile mit dem Tuning?
-		var length = Formatter.TryReadNote(line, out var tuning);
-
-		//Lies ggf. Leerzeichen und dann einen Taktstrich
-		var offset = length;
-		while (offset < line.Length && line[offset] == ' ')
-			offset++;
-		if (offset >= line.Length || line[offset] != '|')
-			return false;
-
-		//Gibt es schon eine aktuelle Tabulaturzeile?
-		var elements = new Queue<TabLineElement>();
-		if (currentTab is null)
-			currentTab = new();
-
-		//Füge die Liste und das Tuning hinzu
-		currentTab.Add((length <= 0 ? null : tuning, elements));
-
-		//Lese Elemente
-		for (offset++; offset < line.Length; offset++)
-		{
-			switch (line[offset])
-			{
-				case ' ':
-					elements.Enqueue(TabLineElement.Space);
-					continue;
-				case '|':
-					elements.Enqueue(TabLineElement.BarLine);
-					continue;
-			}
-
-			//Lies Note und Modifikatoren
-			var noteLength = Formatter.TryReadTabNote(line[offset..], out var note, 1);
-			if (noteLength <= 0)
-			{
-				//Keine TabLine
-				currentTab.RemoveAt(currentTab.Count - 1);
-				if (currentTab.Count == 0)
-					currentTab = null;
-				return false;
-			}
-
-			//Füge Note hinzu
-			elements.Enqueue(new(TabLineElementType.Note, noteLength, note));
-			offset += noteLength - 1;
-		}
-
-		//Erfolgreich gelesen
-		return true;
-	}
-
 	private List<ContentInLine> TryParseLine(ReadOnlySpan<char> line, out bool canBeChordOnlyLine, out bool canBeAttachmentLine)
 	{
 		var contents = new List<ContentInLine>();
@@ -464,13 +254,13 @@ public class DefaultSheetDecoder(ISheetEditorFormatter? formatter = null) : Shee
 		return contents;
 	}
 
-	public override IEnumerable<SheetLine> Finalize()
+	public override SheetDocument Finalize()
 	{
 		//Gibt es noch eine Tabulaturzeile am Ende?
 		if (currentTab is not null)
 		{
 			//Finalisiere die Tabulaturzeile
-			var tabLine = CreateTabLine(currentTab);
+			var tabLine = SheetDecoderHelper.CreateTabLine(currentTab);
 			lines.Add(tabLine);
 			currentTab = null;
 		}
@@ -483,48 +273,11 @@ public class DefaultSheetDecoder(ISheetEditorFormatter? formatter = null) : Shee
 			lines.Add(newChordLine);
 		}
 
-		//Gebe die Zeilen zurück
-		return lines;
+		//Erzeuge das Dokument
+		return new(lines);
 	}
 
 	private readonly record struct ContentInLine(SheetVarietyLine.ComponentContent Content, string OriginalContent, ContentOffset Offset, ContentOffset Length);
-
-	private enum TabLineElementType
-	{
-		Space,
-		BarLine,
-		Note,
-	}
-
-	private readonly record struct TabLineElement(TabLineElementType Type, int Width, TabNote? Note)
-	{
-		public static TabLineElement Space { get; } = new(TabLineElementType.Space, 1, null);
-		public static TabLineElement Empty { get; } = new(TabLineElementType.Note, 1, TabNote.Empty);
-		public static TabLineElement BarLine { get; } = new(TabLineElementType.BarLine, 1, null);
-
-		public TabLineElement Append(TabLineElement next)
-		{
-			if (Type == TabLineElementType.Space)
-				return next with { Width = Width + next.Width };
-
-			if (next.Type == TabLineElementType.Space)
-				return this with { Width = Width + next.Width };
-
-			if (Note?.IsEmpty == true)
-				return next with { Width = Width + next.Width };
-
-			if (next.Note?.IsEmpty == true)
-				return this with { Width = Width + next.Width };
-
-			if (Note is not null && next.Note is not null)
-				return new TabLineElement(
-					TabLineElementType.Note,
-					Width + next.Width,
-					new TabNote(((Note.Value.Value * 10) ?? 0) + (next.Note.Value.Value ?? 0), Note.Value.Modifier | next.Note.Value.Modifier));
-
-			return this with { Width = Width + next.Width };
-		}
-	}
 
 	public record DefaultReaderFormatter : DefaultSheetFormatter
 	{

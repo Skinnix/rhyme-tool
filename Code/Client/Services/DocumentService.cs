@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Skinnix.RhymeTool.Client.IO;
 using Skinnix.RhymeTool.Client.Services.Files;
 using Skinnix.RhymeTool.Data.Notation;
 using Skinnix.RhymeTool.Data.Notation.IO;
@@ -64,9 +65,8 @@ internal class DefaultDocumentService : IDocumentService
 			//	return document;
 
 			using (var stream = await file.ReadAsync(cancellation))
-			using (var reader = new StreamReader(stream))
 			{
-				var document = await SheetDecoderReader.Default.ReadSheetAsync(reader, cancellation);
+				var document = await SheetDocumentReader.ReadSheetAsync(stream, cancellation: cancellation);
 				document.Label = file.Name;
 				return document;
 			}
@@ -77,10 +77,7 @@ internal class DefaultDocumentService : IDocumentService
 			cancellation.ThrowIfCancellationRequested();
 			await file.WriteAsync(async stream =>
 			{
-				using (var writer = new StreamWriter(stream))
-				{
-					await SheetEncoderWriter.Default.WriteSheetAsync(writer, document, cancellation);
-				}
+				await SheetEncoderWriter.Default.WriteSheetAsync(stream, document, cancellation: cancellation);
 			}, cancellation);
 
 			//this.document = document;
