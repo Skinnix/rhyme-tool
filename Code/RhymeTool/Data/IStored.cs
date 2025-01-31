@@ -8,5 +8,5 @@ namespace Skinnix.RhymeTool.Data;
 
 public interface IStored<T>
 {
-	T Recreate();
+	T Restore();
 }

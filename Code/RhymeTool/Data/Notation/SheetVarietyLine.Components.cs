@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Metadata;
 using System.Text;
 using System.Threading.Tasks;
 using Skinnix.RhymeTool.Data.Notation.Display;
@@ -219,6 +220,8 @@ partial class SheetVarietyLine
 		internal abstract MergeResult? TryMerge(Component next, ContentOffset offset, ISheetEditorFormatter? formatter);
 		internal abstract Component SplitEnd(ContentOffset offset, ISheetEditorFormatter? formatter);
 
+		public abstract Stored Store();
+
 		internal class LineBuilders
 		{
 			private int breakPointIndex;
@@ -270,6 +273,35 @@ partial class SheetVarietyLine
 					});
 			}
 		}
+
+		public readonly struct Stored : IStored<Component>
+		{
+			private readonly ComponentContent content;
+			private readonly VarietyComponent.Attachment.Stored[] attachments;
+
+			internal Stored(ComponentContent content, VarietyComponent.Attachment.Stored[] attachments)
+			{
+				this.content = content;
+				this.attachments = attachments;
+			}
+
+			internal Stored(ComponentContent content, IReadOnlyCollection<VarietyComponent.Attachment> attachments)
+			{
+				this.content = content;
+
+				this.attachments = new VarietyComponent.Attachment.Stored[attachments.Count];
+				var i = 0;
+				foreach (var attachment in attachments)
+					this.attachments[i++] = attachment.Store();
+			}
+
+			public Component Restore()
+			{
+				var component = new VarietyComponent(content);
+				component.AddAttachments(attachments.Select(a => a.Restore()));
+				return component;
+			}
+		}
 	}
 
 	public sealed class VarietyComponent : Component
@@ -311,6 +343,8 @@ partial class SheetVarietyLine
 		public static VarietyComponent CreateSpace(ContentOffset length, ISheetEditorFormatter? formatter)
 			=> new VarietyComponent(ComponentContent.CreateSpace(length, formatter));
 
+		public override Stored Store() => new(Content, attachments);
+
 		#region Display
 		internal override void BuildLines(LineBuilders builders, int componentIndex, ISheetBuilderFormatter? formatter)
 		{
@@ -331,12 +365,11 @@ partial class SheetVarietyLine
 				//Die Komponente hat keine Attachments
 
 				//Ist die Komponente nur ein einzelnes Satzzeichen und war die vorherige Komponente ein Wort?
-				if (Content.Type == ContentType.Punctuation && Content.Text is not null
-					&& builders.TextLine.CurrentLength == builders.TextLine.CurrentNonSpaceLength)
+				if (Content.Type == ContentType.Punctuation && builders.TextLine.CurrentLength == builders.TextLine.CurrentNonSpaceLength)
 				{
 					//Schreibe nur das Satzzeichen
 					var textStartLength = builders.TextLine.CurrentLength;
-					var displayText = new SheetDisplayLineText(Content.Text)
+					var displayText = new SheetDisplayLineText((string)Content.Content.Value!)
 					{
 						Slice = new SheetDisplaySliceInfo(this, ContentOffset.Zero)
 					};
@@ -608,6 +641,8 @@ partial class SheetVarietyLine
 			}
 
 			private static void SetRenderBounds(RenderBounds _) { }
+
+			public override Stored Store() => throw new NotSupportedException();
 		}
 		#endregion
 
@@ -615,11 +650,14 @@ partial class SheetVarietyLine
 		internal override bool TryReplaceContent(ComponentContent newContent, ISheetEditorFormatter? formatter)
 		{
 			//Passt der Inhaltstyp nicht?
-			if (newContent.Chord is not null && Owner?.GetAllowedTypes(this).HasFlag(SpecialContentType.Chord) != true)
-				return false;
-			if (newContent.Fingering is not null && Owner?.GetAllowedTypes(this).HasFlag(SpecialContentType.Fingering) != true)
-				return false;
 			if (newContent.Type != Content.Type)
+				return false;
+
+			if (newContent.Content.Switch(
+				_ => true,
+				_ => Owner?.GetAllowedTypes(this).HasFlag(SpecialContentType.Chord),
+				_ => Owner?.GetAllowedTypes(this).HasFlag(SpecialContentType.Fingering),
+				_ => Owner?.GetAllowedTypes(this).HasFlag(SpecialContentType.Rhythm)) != true)
 				return false;
 
 			//Ersetze den Inhalt
@@ -862,17 +900,6 @@ partial class SheetVarietyLine
 
 			return true;
 		}
-
-		//=> left switch
-		//{
-		//	{ Type: ContentType.Word } when total is { Type: ContentType.Fingering } => true,
-		//	{ Type: ContentType.Word } => right is { Type: ContentType.Word or ContentType.Chord },
-		//	{ Type: ContentType.Chord } => right is { Type: ContentType.Word or ContentType.Chord },
-		//	{ Type: ContentType.Space } => right is { Type: ContentType.Space },
-		//	{ Type: ContentType.Punctuation } => right is { Type: ContentType.Punctuation },
-		//	{ Type: ContentType.Fingering } => right is { Type: ContentType.Word or ContentType.Chord or ContentType.Punctuation or ContentType.Fingering },
-		//	_ => false,
-		//};
 		#endregion
 
 		#region Operators
@@ -905,6 +932,23 @@ partial class SheetVarietyLine
 			}
 
 			internal abstract SheetDisplayLineElement? CreateDisplayAttachment(out Action<RenderBounds> setRenderBounds, ISheetFormatter? formatter);
+
+			public abstract Stored Store();
+
+			public readonly struct Stored : IStored<Attachment>
+			{
+				private readonly ContentOffset offset;
+				private readonly ComponentContent content;
+
+				internal Stored(ContentOffset offset, ComponentContent content)
+				{
+					this.offset = offset;
+					this.content = content;
+				}
+
+				public Attachment Restore()
+					=> new VarietyAttachment(offset, content);
+			}
 		}
 
 		public sealed class VarietyAttachment : Attachment
@@ -946,6 +990,8 @@ partial class SheetVarietyLine
 
 			private void SetRenderBounds(RenderBounds bounds)
 				=> RenderBounds = bounds;
+
+			public override Stored Store() => new(Offset, Content);
 
 			#region Editing
 			internal Action? TryRemoveContent(ContentOffset offset, ContentOffset length, ISheetEditorFormatter? formatter)
@@ -993,13 +1039,33 @@ partial class SheetVarietyLine
 		}
 	}
 
-	//private readonly record struct StoredVarietyComponent()
-	//{
-		
+	public readonly struct Stored : IStored<SheetVarietyLine>
+	{
+		private readonly Guid guid;
+		private readonly Component.Stored[] components;
 
-	//	public Component CreateComponent()
-	//	{
+		internal Stored(Guid guid, Component.Stored[] components)
+		{
+			this.guid = guid;
+			this.components = components;
+		}
 
-	//	}
-	//}
+		internal Stored(Guid guid, IReadOnlyCollection<Component> components)
+		{
+			this.guid = guid;
+
+			this.components = new Component.Stored[components.Count];
+			var i = 0;
+			foreach (var component in components)
+				this.components[i++] = component.Store();
+		}
+
+		public SheetVarietyLine Restore()
+		{
+			return new SheetVarietyLine(components.Select(c => c.Restore()))
+			{
+				Guid = guid,
+			};
+		}
+	}
 }

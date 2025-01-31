@@ -15,12 +15,6 @@
     {
         "Entry"
         {
-        "MsmKey" = "8:_ED424F8B6F614FA6A7F19135511C2C38"
-        "OwnerKey" = "8:_UNDEFINED"
-        "MsmSig" = "8:_UNDEFINED"
-        }
-        "Entry"
-        {
         "MsmKey" = "8:_F63E8423C4A443ABA356D833E00B4BF3"
         "OwnerKey" = "8:_UNDEFINED"
         "MsmSig" = "8:_UNDEFINED"
@@ -43,6 +37,14 @@
         "PrivateKeyFile" = "8:"
         "TimeStampServer" = "8:"
         "InstallerBootstrapper" = "3:2"
+            "BootstrapperCfg:{63ACBE69-63AA-4F98-B2B6-99F9E24495F2}"
+            {
+            "Enabled" = "11:TRUE"
+            "PromptEnabled" = "11:TRUE"
+            "PrerequisitesLocation" = "2:1"
+            "Url" = "8:"
+            "ComponentsUrl" = "8:"
+            }
         }
         "Release"
         {
@@ -174,7 +176,7 @@
         "Name" = "8:Microsoft Visual Studio"
         "ProductName" = "8:RhymeTool"
         "ProductCode" = "8:{A85FD546-0C4D-4900-AA49-2BFCBAA29B82}"
-        "PackageCode" = "8:{F8C4FA08-82EF-4CED-A562-D9D724A54612}"
+        "PackageCode" = "8:{2CB3355E-01FE-4796-BF04-B1B54B4CFFB8}"
         "UpgradeCode" = "8:{F3853DD0-2F1E-4381-A5EC-7853A6DC87A1}"
         "AspNetVersion" = "8:4.0.30319.0"
         "RestartWWWService" = "11:FALSE"
@@ -294,7 +296,7 @@
         }
         "Shortcut"
         {
-            "{970C0BB2-C7D0-45D7-ABFA-7EC378858BC0}:_4738F8A61FE4455D9F92239E5831D094"
+            "{970C0BB2-C7D0-45D7-ABFA-7EC378858BC0}:_C5CD639F5DF9406B91EE3E47176B71C8"
             {
             "Name" = "8:RhymeTool"
             "Arguments" = "8:"
@@ -302,7 +304,7 @@
             "ShowCmd" = "3:1"
             "IconIndex" = "3:0"
             "Transitive" = "11:FALSE"
-            "Target" = "8:_ED424F8B6F614FA6A7F19135511C2C38"
+            "Target" = "8:_F63E8423C4A443ABA356D833E00B4BF3"
             "Folder" = "8:_DE6386AAA9AE40FE991256C2815DBC98"
             "WorkingFolder" = "8:_D7F6BD8CE68D46F09447F3D0284B2C16"
             "Icon" = "8:"
@@ -757,34 +759,6 @@
             "ProjectOutputGroupRegister" = "3:1"
             "OutputConfiguration" = "8:"
             "OutputGroupCanonicalName" = "8:IncludeSDKRedistOutputGroup"
-            "OutputProjectGuid" = "8:{538103CD-B1D3-4202-8E82-83320A857D67}"
-            "ShowKeyOutput" = "11:TRUE"
-                "ExcludeFilters"
-                {
-                }
-            }
-            "{5259A561-127C-4D43-A0A1-72F10C7B3BF8}:_ED424F8B6F614FA6A7F19135511C2C38"
-            {
-            "SourcePath" = "8:..\\App\\obj\\Release\\net9.0-windows10.0.19041.0\\win10-x64\\Skinnix.RhymeTool.MauiBlazor.dll"
-            "TargetName" = "8:"
-            "Tag" = "8:"
-            "Folder" = "8:_D7F6BD8CE68D46F09447F3D0284B2C16"
-            "Condition" = "8:"
-            "Transitive" = "11:FALSE"
-            "Vital" = "11:TRUE"
-            "ReadOnly" = "11:FALSE"
-            "Hidden" = "11:FALSE"
-            "System" = "11:FALSE"
-            "Permanent" = "11:FALSE"
-            "SharedLegacy" = "11:FALSE"
-            "PackageAs" = "3:1"
-            "Register" = "3:1"
-            "Exclude" = "11:FALSE"
-            "IsDependency" = "11:FALSE"
-            "IsolateTo" = "8:"
-            "ProjectOutputGroupRegister" = "3:1"
-            "OutputConfiguration" = "8:"
-            "OutputGroupCanonicalName" = "8:Built"
             "OutputProjectGuid" = "8:{538103CD-B1D3-4202-8E82-83320A857D67}"
             "ShowKeyOutput" = "11:TRUE"
                 "ExcludeFilters"

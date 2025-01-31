@@ -22,20 +22,21 @@ set assemblyVersion=%assemblyVersion: =%
 echo Assembly-Version: %assemblyVersion%
 echo.
 
-rmdir /Q /S ..\Build\Publish\wwwroot\
+if exist ..\Build\Publish\wwwroot\ rmdir /Q /S ..\Build\Publish\wwwroot\
 
 dotnet restore ClientWeb\RhymeTool.Client.Web.csproj
 dotnet publish ClientWeb\RhymeTool.Client.Web.csproj -c Release -o ..\Build\Publish\
 
 dotnet restore App\RhymeTool.MauiBlazor.csproj
 dotnet publish App\RhymeTool.MauiBlazor.csproj -c Release -f net9.0-android
-dotnet publish App\RhymeTool.MauiBlazor.csproj -c Release -f net9.0-windows10.0.19041.0
+dotnet build App\RhymeTool.MauiBlazor.csproj -c Release -f net9.0-windows10.0.19041.0
 
 :pack
 mkdir ..\Build\Publish\wwwroot\update\version\%assemblyVersion%
 copy /B /Y ..\Build\Release\net9.0-android\Net.Skinnix.RhymeTool.MauiBlazor-Signed.apk ..\Build\Publish\wwwroot\update\version\%assemblyVersion%\app.apk
 if exist ..\Build\Publish\wwwroot\update\version\%assemblyVersion%\app.zip del ..\Build\Publish\wwwroot\update\version\%assemblyVersion%\app.zip
-tar -a -c -f ..\Build\Publish\wwwroot\update\version\%assemblyVersion%\app.zip -C ..\Build\Release\net9.0-windows10.0.19041.0\win10-x64 *
+::tar -a -c -f ..\Build\Publish\wwwroot\update\version\%assemblyVersion%\app.zip -C ..\Build\Release\Skinnix.RhymeTool.MauiBlazor\net9.0-windows10.0.19041.0\win10-x64 *
+copy /B /Y ..\Code\AppSetup\Release\AppSetup.msi ..\Build\Publish\wwwroot\update\version\%assemblyVersion%\app.msi
 
 echo [Platform:windows]>> ..\Build\Publish\wwwroot\update\check
 echo Label=Windows>> ..\Build\Publish\wwwroot\update\check

@@ -16,6 +16,7 @@ using System.Threading.Tasks;
 using Skinnix.RhymeTool.ComponentModel;
 using Skinnix.RhymeTool.Data.Notation.Display;
 using Skinnix.RhymeTool.Data.Notation.Display.Caching;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Skinnix.RhymeTool.Data.Notation;
 
@@ -169,7 +170,7 @@ public partial class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetT
 			i++;
 
 			//Ist die Komponente keine VarietyComponent, kein Text oder hat Attachments?
-			if (component is not VarietyComponent variety || variety.Content.Text is null || variety.Attachments.Count != 0)
+			if (component is not VarietyComponent variety || !variety.Content.Content.Is<string>(out var text) || variety.Attachments.Count != 0)
 			{
 				title = null;
 				afterTitleIndex = 0;
@@ -177,7 +178,7 @@ public partial class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetT
 			}
 
 			//Erste Komponente muss mit delimiter beginnen
-			if (i == 0 && !variety.Content.Text.StartsWith(TITLE_START_DELIMITER))
+			if (i == 0 && !text.StartsWith(TITLE_START_DELIMITER))
 			{
 				title = null;
 				afterTitleIndex = 0;
@@ -185,9 +186,9 @@ public partial class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetT
 			}
 
 			//Baue den Titel zusammen
-			titleBuilder.Append(variety.Content.Text);
+			titleBuilder.Append(text);
 			titleComponentsList.Add(variety);
-			if (variety.Content.Text.EndsWith(TITLE_END_DELIMITER))
+			if (text.EndsWith(TITLE_END_DELIMITER))
 			{
 				//Titel gefunden
 				title = titleBuilder.ToString(1, titleBuilder.Length - 2);
@@ -240,38 +241,34 @@ public partial class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetT
 	{
 		public const string PUNCTUATION = ",.-><!?\"";
 
-		public string? Text { get; }
-		public Chord? Chord { get; }
-		public Fingering? Fingering { get; }
-		public RhythmPattern? Rhythm { get; }
+		public Either<string, Chord, Fingering, RhythmPattern> Content { get; }
 
-		public bool IsEmpty => Type == ContentType.Space && string.IsNullOrEmpty(Text);
+		public bool IsEmpty => Content.Value is null || (Content.Value is string s && string.IsNullOrEmpty(s));
 
-		public ContentType Type => Chord is not null ? ContentType.Chord
-			: Fingering is not null ? ContentType.Fingering
-			: Rhythm is not null ? ContentType.Rhythm
-			: string.IsNullOrWhiteSpace(Text) ? ContentType.Space
-			: Text.All(PUNCTUATION.Contains) ? ContentType.Punctuation
-			: ContentType.Word;
+		public ContentType Type => Content.Switch(
+			s => string.IsNullOrWhiteSpace(s) ? ContentType.Space : s.All(PUNCTUATION.Contains) ? ContentType.Punctuation : ContentType.Word,
+			_ => ContentType.Chord,
+			_ => ContentType.Fingering,
+			_ => ContentType.Rhythm);
 
 		public ComponentContent(string text)
 		{
-			Text = text;
+			Content = text;
 		}
 
 		public ComponentContent(Chord chord)
 		{
-			Chord = chord;
+			Content = chord;
 		}
 
 		public ComponentContent(Fingering fingering)
 		{
-			Fingering = fingering;
+			Content = fingering;
 		}
 
 		public ComponentContent(RhythmPattern rhythm)
 		{
-			Rhythm = rhythm;
+			Content = rhythm;
 		}
 
 		public static ComponentContent FromString(string content, ISheetEditorFormatter? formatter, SpecialContentType allowedTypes = SpecialContentType.All)
@@ -372,34 +369,14 @@ public partial class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetT
 		public static ComponentContent CreateSpace(ContentOffset length, ISheetEditorFormatter? formatter)
 			=> new ComponentContent(new string(' ', length.Value));
 
-		public SheetDisplayLineElement CreateElement(SheetDisplaySliceInfo sliceInfo, ISheetFormatter? formatter)
-		{
-			if (Chord is not null)
-				return new SheetDisplayLineChord(Chord, Chord.Format(formatter))
-				{
-					Slice = sliceInfo
-				};
-			else if (Fingering is not null)
-				return new SheetDisplayLineFingering(Fingering, Fingering.Format(formatter))
-				{
-					Slice = sliceInfo
-				};
-			else if (Rhythm is not null)
-				return new SheetDisplayLineRhythmPattern(Rhythm, Rhythm.Format(formatter))
-				{
-					Slice = sliceInfo
-				};
-			else if (string.IsNullOrWhiteSpace(Text))
-				return new SheetDisplayLineSpace(Text?.Length ?? 0)
-				{
-					Slice = sliceInfo
-				};
-			else
-				return new SheetDisplayLineText(Text ?? string.Empty)
-				{
-					Slice = sliceInfo
-				};
-		}
+		public SheetDisplayLineElement CreateElement(SheetDisplaySliceInfo sliceInfo, ISheetFormatter? formatter) => Content.Switch<SheetDisplayLineElement>(
+			text => string.IsNullOrWhiteSpace(text)
+				? new SheetDisplayLineSpace(text?.Length ?? 0) { Slice = sliceInfo }
+				: new SheetDisplayLineText(text) { Slice = sliceInfo },
+			chord => new SheetDisplayLineChord(chord, chord.Format(formatter)) { Slice = sliceInfo },
+			fingering => new SheetDisplayLineFingering(fingering, fingering.Format(formatter)) { Slice = sliceInfo },
+			rhythm => new SheetDisplayLineRhythmPattern(rhythm, rhythm.Format(formatter)) { Slice = sliceInfo }
+		);
 
 		public SheetDisplayLineElement CreateDisplayElementPart(SheetDisplaySliceInfo sliceId, ContentOffset offset, ContentOffset length, ISheetBuilderFormatter? formatter)
 		{
@@ -468,10 +445,10 @@ public partial class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetT
 			var stringOffset = Math.Min(offset.Value, textContent.Length);
 
 			//Sonderfall: Wird ein Text hinten an einen Akkord angefügt?
-			if (Chord is not null && content.Type is ContentType.Word && stringOffset >= textContent.Length)
+			if (Content.Is<Chord>(out var chord) && content.Type is ContentType.Word && stringOffset >= textContent.Length)
 			{
 				//Verwende den ursprünglichen Text des Akkords
-				textContent = Chord.OriginalText;
+				textContent = chord.OriginalText;
 				stringOffset = textContent.Length;
 			}
 
@@ -507,12 +484,11 @@ public partial class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetT
 
 		#region Operators
 		public override string ToString() => ToString(null);
-		public string ToString(ISheetFormatter? formatter)
-			=> Text
-			?? Chord?.ToString(formatter)
-			?? Fingering?.ToString(formatter)
-			?? Rhythm?.ToString(formatter)
-			?? string.Empty;
+		public string ToString(ISheetFormatter? formatter) => Content.Switch(
+			text => text,
+			chord => chord.ToString(formatter),
+			fingering => fingering.ToString(formatter),
+			rhythm => rhythm.ToString(formatter));
 		#endregion
 	}
 	#endregion

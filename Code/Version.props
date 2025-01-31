@@ -1,7 +1,7 @@
 <Project>
 	<PropertyGroup>
-		<BaseVersion>0.9</BaseVersion>
-		<IntVersion>5</IntVersion>
+		<BaseVersion>0.10</BaseVersion>
+		<IntVersion>6</IntVersion>
 	</PropertyGroup>
 
 	<PropertyGroup>

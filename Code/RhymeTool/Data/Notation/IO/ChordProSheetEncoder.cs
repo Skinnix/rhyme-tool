@@ -58,12 +58,12 @@ public class ChordProSheetEncoder : SheetEncoderBase<ILine>
 						switch (varietyComponent.Content.Type)
 						{
 							case SheetVarietyLine.ContentType.Chord:
-								var chord = new Konves.ChordPro.Chord(varietyComponent.Content.Chord!.ToString(Formatter));
+								var chord = new Konves.ChordPro.Chord(varietyComponent.Content.ToString(Formatter));
 								blocks.Add(chord);
 								break;
 
 							case SheetVarietyLine.ContentType.Space:
-								var spaceText = varietyComponent.Content.Text!;
+								var spaceText = varietyComponent.Content.Content.ToString();
 								var spaceLength = spaceText.Length;
 								if (spaceLength <= 0)
 									break;
