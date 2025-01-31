@@ -43,7 +43,8 @@
 
 	<PropertyGroup>
 		<OutputPath>..\..\Build\$(Configuration)\$(AssemblyName)</OutputPath>
-		<WindowsPackageType Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">None</WindowsPackageType>
+		<!--<WindowsPackageType Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">None</WindowsPackageType>-->
+		<WindowsPackageType>None</WindowsPackageType>
 		<GenerateAppInstallerFile>True</GenerateAppInstallerFile>
 		<AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
 		<PackageCertificateThumbprint>419C7E252C9788FB737EB3AE777C8FA0015E9BA6</PackageCertificateThumbprint>

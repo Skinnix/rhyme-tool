@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using Skinnix.Dictionaries.Rhyming;
 using Skinnix.RhymeTool.Rhyming;
 
 namespace Skinnix.RhymeTool.Client.Rhyming;

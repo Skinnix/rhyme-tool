@@ -16,18 +16,12 @@
 
 	<ItemGroup>
 	  <ProjectReference Include="..\..\Dependencies\Konves.ChordPro\src\Konves.ChordPro\Konves.ChordPro.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <PackageReference Include="WeCantSpell.Hunspell" Version="5.2.1" />
-	</ItemGroup>
-
-	<ItemGroup>
-	  <ProjectReference Include="..\..\Dependencies\HunspellSharp\HunspellSharp.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
 	  <ProjectReference Include="..\Dictionaries\Dictionaries.csproj" />
+	  <!--<ProjectReference Include="..\..\Dependencies\HunspellSharp\HunspellSharp.csproj" />-->
 	</ItemGroup>
+
+	<!--<ItemGroup>
+	  <PackageReference Include="WeCantSpell.Hunspell" Version="5.2.1" />
+	</ItemGroup>-->
 
 </Project>
