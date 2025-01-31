@@ -46,6 +46,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Konves.ChordPro.UnitTests",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RhymeTool.Test", "Test\RhymeTool.Test.csproj", "{5089CF40-7EAE-41F0-98F4-227C9B5A6807}"
 EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "AppSetup", "AppSetup\AppSetup.vdproj", "{83C28C24-4C8E-47BF-B409-B68416F2A1FA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -140,6 +142,9 @@ Global
 		{5089CF40-7EAE-41F0-98F4-227C9B5A6807}.Release|Any CPU.Build.0 = Release|Any CPU
 		{5089CF40-7EAE-41F0-98F4-227C9B5A6807}.Server Side|Any CPU.ActiveCfg = Debug|Any CPU
 		{5089CF40-7EAE-41F0-98F4-227C9B5A6807}.Server Side|Any CPU.Build.0 = Debug|Any CPU
+		{83C28C24-4C8E-47BF-B409-B68416F2A1FA}.Debug|Any CPU.ActiveCfg = Debug
+		{83C28C24-4C8E-47BF-B409-B68416F2A1FA}.Release|Any CPU.ActiveCfg = Release
+		{83C28C24-4C8E-47BF-B409-B68416F2A1FA}.Server Side|Any CPU.ActiveCfg = Debug
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

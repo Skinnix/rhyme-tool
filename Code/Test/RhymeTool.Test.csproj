@@ -12,7 +12,7 @@
 	<Import Project="..\Common.targets" />
 
 	<PropertyGroup>
-		<OutputPath>..\..\Build\$(Configuration)\</OutputPath>
+		<OutputPath>..\..\Build\$(Configuration)\$(AssemblyName)</OutputPath>
 	</PropertyGroup>
 
 	<ItemGroup>
