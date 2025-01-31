@@ -58,8 +58,7 @@ Und läuft auch mal das Leben nicht auf altbekannten Wegen
 So führt uns dieser Pfad doch stets nach vorn,
     Dadd9                              A11
 Und schleudert ihr uns auch die besten Weisungen entgegen,
-    Gadd9               E7
-Ist eure Lebensweisheit doch an uns verlor'n.
+Ist [Gadd9]eure Lebensweisheit [E7]doch an uns verlor'n.
 
 Gadd9                          Dadd9
 Eines Tages geht das Schicksal mit uns ins Gericht,
@@ -73,3 +72,4 @@ denn wir stehen felsenfest - Saite an Saite!
 [Zwischenspiel]
 G5 G6b G6 G6b
 G5 G6b G6 G6b
+dfsfg asdfjasdf asd f
