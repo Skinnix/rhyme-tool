@@ -46,7 +46,8 @@ declare interface LineNodeAnchor {
 	lineNode: Node;
 }
 
-declare type InputType = 'insertText' | 'deleteContentBackward' | 'deleteContentForward' | 'deleteByDrag' | 'insertTextAfterCompose' | 'deleteContentAfterCompose';
+declare type InputType = 'insertText' | 'deleteContentBackward' | 'deleteContentForward' | 'deleteByDrag' | 'insertTextAfterCompose' | 'deleteContentAfterCompose'
+	| 'historyUndo' | 'historyRedo';
 
 declare interface ModificationData {
 	inputType: InputType,
@@ -145,6 +146,7 @@ class ModificationEditor implements Destructible {
 		this.editContext.addEventListener('compositionend', this.handleCompositionEnd.bind(this));
 		this.editor.addEventListener('keydown', this.handleKeyDown.bind(this));
 		this.editor.addEventListener('paste', this.handlePaste.bind(this));
+		this.editor.addEventListener('beforeinput', this.handleBeforeInput.bind(this));
 
 		(this.editor as any).editContext = this.editContext;
 	}
@@ -154,6 +156,7 @@ class ModificationEditor implements Destructible {
 		this.editContext.removeEventListener('compositionend', this.handleCompositionEnd.bind(this));
 		this.editor.removeEventListener('keydown', this.handleKeyDown.bind(this));
 		this.editor.removeEventListener('paste', this.handlePaste.bind(this));
+		this.editor.removeEventListener('beforeinput', this.handleBeforeInput.bind(this));
 	}
 
 	private handleTextUpdate(event: TextUpdateEvent) {
@@ -210,6 +213,20 @@ class ModificationEditor implements Destructible {
 				data: '\n',
 				afterCompose: false,
 			}, currentRange);
+		} else if (event.key == 'z' && event.ctrlKey) {
+			//Undo
+			this.callback(this, {
+				inputType: 'historyUndo',
+				data: null,
+				afterCompose: false,
+			}, currentRange);
+		} else if (event.key == 'y' && event.ctrlKey) {
+			//Undo
+			this.callback(this, {
+				inputType: 'historyRedo',
+				data: null,
+				afterCompose: false,
+			}, currentRange);
 		}
 	}
 
@@ -239,6 +256,21 @@ class ModificationEditor implements Destructible {
 		requestIdleCallback(() => {
 			this.isAfterCompose = false;
 		});
+	}
+
+	private handleBeforeInput(event: InputEvent) {
+		var currentRange = getSelection()?.getRangeAt(0);
+		if (!currentRange)
+			return;
+
+		if (event.inputType == 'historyUndo' || event.inputType == 'historyRedo') {
+			//Führe die Bearbeitung durch
+			this.callback(this, {
+				inputType: event.inputType,
+				data: null,
+				afterCompose: false,
+			}, currentRange);
+		}
 	}
 
 	public updateFromElement(text?: string | null | boolean, selection?: Selection | AnchorSelection<MetalineLineAnchor> | null | boolean): void {

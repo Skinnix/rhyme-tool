@@ -10,6 +10,7 @@ using System.Runtime.Serialization;
 using Microsoft.AspNetCore.Components;
 using Skinnix.RhymeTool.ComponentModel;
 using Skinnix.RhymeTool.Data.Notation;
+using Skinnix.RhymeTool.Data.Editing;
 
 namespace Skinnix.RhymeTool.Client.Components.Editing;
 
@@ -18,12 +19,16 @@ partial class SheetEditor
 	public static readonly Reason UnknownEditType = new("Unbekannter Bearbeitungstyp");
 	public static readonly Reason MultilineEditNotSupported = new("Mehrzeilige Bearbeitung wird noch nicht unterstützt");
 	public static readonly Reason LineNotFound = new("Zeile nicht gefunden");
+	public static readonly Reason UndoNotAvailable = new("Rückgängig nicht möglich");
+	public static readonly Reason RedoNotAvailable = new("Wiederholen nicht möglich");
 
 	[Parameter] public SheetDocument? Document { get; set; }
 	[Parameter] public ISheetEditorFormatter? Formatter { get; set; }
 
 	private SheetDocument? loadedDocument;
 	private ISheetEditorFormatter? loadedFormatter;
+
+	private DocumentEditHistory? editHistory;
 
 	private ElementReference editorWrapper;
 	private RerenderAnchor rerenderAnchor = null!;
@@ -46,6 +51,7 @@ partial class SheetEditor
 
 			renderedLines.Clear();
 			loadedDocument = Document;
+			editHistory = Document is not null ? new(Document) : null;
 
 			if (loadedDocument is not null)
 				loadedDocument.Lines.Modified += OnLinesModified;
@@ -118,7 +124,14 @@ partial class SheetEditor
 	{
 		if (Document is null) throw new InvalidOperationException("Editor nicht initialisiert");
 
+		//History?
+		if (data.InputType == "historyUndo")
+			return Undo();
+		if (data.InputType == "historyRedo")
+			return Redo();
+
 		//Sind Start- und Endzeile unterschiedlich?
+		MetalineSelectionRange? newSelection = null;
 		if (data.Selection.Start.Metaline != data.Selection.End.Metaline
 			|| data.Selection.Start.Line != data.Selection.End.Line)
 		{
@@ -128,10 +141,8 @@ partial class SheetEditor
 			if (!editResult.Success)
 				return new JsMetalineEditResult(false, false, null, editResult.FailReason);
 
-			//Erzeuge Ergebnis
-			var selection = LineSelection.FromRange(editResult.NewSelection);
-			rerenderAnchor.TriggerRender();
-			return new JsMetalineEditResult(true, true, selection, null);
+			//Neue Auswahl
+			newSelection = editResult.NewSelection;
 		}
 		else
 		{
@@ -141,12 +152,52 @@ partial class SheetEditor
 			if (!editResult.Success)
 				return new JsMetalineEditResult(false, false, null, editResult.FailReason);
 
-			//Erzeuge Ergebnis
-			var selection = LineSelection.FromRange(editResult.NewSelection);
-			rerenderAnchor.TriggerRender();
-			return new JsMetalineEditResult(true, true, selection, null);
+			//Neue Auswahl
+			newSelection = editResult.NewSelection;
 		}
+
+		//Speichere die Änderung
+		editHistory?.StoreEdit(GetEditLabel(data), newSelection, true);
+
+		//Erzeuge Ergebnis
+		var selection = LineSelection.FromRange(newSelection);
+		rerenderAnchor.TriggerRender();
+		return new JsMetalineEditResult(true, true, selection, null);
 	}
+
+	private JsMetalineEditResult Undo()
+	{
+		if (Document is null || editHistory is null) throw new InvalidOperationException("Editor nicht initialisiert");
+
+		if (!editHistory.CanUndo)
+			return new JsMetalineEditResult(false, false, null, UndoNotAvailable);
+
+		var newSelection = editHistory.Undo();
+		var selection = LineSelection.FromRange(newSelection);
+		rerenderAnchor.TriggerRender();
+		return new JsMetalineEditResult(true, true, selection, null);
+	}
+
+	private JsMetalineEditResult Redo()
+	{
+		if (Document is null || editHistory is null) throw new InvalidOperationException("Editor nicht initialisiert");
+
+		if (!editHistory.CanRedo)
+			return new JsMetalineEditResult(false, false, null, RedoNotAvailable);
+
+		var newSelection = editHistory.Redo();
+		var selection = LineSelection.FromRange(newSelection);
+		rerenderAnchor.TriggerRender();
+		return new JsMetalineEditResult(true, true, selection, null);
+	}
+
+	private string GetEditLabel(InputEventData data) => GetEditType(data) switch
+	{
+		EditType.InsertContent or EditType.InsertCompositionContent => "Einfügen",
+		EditType.InsertLine => "Zeile einfügen",
+		EditType.DeleteBackward or EditType.DeleteForward or EditType.DeleteWordBackward or EditType.DeleteWordForward => "Löschen",
+		_ => "Bearbeitung"
+	};
 
 	protected MetalineEditResult EditLine(InputEventData data)
 	{

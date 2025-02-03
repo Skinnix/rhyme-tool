@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Metadata;
+using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Threading.Tasks;
 using Skinnix.RhymeTool.Data.Notation.Display;
@@ -11,124 +12,6 @@ namespace Skinnix.RhymeTool.Data.Notation;
 
 partial class SheetVarietyLine
 {
-	private class ComponentCollection : IList<Component>
-	{
-		private readonly SheetVarietyLine owner;
-		private readonly List<Component> components;
-
-		public int Count => components.Count;
-		public bool IsReadOnly => false;
-
-		public Component this[int index]
-		{
-			get => components[index];
-			set => components[index] = value;
-		}
-
-		public ComponentCollection(SheetVarietyLine owner)
-		{
-			this.owner = owner;
-			this.components = new();
-		}
-
-		public ComponentCollection(SheetVarietyLine owner, IEnumerable<Component> components)
-		{
-			this.owner = owner;
-			this.components = new(components.Select(c =>
-			{
-				c.Owner = owner;
-				return c;
-			}));
-		}
-
-		public bool Contains(Component item) => components.Contains(item);
-		public int IndexOf(Component item) => components.IndexOf(item);
-		public void CopyTo(Component[] array, int arrayIndex) => components.CopyTo(array, arrayIndex);
-
-		public void Add(Component item)
-		{
-			components.Add(item);
-			item.Owner = owner;
-		}
-
-		public void AddRange(IEnumerable<Component> components)
-			=> this.components.AddRange(components.Select(c =>
-			{
-				c.Owner = owner;
-				return c;
-			}));
-
-		public void InsertRange(int index, IEnumerable<Component> components)
-			=> this.components.InsertRange(index, components.Select(c =>
-			{
-				c.Owner = owner;
-				return c;
-			}));
-
-		public void Insert(int index, Component item)
-		{
-			components.Insert(index, item);
-			item.Owner = owner;
-		}
-
-		public bool Remove(Component item)
-		{
-			if (!components.Remove(item))
-				return false;
-
-			if (item.Owner == owner)
-				item.Owner = null;
-
-			return true;
-		}
-
-		public void RemoveAt(int index)
-		{
-			var item = components[index];
-			components.RemoveAt(index);
-
-			if (item.Owner == owner)
-				item.Owner = null;
-		}
-
-		public void RemoveRange(int index, int count)
-		{
-			var end = index + count;
-			for (var i = index; i < end; i++)
-			{
-				var component = components[i];
-				if (component.Owner == owner)
-					component.Owner = null;
-			}
-
-			components.RemoveRange(index, count);
-		}
-
-		public void RemoveAll(Func<Component, bool> match)
-			=> components.RemoveAll(c =>
-			{
-				if (!match(c))
-					return false;
-
-				if (c.Owner == owner)
-					c.Owner = null;
-
-				return true;
-			});
-
-		public void Clear()
-		{
-			foreach (var component in components)
-				if (component.Owner == owner)
-					component.Owner = null;
-
-			components.Clear();
-		}
-
-		public IEnumerator<Component> GetEnumerator() => components.GetEnumerator();
-		IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-	}
-
 	internal record DisplayRenderBounds(int StartOffset, int EndOffset, IReadOnlyList<SheetDisplayLineElement> DisplayElements)
 	{
 		public static readonly DisplayRenderBounds Empty = new(0, 0, []);
@@ -274,16 +157,179 @@ partial class SheetVarietyLine
 			}
 		}
 
+		internal class Collection : IList<Component>
+		{
+			private readonly SheetVarietyLine owner;
+			private readonly List<Component> components;
+
+			public int Count => components.Count;
+			public bool IsReadOnly => false;
+
+			public Component this[int index]
+			{
+				get => components[index];
+				set => components[index] = value;
+			}
+
+			public Collection(SheetVarietyLine owner)
+			{
+				this.owner = owner;
+				this.components = new();
+			}
+
+			public Collection(SheetVarietyLine owner, IEnumerable<Component> components)
+			{
+				this.owner = owner;
+				this.components = new(components.Select(c =>
+				{
+					c.Owner = owner;
+					return c;
+				}));
+			}
+
+			public bool Contains(Component item) => components.Contains(item);
+			public int IndexOf(Component item) => components.IndexOf(item);
+			public void CopyTo(Component[] array, int arrayIndex) => components.CopyTo(array, arrayIndex);
+
+			public void Add(Component item)
+			{
+				components.Add(item);
+				item.Owner = owner;
+			}
+
+			public void AddRange(IEnumerable<Component> components)
+				=> this.components.AddRange(components.Select(c =>
+				{
+					c.Owner = owner;
+					return c;
+				}));
+
+			public void InsertRange(int index, IEnumerable<Component> components)
+				=> this.components.InsertRange(index, components.Select(c =>
+				{
+					c.Owner = owner;
+					return c;
+				}));
+
+			public void Insert(int index, Component item)
+			{
+				components.Insert(index, item);
+				item.Owner = owner;
+			}
+
+			public bool Remove(Component item)
+			{
+				if (!components.Remove(item))
+					return false;
+
+				if (item.Owner == owner)
+					item.Owner = null;
+
+				return true;
+			}
+
+			public void RemoveAt(int index)
+			{
+				var item = components[index];
+				components.RemoveAt(index);
+
+				if (item.Owner == owner)
+					item.Owner = null;
+			}
+
+			public void RemoveRange(int index, int count)
+			{
+				var end = index + count;
+				for (var i = index; i < end; i++)
+				{
+					var component = components[i];
+					if (component.Owner == owner)
+						component.Owner = null;
+				}
+
+				components.RemoveRange(index, count);
+			}
+
+			public void RemoveAll(Func<Component, bool> match)
+				=> components.RemoveAll(c =>
+				{
+					if (!match(c))
+						return false;
+
+					if (c.Owner == owner)
+						c.Owner = null;
+
+					return true;
+				});
+
+			public void Clear()
+			{
+				foreach (var component in components)
+					if (component.Owner == owner)
+						component.Owner = null;
+
+				components.Clear();
+			}
+
+			public IEnumerator<Component> GetEnumerator() => components.GetEnumerator();
+			IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+			public Stored Store() => new(this);
+
+			public readonly struct Stored : ISelfStored<Stored, Collection, SheetVarietyLine>
+			{
+				private readonly Component.Stored[] components;
+
+				internal Stored(Collection collection)
+				{
+					components = new Component.Stored[collection.Count];
+					var i = 0;
+					foreach (var component in collection)
+						components[i++] = component.Store();
+				}
+
+				private Stored(Component.Stored[] components)
+				{
+					this.components = components;
+				}
+
+				public Collection Restore(SheetVarietyLine owner)
+					=> new Collection(owner, components.Select(c => c.Restore()));
+
+				public Stored OptimizeWith(Stored line, out bool isEqual)
+				{
+					isEqual = line.components.Length == components.Length;
+					var newComponents = new Component.Stored[components.Length];
+					for (var i = 0; i < components.Length; i++)
+					{
+						if (i >= line.components.Length)
+						{
+							isEqual = false;
+							newComponents[i] = components[i];
+						}
+						else
+						{
+							newComponents[i] = components[i].OptimizeWith(line.components[i], out var componentEqual);
+							if (!componentEqual)
+							{
+								isEqual = false;
+								newComponents[i] = components[i].OptimizeWith(line.components);
+							}
+						}
+					}
+
+					if (isEqual)
+						return line;
+
+					return new(newComponents);
+				}
+			}
+		}
+
 		public readonly struct Stored : IStored<Component>
 		{
 			private readonly ComponentContent content;
 			private readonly VarietyComponent.Attachment.Stored[] attachments;
-
-			internal Stored(ComponentContent content, VarietyComponent.Attachment.Stored[] attachments)
-			{
-				this.content = content;
-				this.attachments = attachments;
-			}
 
 			internal Stored(ComponentContent content, IReadOnlyCollection<VarietyComponent.Attachment> attachments)
 			{
@@ -295,11 +341,56 @@ partial class SheetVarietyLine
 					this.attachments[i++] = attachment.Store();
 			}
 
+			private Stored(ComponentContent content, VarietyComponent.Attachment.Stored[] attachments)
+			{
+				this.content = content;
+				this.attachments = attachments;
+			}
+
 			public Component Restore()
 			{
 				var component = new VarietyComponent(content);
 				component.AddAttachments(attachments.Select(a => a.Restore()));
 				return component;
+			}
+
+			public Stored OptimizeWith(Stored component, out bool isEqual)
+			{
+				isEqual = attachments.Length == component.attachments.Length
+					&& attachments.SequenceEqual(component.attachments);
+
+				if (!isEqual)
+					return this;
+
+				if (content.Equals(component.content))
+					return component;
+
+				isEqual = false;
+				return new(content, component.attachments);
+			}
+
+			public Stored OptimizeWith(IReadOnlyCollection<Stored> attachments)
+			{
+				Stored? attachmentsCandidate = null;
+				foreach (var attachment in attachments)
+				{
+					if (this.attachments.Length != attachment.attachments.Length)
+						continue;
+
+					if (!this.attachments.SequenceEqual(attachment.attachments))
+						continue;
+
+					attachmentsCandidate = attachment;
+					if (!content.Equals(attachment.content))
+						continue;
+
+					return attachment;
+				}
+
+				if (attachmentsCandidate is not null)
+					return new(content, attachmentsCandidate.Value.attachments);
+
+				return this;
 			}
 		}
 	}
@@ -935,7 +1026,7 @@ partial class SheetVarietyLine
 
 			public abstract Stored Store();
 
-			public readonly struct Stored : IStored<Attachment>
+			public readonly record struct Stored : ISelfStored<Stored, Attachment>
 			{
 				private readonly ContentOffset offset;
 				private readonly ComponentContent content;
@@ -1036,36 +1127,6 @@ partial class SheetVarietyLine
 				return true;
 			}
 			#endregion
-		}
-	}
-
-	public readonly struct Stored : IStored<SheetVarietyLine>
-	{
-		private readonly Guid guid;
-		private readonly Component.Stored[] components;
-
-		internal Stored(Guid guid, Component.Stored[] components)
-		{
-			this.guid = guid;
-			this.components = components;
-		}
-
-		internal Stored(Guid guid, IReadOnlyCollection<Component> components)
-		{
-			this.guid = guid;
-
-			this.components = new Component.Stored[components.Count];
-			var i = 0;
-			foreach (var component in components)
-				this.components[i++] = component.Store();
-		}
-
-		public SheetVarietyLine Restore()
-		{
-			return new SheetVarietyLine(components.Select(c => c.Restore()))
-			{
-				Guid = guid,
-			};
 		}
 	}
 }

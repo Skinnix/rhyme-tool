@@ -11,7 +11,7 @@ public class SheetLineCollection : IReadOnlyList<SheetLine>, IModifiable
 	public event EventHandler? TitlesChanged;
 
 	private readonly SheetDocument document;
-	private readonly List<SheetLine> lines;
+	private List<SheetLine> lines;
 
 	public int Count => lines.Count;
 	public SheetLine this[int index] => lines[index];
@@ -25,18 +25,28 @@ public class SheetLineCollection : IReadOnlyList<SheetLine>, IModifiable
 	public SheetLineCollection(SheetDocument document, IEnumerable<SheetLine> lines)
 	{
 		this.document = document;
-		this.lines = new(lines.Select(l =>
-		{
-			if (l is ISheetTitleLine titleLine)
-				titleLine.IsTitleLineChanged += OnIsTitleLineChanged;
-			return l;
-		}));
+		this.lines = new(lines.Select(RegisterLine));
+	}
+
+	private SheetLine RegisterLine(SheetLine line)
+	{
+		if (line is ISheetTitleLine titleLine)
+			titleLine.IsTitleLineChanged += OnIsTitleLineChanged;
+		return line;
+	}
+
+	private SheetLine DeregisterLine(SheetLine line)
+	{
+		if (line is ISheetTitleLine titleLine)
+			titleLine.IsTitleLineChanged -= OnIsTitleLineChanged;
+		return line;
 	}
 
 	private void OnIsTitleLineChanged(object? sender, EventArgs e)
-	{
-		TitlesChanged?.Invoke(this, EventArgs.Empty);
-	}
+		=> RaiseTitlesChanged();
+
+	private void RaiseTitlesChanged()
+		=> TitlesChanged?.Invoke(this, EventArgs.Empty);
 
 	public IEnumerable<SheetLineContext> GetLinesWithContext()
 	{
@@ -227,4 +237,59 @@ public class SheetLineCollection : IReadOnlyList<SheetLine>, IModifiable
 
 	private void RaiseModified(ModifiedEventArgs args) => Modified?.Invoke(this, args);
 	#endregion
+
+	public Stored Store() => new(this);
+
+	public void Restore(Stored store)
+	{
+		lines.Clear();
+		lines.AddRange(store.Restore(document));
+	}
+
+	public readonly record struct Stored : IStored<SheetLineCollection, SheetDocument>
+	{
+		private readonly SheetLine.Stored[] lines;
+
+		internal Stored(SheetLineCollection collection)
+		{
+			lines = new SheetLine.Stored[collection.Count];
+			var i = 0;
+			foreach (var line in collection)
+				lines[i++] = line.Store();
+		}
+
+		private Stored(SheetLine.Stored[] lines)
+		{
+			this.lines = lines;
+		}
+
+		public SheetLineCollection Restore(SheetDocument owner)
+			=> new(owner, lines.Select(l => l.Restore()));
+
+		internal void Apply(SheetLineCollection target)
+		{
+			foreach (var line in target.lines)
+				target.DeregisterLine(line);
+			target.lines.Clear();
+
+			target.lines = new(lines.Length);
+			foreach (var line in lines)
+				target.lines.Add(target.RegisterLine(line.Restore()));
+
+			target.RaiseModified(new ModifiedEventArgs(target));
+			target.RaiseTitlesChanged();
+		}
+
+		public Stored OptimizeWith(Stored collection)
+		{
+			var newLines = new SheetLine.Stored[lines.Length];
+			for (var i = 0; i < newLines.Length; i++)
+				newLines[i] = lines[i].OptimizeWith(collection.lines);
+
+			if (newLines.Length == collection.lines.Length && newLines.SequenceEqual(collection.lines))
+				return collection;
+
+			return new(newLines);
+		}
+	}
 }

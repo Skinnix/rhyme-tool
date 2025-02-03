@@ -465,6 +465,7 @@ var ModificationEditor = (function () {
         this.editContext.addEventListener('compositionend', this.handleCompositionEnd.bind(this));
         this.editor.addEventListener('keydown', this.handleKeyDown.bind(this));
         this.editor.addEventListener('paste', this.handlePaste.bind(this));
+        this.editor.addEventListener('beforeinput', this.handleBeforeInput.bind(this));
         this.editor.editContext = this.editContext;
     }
     ModificationEditor.prototype.destroy = function () {
@@ -472,6 +473,7 @@ var ModificationEditor = (function () {
         this.editContext.removeEventListener('compositionend', this.handleCompositionEnd.bind(this));
         this.editor.removeEventListener('keydown', this.handleKeyDown.bind(this));
         this.editor.removeEventListener('paste', this.handlePaste.bind(this));
+        this.editor.removeEventListener('beforeinput', this.handleBeforeInput.bind(this));
     };
     ModificationEditor.prototype.handleTextUpdate = function (event) {
         var _a;
@@ -511,6 +513,20 @@ var ModificationEditor = (function () {
                 afterCompose: false,
             }, currentRange);
         }
+        else if (event.key == 'z' && event.ctrlKey) {
+            this.callback(this, {
+                inputType: 'historyUndo',
+                data: null,
+                afterCompose: false,
+            }, currentRange);
+        }
+        else if (event.key == 'y' && event.ctrlKey) {
+            this.callback(this, {
+                inputType: 'historyRedo',
+                data: null,
+                afterCompose: false,
+            }, currentRange);
+        }
     };
     ModificationEditor.prototype.handlePaste = function (event) {
         var _a, _b;
@@ -533,6 +549,19 @@ var ModificationEditor = (function () {
         requestIdleCallback(function () {
             _this.isAfterCompose = false;
         });
+    };
+    ModificationEditor.prototype.handleBeforeInput = function (event) {
+        var _a;
+        var currentRange = (_a = getSelection()) === null || _a === void 0 ? void 0 : _a.getRangeAt(0);
+        if (!currentRange)
+            return;
+        if (event.inputType == 'historyUndo' || event.inputType == 'historyRedo') {
+            this.callback(this, {
+                inputType: event.inputType,
+                data: null,
+                afterCompose: false,
+            }, currentRange);
+        }
     };
     ModificationEditor.prototype.updateFromElement = function (text, selection) {
         var _this = this;

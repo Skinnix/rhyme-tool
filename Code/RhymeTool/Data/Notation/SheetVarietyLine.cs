@@ -16,7 +16,6 @@ using System.Threading.Tasks;
 using Skinnix.RhymeTool.ComponentModel;
 using Skinnix.RhymeTool.Data.Notation.Display;
 using Skinnix.RhymeTool.Data.Notation.Display.Caching;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Skinnix.RhymeTool.Data.Notation;
 
@@ -29,7 +28,7 @@ public partial class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetT
 
 	public event EventHandler? IsTitleLineChanged;
 
-	private readonly ComponentCollection components;
+	private readonly Component.Collection components;
 	private readonly ContentEditing contentEditor;
 	private readonly AttachmentEditing attachmentEditor;
 
@@ -58,6 +57,15 @@ public partial class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetT
 		: base(LineType)
 	{
 		this.components = new(this, components);
+
+		contentEditor = new(this);
+		attachmentEditor = new(this);
+	}
+
+	private SheetVarietyLine(Func<SheetVarietyLine, Component.Collection> getComponents)
+		: base(LineType)
+	{
+		components = getComponents(this);
 
 		contentEditor = new(this);
 		attachmentEditor = new(this);
@@ -237,7 +245,7 @@ public partial class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetT
 		public ContentOffset MergeLengthBefore { get; init; }
 	}
 
-	internal readonly struct ComponentContent
+	internal readonly record struct ComponentContent
 	{
 		public const string PUNCTUATION = ",.-><!?\"";
 
@@ -492,4 +500,46 @@ public partial class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetT
 		#endregion
 	}
 	#endregion
+
+	public override SheetLine.Stored Store() => new Stored(this);
+
+	public sealed new class Stored : SheetLine.Stored, IStored<SheetVarietyLine>
+	{
+		private readonly Guid guid;
+		private readonly Component.Collection.Stored components;
+
+		internal Stored(SheetVarietyLine line)
+			: this(line.Guid, line.components.Store())
+		{ }
+
+		private Stored(Guid guid, Component.Collection.Stored components)
+		{
+			this.guid = guid;
+			this.components = components;
+		}
+
+		public override SheetVarietyLine Restore()
+			=> new SheetVarietyLine(components.Restore)
+		{
+			Guid = guid,
+		};
+
+		public override SheetLine.Stored OptimizeWith(IReadOnlyCollection<SheetLine.Stored> lines)
+		{
+			var match = lines.OfType<Stored>().FirstOrDefault(l => l.guid == guid);
+			if (match is not null)
+				return OptimizeWith(match);
+
+			return this;
+		}
+
+		private Stored OptimizeWith(Stored line)
+		{
+			var newComponents = components.OptimizeWith(line.components, out var isEqual);
+			if (isEqual)
+				return line;
+
+			return new Stored(guid, newComponents);
+		}
+	}
 }
