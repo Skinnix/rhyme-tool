@@ -259,6 +259,11 @@ public partial class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetT
 			_ => ContentType.Fingering,
 			_ => ContentType.Rhythm);
 
+		public ComponentContent(Either<string, Chord, Fingering, RhythmPattern> content)
+		{
+			Content = content;
+		}
+
 		public ComponentContent(string text)
 		{
 			Content = text;

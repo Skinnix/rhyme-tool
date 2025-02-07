@@ -342,7 +342,7 @@ partial class SheetVarietyLine
 
 			internal Stored(ComponentContent content, IReadOnlyCollection<VarietyComponent.Attachment> attachments)
 			{
-				this.content = content;
+				this.content = new(ReferenceCache.Cache(content.Content));
 
 				if (attachments.Count == 0)
 				{

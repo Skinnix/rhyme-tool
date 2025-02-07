@@ -1,0 +1,399 @@
+﻿@page "/document"
+@page "/chords/document"
+
+@using Skinnix.RhymeTool.Client.Components.Configuration
+@using Skinnix.RhymeTool.Client.Components.Rendering
+@using Skinnix.RhymeTool.Client.Native
+@using Skinnix.RhymeTool.Client.Services
+@using Skinnix.RhymeTool.Client.Services.Files
+@using Skinnix.RhymeTool.ComponentModel
+@using Skinnix.RhymeTool.Data.Editing
+@using Skinnix.RhymeTool.Data.Notation
+@using Skinnix.RhymeTool.Data.Notation.Display
+@using Skinnix.RhymeTool.Client.Components.Editing
+@using System.ComponentModel
+
+@layout RendererLayout
+
+@implements IAsyncDisposable
+
+@inject IJSRuntime js
+@inject IDocumentFileService fileService
+@inject IDocumentService documentService
+@inject IDialogService dialogService
+@inject NavigationManager navigation
+
+<SectionContent SectionName="NavbarMain">
+    <a class="btn btn-dark" href="javascript:history.back()">
+        <i class="fas fa-arrow-left"></i>
+    </a>
+
+    <div class="navbar-brand me-auto text-truncate">
+        @document?.Label
+    </div>
+
+    @switch (viewMode)
+    {
+        case ViewMode.Renderer:
+            <button class="btn btn-secondary" @onclick="() => viewMode = ViewMode.Editor">
+                <i class="fa-regular fa-pen-to-square"></i>
+            </button>
+
+            break;
+
+        case ViewMode.Editor:
+            <button class="btn btn-secondary" @onclick="() => viewMode = ViewMode.Renderer">
+                <i class="fa-solid fa-eye"></i>
+            </button>
+
+            <EditDropdownMenu History="editor?.EditHistory" />
+
+            @if (document is not null && documentSource is not null && documentSource.CanSave)
+            {
+                <button class="btn btn-primary" type="button" @onclick="SaveDocument">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                </button>
+            }
+
+            break;
+    }
+
+    <button class="navbar-toggler d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#sideMenu" aria-controls="sideMenu">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+</SectionContent>
+
+@if (fileService.CanOpenDroppedFile)
+{
+    <div class="dropzone dropzone-overlay">
+        <div class="dropzone-overlay-background"></div>
+
+        <div class="dropzone-overlay-content d-flex flex-column align-items-center">
+            <div class="dropzone-overlay-icon fs-1">
+                <i class="fas fa-file-import"></i>
+            </div>
+
+            <div class="dropzone-overlay-text">
+                <p>Droppe eine Datei hier, um sie zu öffnen.</p>
+            </div>
+        </div>
+
+        <InputFile @key="inputFileId" OnChange="OpenDroppedFile" id="openFileInput" />
+    </div>
+}
+
+<SectionContent SectionName="SideMenuHeader">
+    <h5 class="offcanvas-title" id="offcanvasResponsiveLabel">@document?.Label</h5>
+</SectionContent>
+
+<SectionContent SectionName="SideMenu">
+    @if (document != null)
+    {
+        <h4>Tools</h4>
+        <ConfigurationGrid Settings="@(viewMode switch { ViewMode.Editor => editingSettings, _ => renderingSettings })" />
+
+        @if (viewMode == ViewMode.Editor)
+        {
+            <div class="mx-1 my-3 d-grid gap-2">
+                <button class="btn btn-secondary text-truncate mt-2" role="button" data-bs-toggle="modal" data-bs-target="#rhymeDialog">
+                    Reime
+                </button>
+            </div>
+        }
+
+        <h4>Navigation</h4>
+        <nav class="nav nav-pills d-flex flex-column flex-nowrap overflow-x-hidden text-break" id="pageNavigation">
+            @foreach (var segment in document.FindSegments())
+            {
+                var url = $"{new Uri(navigation.Uri).GetLeftPart(UriPartial.Query)}#sheetSegment-{segment.TitleLine.Guid}";
+                <a class="nav-link" href="@url" onclick="location.replace('@url'); return false">
+                    @segment.Title
+                </a>
+            }
+        </nav>
+    }
+</SectionContent>
+
+<div @ref="wrapper" class="chord-sheet-wrapper w-100 @(IsDebug ? "debug" : null) @((CurrentSettings as RenderingSettings)?.Autofit == true ? "autofit" : null)" style="--font-percent: @CurrentSettings.FontSize; --characters: @(maxCharacters)">
+
+    @if (viewMode == ViewMode.Renderer)
+    {
+        <SheetRenderer Document="document" DisplayMode="SheetDisplayMode.Lines" Formatter="renderingSettings.Formatter"
+                       BreakWidth="@(renderingSettings.Autofit ? maxCharacters : null)" />
+    }
+    else
+    {
+        <SheetEditor @ref="editor" Document="document" EditHistory="editHistory" Formatter="editingSettings.Formatter" />
+    }
+
+    <span class="calculator">&nbsp;</span>
+</div>
+
+@if (viewMode == ViewMode.Renderer)
+{
+    <footer class="fixed-bottom" id="bottomMenu">
+        <div class="container-xxl">
+            @if (document != null)
+            {
+                <div class="d-inline-flex flex-row flex-wrap bg-body border border-light-subtle rounded px-2 pt-2">
+                    <input class="btn-check" type="checkbox" id="autofitCheck"
+                    @bind="renderingSettings.Autofit" />
+
+                    <label for="autofitCheck" class="btn btn-sm btn-outline-secondary me-2 mb-2" title="Autofit"><i class="fa-solid fa-maximize"></i></label>
+
+                    <div class="input-group input-group-sm flex-nowrap me-2 mb-2">
+                        <label class="input-group-text" title="Schriftgröße"><i class="fa-solid fa-text-height"></i></label>
+
+                        <button type="button" class="btn btn-outline-secondary"
+                        @onclick="() => renderingSettings.FontSize -= 10">
+                            <i class="fas fa-minus"></i>
+                        </button>
+
+                        <input type="number" class="form-control small-number text-center align-middle p-0" step="10"
+                        @bind="renderingSettings.FontSize" />
+
+                        <button type="button" class="btn btn-outline-secondary"
+                        @onclick="() => renderingSettings.FontSize += 10">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+
+                    <div class="input-group input-group-sm flex-nowrap mb-2">
+                        <label class="input-group-text" title="Transponieren"><i class="fa-solid fa-music"></i></label>
+
+                        <button type="button" class="btn btn-outline-secondary"
+                        @onclick="() => renderingSettings.Transpose -= 1">
+                            <i class="fas fa-minus"></i>
+                        </button>
+
+                        <input type="number" class="form-control small-number text-center align-middle p-0" step="1"
+                        @bind="renderingSettings.Transpose" />
+
+                        <button type="button" class="btn btn-outline-secondary"
+                        @onclick="() => renderingSettings.Transpose += 1">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+    </footer>
+}
+
+<div class="modal" tabindex="-1" id="rhymeDialog">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Reimsuche</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <Skinnix.RhymeTool.Client.Components.Rhyming.TermSearch />
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private static readonly bool IsDebug =
+#if DEBUG
+    true;
+#else
+        false;
+#endif
+
+    [Parameter, SupplyParameterFromQuery] public string? Doc { get; set; }
+
+    public static string GetUrl(IDocumentSource document) => GetUrl(document.Id);
+    public static string GetUrl(string? documentId) => documentId is null ? "/chords/document" : "/chords/document?doc=" + Uri.EscapeDataString(documentId);
+
+    private ElementReference wrapper;
+    private int? maxCharacters = null;
+    private IJSObjectReference? resizer;
+
+    private Guid inputFileId = Guid.NewGuid();
+
+    private IDocumentSource? documentSource;
+    private SheetDocument? document;
+    private DocumentEditHistory? editHistory;
+
+    private RenderingSettings renderingSettings = new();
+    private EditingSettings editingSettings = new();
+
+    private SheetEditor? editor;
+
+    private ViewMode viewMode;
+
+    private DocumentSettings CurrentSettings => viewMode switch
+    {
+        ViewMode.Editor => editingSettings,
+        _ => renderingSettings,
+    };
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await base.OnParametersSetAsync();
+
+        renderingSettings.PropertyChanged -= OnSettingsPropertyChanged;
+        renderingSettings = new()
+        {
+            FontSize = 100,
+            Formatter = new DefaultSheetFormatter()
+            {
+                GermanMode = GermanNoteMode.Descriptive,
+            }
+        };
+        renderingSettings.PropertyChanged += OnSettingsPropertyChanged;
+
+        editingSettings.PropertyChanged -= OnSettingsPropertyChanged;
+        editingSettings = new()
+        {
+            FontSize = 100,
+            Formatter = new DefaultSheetFormatter()
+            {
+                GermanMode = GermanNoteMode.Descriptive,
+                ExtendAttachmentLines = true,
+                //CondenseTabNotes = false,
+            },
+        };
+
+        documentSource = await documentService.TryGetDocument(Doc);
+        if (documentSource is not null)
+        {
+            if (document is not null)
+            {
+                document.Lines.Modified -= OnDocumentLinesModified;
+                document.TitlesChanged -= OnDocumentTitlesChanged;
+            }
+            document = await documentSource.LoadAsync();
+            editHistory = document is null ? null : new(document);
+            if (document is not null)
+            {
+                document.Lines.Modified += OnDocumentLinesModified;
+                document.TitlesChanged += OnDocumentTitlesChanged;
+            }
+        }
+
+        if (document is null)
+        {
+            document = new SheetDocument(new SheetEmptyLine());
+            document.Lines.Modified += OnDocumentLinesModified;
+            document.TitlesChanged += OnDocumentTitlesChanged;
+        }
+    }
+
+    private void OnDocumentTitlesChanged(object? sender, EventArgs e)
+        => StateHasChanged();
+
+    private void OnDocumentLinesModified(object? sender, ModifiedEventArgs e)
+        => StateHasChanged();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+
+        if (firstRender)
+        {
+            resizer = await js.InvokeAsync<IJSObjectReference>("registerResize", wrapper, DotNetObjectReference.Create(this), nameof(OnResize));
+        }
+    }
+
+    private void OnSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public void OnResize(int maxCharacters)
+    {
+        if (this.maxCharacters == maxCharacters)
+            return;
+
+        this.maxCharacters = maxCharacters;
+        StateHasChanged();
+    }
+
+    private async Task SaveDocument()
+    {
+        if (document is null || documentSource is null)
+            return;
+
+        await documentSource.SaveAsync(document);
+    }
+
+    private async Task OpenDroppedFile(InputFileChangeEventArgs e)
+    {
+        if (e.File is null)
+            return;
+
+        //Lade Datei
+        var content = await fileService.OpenSelectedFileAsync(e.File);
+
+        //Öffne Datei
+        await OpenFile(content.Value);
+
+        //Input zurücksetzen
+        inputFileId = Guid.NewGuid();
+    }
+
+    private async Task OpenFile(IFileContent? content)
+    {
+        //Prüfe, ob Datei geöffnet werden kann
+        if (content is null || !content.CanRead)
+        {
+            await dialogService.ShowErrorAsync("Die Datei konnte nicht geöffnet werden.", "Fehler");
+            return;
+        }
+
+        //Lade Datei
+        var documentSource = await documentService.LoadFile(content);
+        if (!documentSource.CanLoad)
+        {
+            await dialogService.ShowErrorAsync("Die Datei konnte nicht gelesen werden.", "Fehler");
+            return;
+        }
+
+        //Setze als aktuelles Dokument
+        documentService.SetCurrentDocument(documentSource);
+
+        //Navigiere
+        var url = GetUrl(documentSource);
+        var currentUri = new Uri(navigation.Uri);
+        if (!new Uri(currentUri, url).Equals(currentUri))
+        {
+            navigation.NavigateTo(GetUrl(documentSource), new NavigationOptions()
+                {
+                    ReplaceHistoryEntry = true,
+                });
+            return;
+        }
+
+        //Zeige an
+        document = await documentSource.LoadAsync();
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (resizer is not null)
+        {
+            try
+            {
+                await resizer.InvokeVoidAsync("destroy");
+                await resizer.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+                //Ignore
+            }
+
+            resizer = null;
+        }
+    }
+
+    private enum ViewMode
+    {
+        Renderer,
+        Editor
+    }
+}

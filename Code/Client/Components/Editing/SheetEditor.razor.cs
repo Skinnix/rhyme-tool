@@ -24,6 +24,7 @@ partial class SheetEditor
 
 	[Parameter] public SheetDocument? Document { get; set; }
 	[Parameter] public ISheetEditorFormatter? Formatter { get; set; }
+	[Parameter] public DocumentEditHistory? EditHistory { get; set; }
 
 	private SheetDocument? loadedDocument;
 	private ISheetEditorFormatter? loadedFormatter;
@@ -35,8 +36,6 @@ partial class SheetEditor
 	private bool shouldRender;
 
 	private readonly WeakDictionary<Guid, SheetDisplayLine[]> renderedLines = new();
-
-	public DocumentEditHistory? EditHistory { get; private set; }
 
 	protected override void OnParametersSet()
 	{
@@ -51,7 +50,6 @@ partial class SheetEditor
 
 			renderedLines.Clear();
 			loadedDocument = Document;
-			EditHistory = Document is not null ? new(Document) : null;
 
 			if (loadedDocument is not null)
 				loadedDocument.Lines.Modified += OnLinesModified;

@@ -151,7 +151,7 @@ else if (shouldSelectWorkingDirectory)
 {
     <div class="row mb-3">
         <div class="col">
-            <a class="btn btn-primary d-block w-100" href="/chords/renderer">
+            <a class="btn btn-primary d-block w-100" href="/chords/document">
                 Testdokument
             </a>
         </div>
@@ -322,7 +322,7 @@ else if (shouldSelectWorkingDirectory)
         documentService.SetCurrentDocument(documentSource);
 
         //Zeige an
-        navigation.NavigateTo(Renderer.GetUrl(documentSource));
+        navigation.NavigateTo(Document.GetUrl(documentSource));
     }
 
     private async Task CheckForUpdates()
