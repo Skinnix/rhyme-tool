@@ -116,6 +116,12 @@ function registerDropDownHandler(element, reference) {
 }
 function showToast(message, title, delay) {
     var toastContainer = document.querySelector('.toast-container');
+    var allToasts = toastContainer.querySelectorAll('.toast');
+    for (var i = 0; i < allToasts.length; i++) {
+        var bsToast_1 = bootstrap.Toast.getInstance(allToasts[i]);
+        if (bsToast_1 && (bsToast_1['data-title'] == title && bsToast_1['data-message'] == message))
+            return;
+    }
     var toast = document.createElement('div');
     toast.classList.add('toast');
     toast.setAttribute('role', 'alert');
@@ -128,6 +134,8 @@ function showToast(message, title, delay) {
         autohide: true,
         delay: delay || 5000
     });
+    bsToast['data-title'] = title;
+    bsToast['data-message'] = message;
     toast.addEventListener('hidden.bs.toast', function () {
         bsToast.dispose();
         toast.remove();

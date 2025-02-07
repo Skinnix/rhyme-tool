@@ -2,8 +2,8 @@
 
 	<PropertyGroup>
 		<!--<TargetFrameworks>net9.0-android;net9.0-ios;net9.0-maccatalyst</TargetFrameworks>-->
-		<TargetFrameworks>net9.0-windows10.0.19041.0;net9.0-android</TargetFrameworks>
-		<!--<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">net9.0-windows10.0.19041.0;$(TargetFrameworks)</TargetFrameworks>-->
+		<TargetFrameworks>net9.0-android</TargetFrameworks>
+		<TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">net9.0-windows10.0.19041.0;$(TargetFrameworks)</TargetFrameworks>
 		<!-- Uncomment to also build the tizen app. You will need to install tizen by following this: https://github.com/Samsung/Tizen.NET -->
 		<!-- <TargetFrameworks>$(TargetFrameworks);net8.0-tizen</TargetFrameworks> -->
 
@@ -43,19 +43,27 @@
 
 	<PropertyGroup>
 		<OutputPath>..\..\Build\$(Configuration)\$(AssemblyName)</OutputPath>
-		<!--<WindowsPackageType Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows'">None</WindowsPackageType>-->
-		<WindowsPackageType>None</WindowsPackageType>
-		<GenerateAppInstallerFile>True</GenerateAppInstallerFile>
+		<NeutralLanguage>de-DE</NeutralLanguage>
+		<DefaultLanguage>de-DE</DefaultLanguage>
+		<SatelliteResourceLanguages>de-DE;de</SatelliteResourceLanguages>
+
+		<!--<HeatDirectory OutputFile="ComponentsGenerated.wxs" DirectoryRefId="INSTALLFOLDER" ComponentGroupName="PublishedComponents" SuppressCom="true" Directory="..\MauiApp\bin\$(Configuration)\net9.0-windows10.0.19041.0\win10-$(Platform)" SuppressFragments="true" SuppressRegistry="true" SuppressRootDirectory="true" AutoGenerateGuids="false" GenerateGuidsNow="true" ToolPath="$(WixToolPath)" RunAsSeparateProcess="true" PreprocessorVariable="var.BasePath"/>-->
+
+		<!--<GenerateAppInstallerFile>True</GenerateAppInstallerFile>
 		<AppxPackageSigningEnabled>True</AppxPackageSigningEnabled>
 		<PackageCertificateThumbprint>419C7E252C9788FB737EB3AE777C8FA0015E9BA6</PackageCertificateThumbprint>
 		<AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
 		<AppxAutoIncrementPackageRevision>True</AppxAutoIncrementPackageRevision>
 		<AppxSymbolPackageEnabled>False</AppxSymbolPackageEnabled>
 		<GenerateTestArtifacts>True</GenerateTestArtifacts>
-		<HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
-		<NeutralLanguage>de-DE</NeutralLanguage>
-		<DefaultLanguage>de-DE</DefaultLanguage>
-		<SatelliteResourceLanguages>de-DE;de</SatelliteResourceLanguages>
+		<HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>-->
+	</PropertyGroup>
+
+	<PropertyGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows' and '$(Configuration)'=='Release'">
+		<WindowsPackageType>None</WindowsPackageType>
+		<WindowsAppSDKSelfContained Condition="'$(IsUnpackaged)' == 'true'">true</WindowsAppSDKSelfContained>
+		<SelfContained Condition="'$(IsUnpackaged)' == 'true'">true</SelfContained>
+		<OutputType>WinExe</OutputType>
 	</PropertyGroup>
 
 	<Import Project="..\Common.targets" />
@@ -92,6 +100,7 @@
 
 	<ItemGroup>
 	  <Folder Include="Properties\PublishProfiles\" />
+	  <Folder Include="Views\" />
 	</ItemGroup>
 
 </Project>

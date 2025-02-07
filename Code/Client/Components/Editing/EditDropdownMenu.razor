@@ -1,0 +1,49 @@
+@using Skinnix.RhymeTool.Data.Editing
+
+@if (History is not null)
+{
+    <div class="dropdown dropdown-hide-arrow">
+        <button class="btn btn-dark dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fa-solid fa-ellipsis-vertical"></i>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+            <li>
+                <button class="dropdown-item" disabled="@(!History.CanUndo)" @onclick="() => History.Undo()">
+                    Rückgängig@(History.UndoLabel is null ? null : ": " + History.UndoLabel)
+                </button>
+            </li>
+            <li>
+                <button class="dropdown-item" disabled="@(!History.CanRedo)" @onclick="() => History.Redo()">
+                    Wiederholen@(History.RedoLabel is null ? null : ": " + History.RedoLabel)
+                </button>
+            </li>
+        </ul>
+    </div>
+}
+
+@code {
+    [Parameter] public DocumentEditHistory? History { get; set; }
+
+    private DocumentEditHistory? loadedHistory;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        if (History != loadedHistory)
+        {
+            if (loadedHistory is not null)
+                loadedHistory.HistoryChanged -= OnHistoryChanged;
+
+            loadedHistory = History;
+
+            if (loadedHistory is not null)
+                loadedHistory.HistoryChanged += OnHistoryChanged;
+        }
+    }
+
+    private void OnHistoryChanged(object? sender, EventArgs e)
+    {
+        StateHasChanged();
+    }
+}

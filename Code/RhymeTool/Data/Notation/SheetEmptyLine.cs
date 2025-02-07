@@ -111,7 +111,10 @@ public class SheetEmptyLine() : SheetLine(LineType), ISelectableSheetLine, IShee
 		};
 
 		//Ersetze die Zeile mit einer VarietyLine und füge dann den Content ein
-		var varietyLine = new SheetVarietyLine();
+		var varietyLine = new SheetVarietyLine()
+		{
+			Guid = Guid
+		};
 		var varietyLineResult = varietyLine.ContentEditor.InsertContent(context, multilineContext, content, formatter);
 
 		//Nicht erfolgreich?
@@ -147,13 +150,13 @@ public class SheetEmptyLine() : SheetLine(LineType), ISelectableSheetLine, IShee
 			Guid = guid
 		};
 
-		public override SheetLine.Stored OptimizeWith(IReadOnlyCollection<SheetLine.Stored> lines)
+		/*public override SheetLine.Stored OptimizeWith(IReadOnlyCollection<SheetLine.Stored> lines)
 		{
 			var match = lines.OfType<Stored>().FirstOrDefault(l => l.guid == guid);
 			if (match is null)
 				return this;
 
 			return match;
-		}
+		}*/
 	}
 }

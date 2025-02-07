@@ -24,7 +24,10 @@ public abstract class SheetLineConversion
 
 		private Simple() : base(TLine.LineType) { }
 
-		public override SheetLine Convert(SheetLine origin) => new TLine();
+		public override SheetLine Convert(SheetLine origin) => new TLine()
+		{
+			Guid = origin.Guid
+		};
 	}
 
 	public sealed class Delegate : SheetLineConversion

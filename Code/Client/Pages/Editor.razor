@@ -25,6 +25,8 @@
         @document?.Label
     </div>
 
+    <EditDropdownMenu History="editor?.EditHistory" />
+
     @if (document is not null && documentSource is not null && documentSource.CanSave)
     {
         <button class="btn btn-primary" type="button" @onclick="SaveDocument">
@@ -67,7 +69,7 @@
 </SectionContent>
 
 <div class="chord-sheet-wrapper@(IsDebug ? " debug" : null)" style="--font-percent: @settings.FontSize;">
-    <SheetEditor Document="document" Formatter="settings.Formatter" />
+    <SheetEditor @ref="editor" Document="document" Formatter="settings.Formatter" />
 </div>
 
 <div class="modal" tabindex="-1" id="rhymeDialog">
@@ -93,10 +95,12 @@
         false;
 #endif
 
-    [Parameter, SupplyParameterFromQuery] public string? Doc { get; set; }
-
     public static string GetUrl(IDocumentSource document) => GetUrl(document.Id);
     public static string GetUrl(string? documentId) => documentId is null ? "/chords/editor" : "/chords/editor?doc=" + Uri.EscapeDataString(documentId);
+
+    [Parameter, SupplyParameterFromQuery] public string? Doc { get; set; }
+
+    private SheetEditor? editor;
 
     private IDocumentSource? documentSource;
     private SheetDocument? document;

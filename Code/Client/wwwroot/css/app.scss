@@ -10,6 +10,16 @@ a, .btn-link {
     color: #0071c1;
 }
 
+header, header.sticky-top {
+	z-index: 2000;
+}
+
+.dropdown.dropdown-hide-arrow {
+	.dropdown-toggle::after {
+		content: unset;
+	}
+}
+
 #blazor-error-ui {
 	background: lightyellow;
 	bottom: 0;

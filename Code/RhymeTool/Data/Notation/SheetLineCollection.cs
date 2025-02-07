@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Linq.Expressions;
 using Skinnix.RhymeTool.ComponentModel;
+using Skinnix.RhymeTool.Data.Editing;
 using Skinnix.RhymeTool.Data.Notation.Features;
 
 namespace Skinnix.RhymeTool.Data.Notation;
@@ -248,14 +249,22 @@ public class SheetLineCollection : IReadOnlyList<SheetLine>, IModifiable
 
 	public readonly record struct Stored : IStored<SheetLineCollection, SheetDocument>
 	{
-		private readonly SheetLine.Stored[] lines;
+		private readonly SheetLine.Stored[]? lines;
 
 		internal Stored(SheetLineCollection collection)
 		{
-			lines = new SheetLine.Stored[collection.Count];
-			var i = 0;
-			foreach (var line in collection)
-				lines[i++] = line.Store();
+			if (collection.Count == 0)
+			{
+				lines = null;
+			}
+			else
+			{
+				lines = new SheetLine.Stored[collection.Count];
+				foreach ((var i, var line) in collection.Index())
+					lines[i] = line.Store();
+
+				lines = ArrayCache.Cache(lines);
+			}
 		}
 
 		private Stored(SheetLine.Stored[] lines)
@@ -264,7 +273,7 @@ public class SheetLineCollection : IReadOnlyList<SheetLine>, IModifiable
 		}
 
 		public SheetLineCollection Restore(SheetDocument owner)
-			=> new(owner, lines.Select(l => l.Restore()));
+			=> new(owner, lines?.Select(l => l.Restore()) ?? []);
 
 		internal void Apply(SheetLineCollection target)
 		{
@@ -272,15 +281,18 @@ public class SheetLineCollection : IReadOnlyList<SheetLine>, IModifiable
 				target.DeregisterLine(line);
 			target.lines.Clear();
 
-			target.lines = new(lines.Length);
-			foreach (var line in lines)
-				target.lines.Add(target.RegisterLine(line.Restore()));
+			if (lines is not null)
+			{
+				target.lines = new(lines.Length);
+				foreach (var line in lines)
+					target.lines.Add(target.RegisterLine(line.Restore()));
+			}
 
 			target.RaiseModified(new ModifiedEventArgs(target));
 			target.RaiseTitlesChanged();
 		}
 
-		public Stored OptimizeWith(Stored collection)
+		/*public Stored OptimizeWith(Stored collection)
 		{
 			var newLines = new SheetLine.Stored[lines.Length];
 			for (var i = 0; i < newLines.Length; i++)
@@ -290,6 +302,6 @@ public class SheetLineCollection : IReadOnlyList<SheetLine>, IModifiable
 				return collection;
 
 			return new(newLines);
-		}
+		}*/
 	}
 }

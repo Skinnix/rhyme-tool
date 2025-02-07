@@ -524,7 +524,7 @@ public partial class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetT
 			Guid = guid,
 		};
 
-		public override SheetLine.Stored OptimizeWith(IReadOnlyCollection<SheetLine.Stored> lines)
+		/*public override SheetLine.Stored OptimizeWith(IReadOnlyCollection<SheetLine.Stored> lines)
 		{
 			var match = lines.OfType<Stored>().FirstOrDefault(l => l.guid == guid);
 			if (match is not null)
@@ -540,6 +540,6 @@ public partial class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetT
 				return line;
 
 			return new Stored(guid, newComponents);
-		}
+		}*/
 	}
 }

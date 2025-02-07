@@ -81,7 +81,7 @@ public readonly record struct TabNote
 			s = s[modifierLength..];
 
 		//Versuche Zahl zu lesen
-		for (var i = maxNumberLength; i > 0; i--)
+		for (var i = Math.Min(maxNumberLength, s.Length); i > 0; i--)
 		{
 			if (byte.TryParse(s[0..i], out var noteValue))
 			{

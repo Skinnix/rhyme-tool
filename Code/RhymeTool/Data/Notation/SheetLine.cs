@@ -63,6 +63,6 @@ public abstract class SheetLine : DeepObservableBase, ISheetLine
 	{
 		public abstract SheetLine Restore();
 
-		public abstract Stored OptimizeWith(IReadOnlyCollection<Stored> lines);
+		//public abstract Stored OptimizeWith(IReadOnlyCollection<Stored> lines);
 	}
 }

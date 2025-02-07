@@ -17,7 +17,7 @@ public record AppVersionInfoData
 		Platforms = platforms;
 	}
 
-	public static bool TryRead(IniFile ini, [MaybeNullWhen(false)] out AppVersionInfoData data)
+	public static bool TryRead(IniFile ini, string baseUrl, [MaybeNullWhen(false)] out AppVersionInfoData data)
 	{
 		var platforms = new Dictionary<string, PlatformInfo>();
 		foreach (var section in ini.Sections)
@@ -32,7 +32,7 @@ public record AppVersionInfoData
 				|| !Version.TryParse(versionString, out var version))
 				continue;
 
-			platforms[platformKey.ToLower()] = new PlatformInfo(label, version, url);
+			platforms[platformKey.ToLower()] = new PlatformInfo(label, version, baseUrl + url);
 		}
 
 		if (platforms.Count == 0)

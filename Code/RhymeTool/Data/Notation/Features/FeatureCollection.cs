@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using Skinnix.RhymeTool.ComponentModel;
+using Skinnix.RhymeTool.Data.Editing;
 
 namespace Skinnix.RhymeTool.Data.Notation.Features;
 
@@ -50,29 +51,38 @@ public class FeatureCollection : IReadOnlyCollection<IDocumentFeature>, IModifia
 
 	public readonly record struct Stored : IStored<FeatureCollection, SheetDocument>
 	{
-		private readonly IDocumentFeature.Stored[] features;
+		private readonly IDocumentFeature.Stored[]? features;
 
 		public Stored(FeatureCollection collection)
 		{
-			features = new IDocumentFeature.Stored[collection.Count];
-			int i = 0;
-			foreach (var feature in collection)
-				features[i++] = feature.Store();
+			if (collection.Count == 0)
+			{
+				features = null;
+			}
+			else
+			{
+				features = new IDocumentFeature.Stored[collection.Count];
+				foreach ((var i, var feature) in collection.Index())
+					features[i] = feature.Store();
+
+				features = ArrayCache.Cache(features);
+			}
 		}
 
-		private Stored(IDocumentFeature.Stored[] features)
+		private Stored(IDocumentFeature.Stored[]? features)
 		{
 			this.features = features;
 		}
 
 		public FeatureCollection Restore(SheetDocument document)
-			=> new(document, features.Select(f => f.Restore(document)));
+			=> new(document, features?.Select(f => f.Restore(document)) ?? []);
 
 		internal void Apply(FeatureCollection collection)
 		{
-			var newFeatures = new List<IDocumentFeature>(features.Length);
-			foreach (var feature in features)
-				newFeatures.Add(feature.Restore(collection.Document));
+			var newFeatures = new List<IDocumentFeature>(features?.Length ?? 0);
+			if (features is not null)
+				foreach (var feature in features)
+					newFeatures.Add(feature.Restore(collection.Document));
 
 			collection.features.Clear();
 			collection.features = newFeatures;
@@ -80,13 +90,17 @@ public class FeatureCollection : IReadOnlyCollection<IDocumentFeature>, IModifia
 			collection.RaiseModified(new(collection));
 		}
 
-		public Stored OptimizeWith(Stored other)
+		/*public Stored OptimizeWith(Stored other)
 		{
 			if (Equals(other))
 				return other;
 
-			var newFeatures = new IDocumentFeature.Stored[features.Length];
-			var isEqual = features.Length == other.features.Length;
+			var newFeatures = new IDocumentFeature.Stored[features?.Length ?? 0];
+			var isEqual = features?.Length == other.features?.Length;
+			if (features is not null)
+			{
+
+			}
 			for (var i = 0; i < features.Length; i++)
 			{
 				if (i >= other.features.Length)
@@ -108,6 +122,6 @@ public class FeatureCollection : IReadOnlyCollection<IDocumentFeature>, IModifia
 				return other;
 
 			return new(newFeatures);
-		}
+		}*/
 	}
 }

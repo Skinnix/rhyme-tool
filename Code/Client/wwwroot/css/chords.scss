@@ -130,10 +130,6 @@ $separatorColor: #6c757d;
 
 			.line-type {
 				margin-left: 9px;
-
-				.dropdown-toggle::after {
-					content: unset;
-				}
 			}
 		}
 
@@ -155,11 +151,6 @@ $separatorColor: #6c757d;
 				.line-type {
 					.btn {
 						width: 100%;
-					}
-
-					.dropdown-toggle::after {
-						//hide dropdown triangle
-						content: unset;
 					}
 				}
 			}

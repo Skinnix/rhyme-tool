@@ -14,7 +14,7 @@ public interface IDocumentFeature
 
 	public interface Stored : IStored<IDocumentFeature, SheetDocument>
 	{
-		Stored OptimizeWith(Stored feature, out bool isEqual);
-		Stored OptimizeWith(IReadOnlyCollection<Stored> others);
+		/*Stored OptimizeWith(Stored feature, out bool isEqual);
+		Stored OptimizeWith(IReadOnlyCollection<Stored> others);*/
 	}
 }

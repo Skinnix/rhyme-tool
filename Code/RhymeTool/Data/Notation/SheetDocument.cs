@@ -76,8 +76,8 @@ public class SheetDocument
 			lines.Apply(document.Lines);
 		}
 
-		public Stored OptimizeWith(Stored other)
-			=> new(globalFeatures.OptimizeWith(other.globalFeatures), lines.OptimizeWith(other.lines));
+		/*public Stored OptimizeWith(Stored other)
+			=> new(globalFeatures.OptimizeWith(other.globalFeatures), lines.OptimizeWith(other.lines));*/
 	}
 }
 

@@ -73,12 +73,12 @@ public abstract class UpdateServiceBase(IOptions<UpdateOptions> options, HttpCli
 		try
 		{
 			AppVersionInfoData updateData;
-			var checkUrl = options.Value.UpdateBaseUrl + string.Format(options.Value.UpdateVersionUrl, CurrentVersion);
+			var checkUrl = options.Value.UpdateBaseUrl + string.Format(options.Value.UpdateVersionUrlSuffix, CurrentVersion);
 			using (var infoStream = await httpClient.GetStreamAsync(checkUrl))
 			{
 				using var reader = new StreamReader(infoStream);
 				var data = await IniFile.ReadAsync(reader, StringComparison.OrdinalIgnoreCase);
-				if (!AppVersionInfoData.TryRead(data, out updateData!))
+				if (!AppVersionInfoData.TryRead(data, options.Value.UpdateBaseUrl, out updateData!))
 					return new CheckUpdateResult.Error("Leere oder ungültige Antwort", CurrentVersion);
 			}
 
@@ -88,8 +88,7 @@ public abstract class UpdateServiceBase(IOptions<UpdateOptions> options, HttpCli
 			if (CurrentVersion is not null && CurrentVersion >= platformInfo.Version)
 				return new CheckUpdateResult.NoUpdate(CurrentVersion);
 
-			var downloadUrl = options.Value.UpdateBaseUrl + platformInfo.Url;
-			return new CheckUpdateResult.UpdateAvailable(this, CurrentVersion, platformInfo.Version, platformInfo.Label, downloadUrl);
+			return new CheckUpdateResult.UpdateAvailable(this, CurrentVersion, platformInfo.Version, platformInfo.Label, platformInfo.Url);
 		}
 		catch (HttpRequestException)
 		{
@@ -110,12 +109,12 @@ public abstract class UpdateServiceBase(IOptions<UpdateOptions> options, HttpCli
 		try
 		{
 			AppVersionInfoData updateData;
-			var checkUrl = options.Value.UpdateBaseUrl + string.Format(options.Value.UpdateVersionUrl, CurrentVersion);
+			var checkUrl = options.Value.UpdateBaseUrl + string.Format(options.Value.UpdateVersionUrlSuffix, CurrentVersion);
 			using (var infoStream = await httpClient.GetStreamAsync(checkUrl))
 			{
 				using var reader = new StreamReader(infoStream);
 				var data = await IniFile.ReadAsync(reader, StringComparison.OrdinalIgnoreCase);
-				if (!AppVersionInfoData.TryRead(data, out updateData!))
+				if (!AppVersionInfoData.TryRead(data, options.Value.UpdateBaseUrl, out updateData!))
 					return new CheckDownloadsResult.Error("Leere oder ungültige Antwort");
 			}
 

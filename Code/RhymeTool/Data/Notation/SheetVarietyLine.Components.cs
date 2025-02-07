@@ -6,6 +6,7 @@ using System.Reflection.Metadata;
 using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Threading.Tasks;
+using Skinnix.RhymeTool.Data.Editing;
 using Skinnix.RhymeTool.Data.Notation.Display;
 
 namespace Skinnix.RhymeTool.Data.Notation;
@@ -278,14 +279,22 @@ partial class SheetVarietyLine
 
 			public readonly struct Stored : ISelfStored<Stored, Collection, SheetVarietyLine>
 			{
-				private readonly Component.Stored[] components;
+				private readonly Component.Stored[]? components;
 
 				internal Stored(Collection collection)
 				{
-					components = new Component.Stored[collection.Count];
-					var i = 0;
-					foreach (var component in collection)
-						components[i++] = component.Store();
+					if (collection.Count == 0)
+					{
+						components = null;
+					}
+					else
+					{
+						components = new Component.Stored[collection.Count];
+						foreach ((var i, var component) in collection.Index())
+							components[i] = component.Store();
+
+						components = ArrayCache.Cache(components);
+					}
 				}
 
 				private Stored(Component.Stored[] components)
@@ -294,9 +303,9 @@ partial class SheetVarietyLine
 				}
 
 				public Collection Restore(SheetVarietyLine owner)
-					=> new Collection(owner, components.Select(c => c.Restore()));
+					=> new Collection(owner, components?.Select(c => c.Restore()) ?? []);
 
-				public Stored OptimizeWith(Stored line, out bool isEqual)
+				/*public Stored OptimizeWith(Stored line, out bool isEqual)
 				{
 					isEqual = line.components.Length == components.Length;
 					var newComponents = new Component.Stored[components.Length];
@@ -322,23 +331,31 @@ partial class SheetVarietyLine
 						return line;
 
 					return new(newComponents);
-				}
+				}*/
 			}
 		}
 
 		public readonly struct Stored : IStored<Component>
 		{
 			private readonly ComponentContent content;
-			private readonly VarietyComponent.Attachment.Stored[] attachments;
+			private readonly VarietyComponent.Attachment.Stored[]? attachments;
 
 			internal Stored(ComponentContent content, IReadOnlyCollection<VarietyComponent.Attachment> attachments)
 			{
 				this.content = content;
 
-				this.attachments = new VarietyComponent.Attachment.Stored[attachments.Count];
-				var i = 0;
-				foreach (var attachment in attachments)
-					this.attachments[i++] = attachment.Store();
+				if (attachments.Count == 0)
+				{
+					this.attachments = null;
+				}
+				else
+				{
+					this.attachments = new VarietyComponent.Attachment.Stored[attachments.Count];
+					foreach ((var i, var attachment) in attachments.Index())
+						this.attachments[i] = attachment.Store();
+
+					this.attachments = ArrayCache.Cache(this.attachments);
+				}
 			}
 
 			private Stored(ComponentContent content, VarietyComponent.Attachment.Stored[] attachments)
@@ -350,11 +367,11 @@ partial class SheetVarietyLine
 			public Component Restore()
 			{
 				var component = new VarietyComponent(content);
-				component.AddAttachments(attachments.Select(a => a.Restore()));
+				component.AddAttachments(attachments?.Select(a => a.Restore()) ?? []);
 				return component;
 			}
 
-			public Stored OptimizeWith(Stored component, out bool isEqual)
+			/*public Stored OptimizeWith(Stored component, out bool isEqual)
 			{
 				isEqual = attachments.Length == component.attachments.Length
 					&& attachments.SequenceEqual(component.attachments);
@@ -391,7 +408,7 @@ partial class SheetVarietyLine
 					return new(content, attachmentsCandidate.Value.attachments);
 
 				return this;
-			}
+			}*/
 		}
 	}
 

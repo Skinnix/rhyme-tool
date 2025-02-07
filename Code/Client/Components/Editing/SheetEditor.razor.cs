@@ -28,8 +28,6 @@ partial class SheetEditor
 	private SheetDocument? loadedDocument;
 	private ISheetEditorFormatter? loadedFormatter;
 
-	private DocumentEditHistory? editHistory;
-
 	private ElementReference editorWrapper;
 	private RerenderAnchor rerenderAnchor = null!;
 	private IJSObjectReference? jsEditor = null;
@@ -37,6 +35,8 @@ partial class SheetEditor
 	private bool shouldRender;
 
 	private readonly WeakDictionary<Guid, SheetDisplayLine[]> renderedLines = new();
+
+	public DocumentEditHistory? EditHistory { get; private set; }
 
 	protected override void OnParametersSet()
 	{
@@ -51,7 +51,7 @@ partial class SheetEditor
 
 			renderedLines.Clear();
 			loadedDocument = Document;
-			editHistory = Document is not null ? new(Document) : null;
+			EditHistory = Document is not null ? new(Document) : null;
 
 			if (loadedDocument is not null)
 				loadedDocument.Lines.Modified += OnLinesModified;
@@ -143,6 +143,9 @@ partial class SheetEditor
 
 			//Neue Auswahl
 			newSelection = editResult.NewSelection;
+
+			//Speichere die Änderung
+			EditHistory?.StoreEdit(GetEditLabel(data), newSelection, true, null);
 		}
 		else
 		{
@@ -154,10 +157,10 @@ partial class SheetEditor
 
 			//Neue Auswahl
 			newSelection = editResult.NewSelection;
-		}
 
-		//Speichere die Änderung
-		editHistory?.StoreEdit(GetEditLabel(data), newSelection, true);
+			//Speichere die Änderung
+			EditHistory?.StoreEdit(GetEditLabel(data), newSelection, true, (data.Selection.Start.Metaline, data.Selection.Start.Line));
+		}
 
 		//Erzeuge Ergebnis
 		var selection = LineSelection.FromRange(newSelection);
@@ -167,12 +170,12 @@ partial class SheetEditor
 
 	private JsMetalineEditResult Undo()
 	{
-		if (Document is null || editHistory is null) throw new InvalidOperationException("Editor nicht initialisiert");
+		if (Document is null || EditHistory is null) throw new InvalidOperationException("Editor nicht initialisiert");
 
-		if (!editHistory.CanUndo)
+		if (!EditHistory.CanUndo)
 			return new JsMetalineEditResult(false, false, null, UndoNotAvailable);
 
-		var newSelection = editHistory.Undo();
+		var newSelection = EditHistory.Undo();
 		var selection = LineSelection.FromRange(newSelection);
 		rerenderAnchor.TriggerRender();
 		return new JsMetalineEditResult(true, true, selection, null);
@@ -180,12 +183,12 @@ partial class SheetEditor
 
 	private JsMetalineEditResult Redo()
 	{
-		if (Document is null || editHistory is null) throw new InvalidOperationException("Editor nicht initialisiert");
+		if (Document is null || EditHistory is null) throw new InvalidOperationException("Editor nicht initialisiert");
 
-		if (!editHistory.CanRedo)
+		if (!EditHistory.CanRedo)
 			return new JsMetalineEditResult(false, false, null, RedoNotAvailable);
 
-		var newSelection = editHistory.Redo();
+		var newSelection = EditHistory.Redo();
 		var selection = LineSelection.FromRange(newSelection);
 		rerenderAnchor.TriggerRender();
 		return new JsMetalineEditResult(true, true, selection, null);

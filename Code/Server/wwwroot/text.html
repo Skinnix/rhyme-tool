@@ -1,0 +1,21 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+</head>
+<body>
+    <div contenteditable="true"></div>
+
+    <script>
+        let target = document.querySelector('textarea');
+        let listener = console.log;
+        for (const key in target) {
+            if (/^on/.test(key)) {
+                const eventType = key.substr(2);
+                target.addEventListener(eventType, listener);
+            }
+        }
+    </script>
+</body>
+</html>

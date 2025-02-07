@@ -9,7 +9,7 @@ namespace Skinnix.RhymeTool.Client.Updating;
 public class UpdateOptions
 {
 	public string UpdateBaseUrl { get; set; } = "https://skinnix.net/chords/update/";
-	public string UpdateVersionUrl { get; set; } = "check?current={0}";
+	public string UpdateVersionUrlSuffix { get; set; } = "check?current={0}";
 	
 	public string PlatformKey { get; set; } = "unknown";
 }

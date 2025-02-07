@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Skinnix.RhymeTool.Data.Editing;
 using Skinnix.RhymeTool.Data.Notation.Display;
 
 namespace Skinnix.RhymeTool.Data.Notation;
@@ -568,29 +569,36 @@ partial class SheetTabLine
 
 			public readonly struct Stored : ISelfStored<Stored, Collection, SheetTabLine>
 			{
-				private readonly TabLineDefinition.Stored[] lines;
+				private readonly TabLineDefinition.Stored[]? lines;
 
 				internal Stored(Collection collection)
 				{
 					lines = new TabLineDefinition.Stored[collection.Count];
-					var i = 0;
-					foreach (var line in collection)
-						lines[i++] = line.Store();
+					if (lines.Length == 0)
+					{
+						lines = null;
+					}
+					else
+					{
+						var i = 0;
+						foreach (var line in collection)
+							lines[i++] = line.Store();
+					}
 				}
 
 				public Collection Restore(SheetTabLine owner)
-					=> new(owner, lines.Select((l, i) => l.Restore((owner, i))));
+					=> new(owner, lines?.Select((l, i) => l.Restore((owner, i))) ?? []);
 
-				public Stored OptimizeWith(Stored collection, out bool isEqual)
+				/*public Stored OptimizeWith(Stored collection, out bool isEqual)
 				{
-					isEqual = collection.lines.Length == lines.Length
-						&& collection.lines.SequenceEqual(lines);
+					isEqual = collection.lines?.Length == lines?.Length
+						&& (lines is null || collection.lines!.SequenceEqual(lines));
 
 					if (isEqual)
 						return collection;
 
 					return this;
-				}
+				}*/
 			}
 		}
 
@@ -735,19 +743,28 @@ partial class SheetTabLine
 
 			public readonly struct Stored : IStored<Collection>
 			{
-				private readonly Component.Stored?[] components;
+				private readonly Component.Stored?[]? components;
 
 				public Stored(Collection collection)
 				{
-					components = new Component.Stored?[collection.Count];
-					for (var i = 0; i < collection.Count; i++)
-						components[i] = collection[i]?.Store();
+					if (collection.Count == 0)
+					{
+						components = null;
+					}
+					else
+					{
+						components = new Component.Stored?[collection.Count];
+						foreach ((var i, var component) in collection.Index())
+							components[i] = component?.Store();
+
+						components = ArrayCache.Cache(components);
+					}
 				}
 
 				public Collection Restore()
-					=> new(components.Select(c => c?.Restore()));
+					=> new(components?.Select(c => c?.Restore()) ?? []);
 
-				public Stored OptimizeWith(Stored collection, out bool isEqual)
+				/*public Stored OptimizeWith(Stored collection, out bool isEqual)
 				{
 					var newComponents = new Component.Stored?[components.Length];
 					isEqual = components.Length == collection.components.Length;
@@ -780,7 +797,7 @@ partial class SheetTabLine
 						return collection;
 
 					return this;
-				}
+				}*/
 			}
 		}
 

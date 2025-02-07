@@ -101,10 +101,18 @@ function registerDropDownHandler(element: HTMLElement, reference: BlazorDotNetRe
 
 function showToast(message: string, title: string, delay: number): void {
 	//get container
-	var toastContainer = document.querySelector('.toast-container')!;
+	let toastContainer = document.querySelector('.toast-container')!;
+
+	//does the toast already exist?
+	let allToasts = toastContainer.querySelectorAll('.toast');
+	for (var i = 0; i < allToasts.length; i++) {
+		let bsToast = bootstrap.Toast.getInstance(allToasts[i]);
+		if (bsToast &&(bsToast['data-title'] == title && bsToast['data-message'] == message))
+			return;
+	}
 
 	//create toast
-	var toast = document.createElement('div');
+	let toast = document.createElement('div');
 	toast.classList.add('toast');
 	toast.setAttribute('role', 'alert');
 	toast.setAttribute('aria-live', 'assertive');
@@ -120,11 +128,13 @@ function showToast(message: string, title: string, delay: number): void {
 	toastContainer.appendChild(toast);
 	
 	//create BS toast
-	var bsToast = new bootstrap.Toast(toast, {
+	let bsToast = new bootstrap.Toast(toast, {
 		animation: true,
 		autohide: true,
 		delay: delay || 5000
 	});
+	bsToast['data-title'] = title;
+	bsToast['data-message'] = message;
 
 	//remove toast when hidden
 	toast.addEventListener('hidden.bs.toast', function () {

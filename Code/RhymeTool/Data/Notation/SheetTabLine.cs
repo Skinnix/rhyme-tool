@@ -324,7 +324,7 @@ public partial class SheetTabLine : SheetLine, ISelectableSheetLine
 				BarLength = barLength,
 			};
 
-		public override SheetLine.Stored OptimizeWith(IReadOnlyCollection<SheetLine.Stored> lines)
+		/*public override SheetLine.Stored OptimizeWith(IReadOnlyCollection<SheetLine.Stored> lines)
 		{
 			var match = lines.OfType<Stored>().FirstOrDefault(l => l.guid == guid);
 			if (match is null)
@@ -345,6 +345,6 @@ public partial class SheetTabLine : SheetLine, ISelectableSheetLine
 				return new Stored(guid, lines, components, barLength);
 
 			return this;
-		}
+		}*/
 	}
 }
