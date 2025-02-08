@@ -193,10 +193,11 @@
 @if (LineContext is not null)
 {
     <span class="metaline" data-metaline="@Line!.Guid" data-type="@Line.GetType()?.Name" data-render-key="@(renderKey++)" @attributes="GetAdditionalAttributes()">
-        <span class="metaline-controls" contenteditable="false"><span class="metaline-bracket"></span><MetalineTypeButton Line="Line" /></span><span class="metaline-lines">
+        <span class="metaline-controls" contenteditable="false"><span class="metaline-bracket"></span>@*<MetalineTypeButton Line="Line" />*@</span>
+        <span class="metaline-lines">
             @foreach (var display in (renderedLines = LineContext.CreateDisplayLines(Formatter).ToArray()))
             {
-                <span class="line-controls" contenteditable="false"><LineTypeButton Line="display" /></span>
+                @*<span class="line-controls" contenteditable="false"><LineTypeButton Line="display" /></span>*@
                 RenderLine(display);
             }
         </span>
@@ -318,7 +319,6 @@
 
     private object? GetKey(SheetDisplayLine line)
     {
-        return null;
         return line.Id;
     }
 

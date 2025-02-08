@@ -6,7 +6,6 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Diagnostics.Metrics;
 using System.Linq;
-using System.Net.Mail;
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.Metadata.Ecma335;
@@ -51,6 +50,8 @@ public partial class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetT
 
 		contentEditor = new(this);
 		attachmentEditor = new(this);
+
+		IsTitleLine(out cachedTitle);
 	}
 
 	public SheetVarietyLine(IEnumerable<Component> components)
@@ -60,6 +61,8 @@ public partial class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetT
 
 		contentEditor = new(this);
 		attachmentEditor = new(this);
+
+		IsTitleLine(out cachedTitle);
 	}
 
 	private SheetVarietyLine(Func<SheetVarietyLine, Component.Collection> getComponents)
@@ -69,6 +72,8 @@ public partial class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetT
 
 		contentEditor = new(this);
 		attachmentEditor = new(this);
+
+		IsTitleLine(out cachedTitle);
 	}
 
 	public override IEnumerable<SheetLineConversion> GetPossibleConversions(ISheetBuilderFormatter? formatter = null)
@@ -196,7 +201,7 @@ public partial class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetT
 			//Baue den Titel zusammen
 			titleBuilder.Append(text);
 			titleComponentsList.Add(variety);
-			if (text.EndsWith(TITLE_END_DELIMITER))
+			if (text.EndsWith(TITLE_END_DELIMITER) && titleBuilder.Length > 1)
 			{
 				//Titel gefunden
 				title = titleBuilder.ToString(1, titleBuilder.Length - 2);
@@ -211,7 +216,7 @@ public partial class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetT
 			return false;
 		}
 
-		title = titleBuilder.ToString();
+		title = titleBuilder.ToString(1, titleBuilder.Length - 1);
 		afterTitleIndex = i;
 		return true;
 	}

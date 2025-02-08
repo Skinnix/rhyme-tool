@@ -518,6 +518,7 @@ partial class SheetVarietyLine
 
 			//Trenne den Text an Attachments
 			var contentDisplayElements = new List<SheetDisplayLineElement>();
+			var isTitleLine = Owner?.IsTitleLine(out _) == true;
 			foreach (var block in GetDisplayColumns(componentIndex, formatter))
 			{
 				//Wird ein Attachment geschrieben?
@@ -553,17 +554,20 @@ partial class SheetVarietyLine
 
 				//Ist die Zeile eine Titelzeile?
 				var isTitle = false;
-				foreach (var titleElement in TrySplitTitleElement(block.Content, builders.IsRenderingTitle))
+				if (isTitleLine)
 				{
-					isTitle = true;
+					foreach (var titleElement in TrySplitTitleElement(block.Content, builders.IsRenderingTitle))
+					{
+						isTitle = true;
 
-					//An Klammern beginnt/endet der Titel
-					if (titleElement is SheetDisplayLineSegmentTitleBracket titleBracket)
-						builders.IsRenderingTitle = !builders.IsRenderingTitle;
+						//An Klammern beginnt/endet der Titel
+						if (titleElement is SheetDisplayLineSegmentTitleBracket titleBracket)
+							builders.IsRenderingTitle = !builders.IsRenderingTitle;
 
-					//Schreibe Titelelemente
-					builders.TextLine.Append(titleElement, formatter);
-					contentDisplayElements.Add(titleElement);
+						//Schreibe Titelelemente
+						builders.TextLine.Append(titleElement, formatter);
+						contentDisplayElements.Add(titleElement);
+					}
 				}
 
 				//Kein Titelelement?
@@ -663,11 +667,11 @@ partial class SheetVarietyLine
 			var contentOffset = element.Slice?.ContentOffset ?? ContentOffset.Zero;
 			if (!isCurrentlyWritingTitle)
 			{
-				if (!text.StartsWith('['))
+				if (!text.StartsWith(TITLE_START_DELIMITER))
 					yield break; //nur Text
 
 				//Trenne öffnende Klammer
-				yield return new SheetDisplayLineSegmentTitleBracket("[", true)
+				yield return new SheetDisplayLineSegmentTitleBracket(TITLE_START_DELIMITER.ToString(), true)
 				{
 					Slice = textElement.Slice,
 				};
@@ -681,7 +685,7 @@ partial class SheetVarietyLine
 			}
 
 			//Ist die Komponente auch das Ende des Titels?
-			if (text.EndsWith(']'))
+			if (text.EndsWith(TITLE_END_DELIMITER))
 			{
 				//Trenne den Text
 				var titleText = text[..^1];
@@ -695,7 +699,7 @@ partial class SheetVarietyLine
 				contentOffset += new ContentOffset(titleText.Length);
 
 				//Trenne schließende Klammer
-				yield return new SheetDisplayLineSegmentTitleBracket("]", false)
+				yield return new SheetDisplayLineSegmentTitleBracket(TITLE_END_DELIMITER.ToString(), false)
 				{
 					Slice = textElement.Slice!.Value with
 					{

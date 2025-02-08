@@ -1,6 +1,6 @@
 <Project>
 	<PropertyGroup>
-		<BaseVersion>0.10</BaseVersion>
+		<BaseVersion>0.11</BaseVersion>
 		<IntVersion>6</IntVersion>
 	</PropertyGroup>
 

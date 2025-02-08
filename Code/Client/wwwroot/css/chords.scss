@@ -90,7 +90,7 @@ $separatorColor: #6c757d;
 
 	&.chord-sheet-editor {
 		.line {
-			width: fit-content;
+			//width: fit-content;
 		}
 	}
 
@@ -118,8 +118,8 @@ $separatorColor: #6c757d;
 			align-self: stretch;
 			position: sticky;
 			left: 0px;
-			border-right: 1rem solid var(--bs-body-bg);
-			margin-right: -1rem;
+			//border-right: 1rem solid var(--bs-body-bg);
+			//margin-right: -1rem;
 
 			.metaline-bracket {
 				@include bracket;

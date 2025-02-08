@@ -1,4 +1,4 @@
-[Test]
+#Test
 
    Gm7                               EbΔ/11 EbΔ/11 A               A
 EsXwarXeinmalXeinXFürstensprossXXdem war seineineinein Leben mies, A
@@ -13,11 +13,11 @@ D|---4----|9 -  - --- 12 1|
 A|----5--8|- -  - --- 12 1|
 E|-----67-|- -  - --- 12 1|
 
-[Intro]
+#Intro
 G5 G6b G6
 (Tempo >150)
 
-[Strophe]
+#Strophe
     Emaj7/11 Emaj7/11 Emaj7/11 Emaj7/11 Emaj7/11 Emaj7/11
 Xmaj7/11 Xmaj7/11 Xmaj7/11 Xmaj7/11 Xmaj7/11 Xmaj7/11
    Gm7                               EbΔ/11 EbΔ/11 A               A
@@ -38,7 +38,7 @@ Als man ihn dann zum Ritter schlug, wurd ihm bald deutlich klar,
      F                           Gm
 dass er im Grunde durch und durch ein Mann des Volkes war.
 
-[Pre-Chorus]
+#Pre-Chorus
     Csus2                           Bb/D
 Man lehrte ihn das Kämpfen, denn er sollte sich verpflichten,
     EbM7                         F
@@ -48,10 +48,10 @@ Doch war es nie sein Wunsch, des Adels Kriege zu bestreiten,
      Bbmaj7                             C
 drum legte er sein Schwert ab und jetzt metzelt er nur Saiten.
 
-[Zwischenspiel Gitarre]
+#Zwischenspiel Gitarre
 Dadd9 Bbmaj7 Cadd9 Gadd9
 
-[Chorus]
+#Chorus
     Dadd9                              A11
 Und läuft auch mal das Leben nicht auf altbekannten Wegen
    Gadd9
@@ -69,7 +69,7 @@ Was immer ihr uns auferlegt, das int'ressiert uns nicht,
 Bbmaj7/D                   Cadd9/D
 denn wir stehen felsenfest - Saite an Saite!
 
-[Zwischenspiel]
+#Zwischenspiel
 G5 G6b G6 G6b
 G5 G6b G6 G6b
 dfsfg asdfjasdf asd f

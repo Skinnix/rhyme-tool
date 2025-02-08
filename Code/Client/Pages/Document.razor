@@ -114,7 +114,7 @@
     }
 </SectionContent>
 
-<div @ref="wrapper" class="chord-sheet-wrapper w-100 @(IsDebug ? "debug" : null) @((CurrentSettings as RenderingSettings)?.Autofit == true ? "autofit" : null)" style="--font-percent: @CurrentSettings.FontSize; --characters: @(maxCharacters)">
+<div @ref="wrapper" class="chord-sheet-wrapper w-100 @(IsDebug ? "debug" : null) @((CurrentSettings as RenderingSettings)?.Autofit == true ? "autofit" : null)" style="--font-percent: @CurrentSettings.FontSize; --characters: @(maxCharacters)" data-mode="@viewMode">
 
     @if (viewMode == ViewMode.Renderer)
     {
