@@ -13,7 +13,6 @@ public abstract class BinaryRhymeLoadingServiceBase : RhymeLoadingServiceBase
 	{
 		using (var reader = await GetRhymeReaderAsync())
 		{
-			throw new NotImplementedException();
 			return new(RhymeWordList.Read(reader), null, null);
 		}
 	}

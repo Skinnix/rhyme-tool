@@ -87,7 +87,7 @@ else
         {
             suffixSearchResult = rhymeHelper.FindBySuffix(searchTerm[1..]);
             rhymeSearchResult = default;
-            notFound = false;
+            notFound = suffixSearchResult.IsEmpty;
         }
         else
         {

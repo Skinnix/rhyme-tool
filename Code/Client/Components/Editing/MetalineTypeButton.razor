@@ -32,8 +32,6 @@
 
     [Parameter] public SheetLine? Line { get; set; }
 
-    private bool expanded;
-
     private ElementReference dropdownWrapper;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -49,14 +47,12 @@
     [JSInvokable]
     public void OnDropDownShow()
     {
-        expanded = true;
         StateHasChanged();
     }
 
     [JSInvokable]
     public void OnDropDownHidden()
     {
-        expanded = false;
         StateHasChanged();
     }
 }

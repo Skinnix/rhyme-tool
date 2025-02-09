@@ -442,7 +442,7 @@ public abstract class WordFeatureList<TEntry, TResult> : IReadOnlyList<TResult>
 		public static readonly ReverseWordComparer IgnoreCase = new(true, CultureInfo.InvariantCulture);
 
 		public int Compare(TEntry x, string reversedWord)
-			=> CompareStrings(x.Word.ReverseEnumerator(), reversedWord, ignoreCase, culture);
+			=> CompareStrings(x.Word.ReverseEnumerator().Take(reversedWord.Length), reversedWord, ignoreCase, culture);
 
 		public int Compare(TEntry x, TEntry y)
 			=> CompareStrings(x.Word.ReverseEnumerator(), y.Word.ReverseEnumerator(), ignoreCase, culture);

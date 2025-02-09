@@ -11,7 +11,7 @@ a, .btn-link {
 }
 
 header, header.sticky-top {
-	z-index: 2000;
+	z-index: 1050; //modal is 1055
 }
 
 .dropdown.dropdown-hide-arrow {

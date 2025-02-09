@@ -17,10 +17,10 @@ public class RhymeHelper
 
 	private readonly RhymeWordList rhymeWordList;
 	//private readonly SpellingList spellingList;
-	private readonly WordFormList wordFormList;
-	private readonly ComparisonWordList comparisonWordList;
+	private readonly WordFormList? wordFormList;
+	private readonly ComparisonWordList? comparisonWordList;
 
-	public RhymeHelper(RhymeWordList rhymeWordList, WordFormList wordFormList, ComparisonWordList comparisonWordList)
+	public RhymeHelper(RhymeWordList rhymeWordList, WordFormList? wordFormList, ComparisonWordList? comparisonWordList)
 	{
 		this.rhymeWordList = rhymeWordList;
 		this.wordFormList = wordFormList;
@@ -42,8 +42,8 @@ public class RhymeHelper
 		var words = rhymeWordList.FindAllWords(word).ToArray();
 
 		//Finde den Wortstamm
-		var stems = wordFormList.FindAllForms(word).Select(r => r.Stem).Where(s => s.HasValue).Select(s => s!.Value).Distinct().ToArray();
-		if (stems.Length != 0)
+		var stems = wordFormList?.FindAllForms(word).Select(r => r.Stem).Where(s => s.HasValue).Select(s => s!.Value).Distinct().ToArray();
+		if (stems is not null && stems.Length != 0)
 		{
 			//Suche die Wortstämme in der Vergleichsliste
 			var candidateFound = false;
@@ -63,7 +63,7 @@ public class RhymeHelper
 						break;
 
 					//Suche das Wort in der Vergleichsliste
-					comparisonWord = comparisonWordList.FindWord(word);
+					comparisonWord = comparisonWordList?.FindWord(word) ?? default;
 					if (!comparisonWord.Success)
 						break;
 
@@ -71,7 +71,7 @@ public class RhymeHelper
 				}
 
 				//Suche den Stamm in der Vergleichsliste
-				var comparisonStem = comparisonWordList.FindWord(stem.Form);
+				var comparisonStem = comparisonWordList?.FindWord(stem.Form) ?? default;
 				if (comparisonStem.Success)
 				{
 					//Prüfe alle möglichen Aussprachen

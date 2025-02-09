@@ -74,7 +74,6 @@
 
     private string? currentWorkingDirectory;
     private bool workingDirectoryError;
-    private bool shouldGetWorkingDirectoryPermission;
     private bool waitingForDirectoryPermission;
 
     protected override async Task OnParametersSetAsync()
@@ -82,7 +81,6 @@
         await base.OnParametersSetAsync();
 
         currentWorkingDirectory = null;
-        shouldGetWorkingDirectoryPermission = false;
         waitingForDirectoryPermission = false;
         workingDirectoryError = false;
         if (fileService.CanSelectWorkingDirectory)
@@ -91,7 +89,6 @@
 
             if (workingDirectoryResult.Result == SystemRequestResultType.Nonexisting)
             {
-                shouldGetWorkingDirectoryPermission = true;
                 StateHasChanged();
                 return;
             }
