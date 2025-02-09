@@ -1,0 +1,5 @@
+<Project>
+	<Target Name="CreateInnoSetup" DependsOnTargets="Build" AfterTargets="AfterBuild" Condition="'$(Configuration)'=='Release'">
+		<Exec Command="$(InnoSetupCompiler) CreateWin64Installer.iss /DMyAppVersion=$(Version)" />
+	</Target>
+</Project>

@@ -29,19 +29,20 @@ dotnet publish ClientWeb\RhymeTool.Client.Web.csproj -c Release -o ..\Build\Publ
 
 dotnet restore App\RhymeTool.MauiBlazor.csproj
 dotnet publish App\RhymeTool.MauiBlazor.csproj -c Release -f net9.0-android
-dotnet build App\RhymeTool.MauiBlazor.csproj -c Release -f net9.0-windows10.0.19041.0
+dotnet build App\RhymeTool.MauiBlazor.csproj -c Release -f net9.0-windows10.0.19041.0 -t:CreateInnoSetup
 
 :pack
 mkdir ..\Build\Publish\wwwroot\update\version\%assemblyVersion%
-copy /B /Y ..\Build\Release\net9.0-android\Net.Skinnix.RhymeTool.MauiBlazor-Signed.apk ..\Build\Publish\wwwroot\update\version\%assemblyVersion%\app.apk
+copy /B /Y ..\Build\Release\Skinnix.RhymeTool.MauiBlazor\net9.0-android\Net.Skinnix.RhymeTool.MauiBlazor-Signed.apk ..\Build\Publish\wwwroot\update\version\%assemblyVersion%\app.apk
 if exist ..\Build\Publish\wwwroot\update\version\%assemblyVersion%\app.zip del ..\Build\Publish\wwwroot\update\version\%assemblyVersion%\app.zip
+if exist ..\Build\Publish\wwwroot\update\version\%assemblyVersion%\app.exe del ..\Build\Publish\wwwroot\update\version\%assemblyVersion%\app.exe
 ::tar -a -c -f ..\Build\Publish\wwwroot\update\version\%assemblyVersion%\app.zip -C ..\Build\Release\Skinnix.RhymeTool.MauiBlazor\net9.0-windows10.0.19041.0\win10-x64 *
-copy /B /Y ..\Code\AppSetup\Release\AppSetup.msi ..\Build\Publish\wwwroot\update\version\%assemblyVersion%\app.msi
+copy /B /Y ..\Build\Installer\win-x64\RhymeToolSetup.exe ..\Build\Publish\wwwroot\update\version\%assemblyVersion%\app.exe
 
 echo [Platform:windows]>> ..\Build\Publish\wwwroot\update\check
 echo Label=Windows>> ..\Build\Publish\wwwroot\update\check
 echo Version=%version%>> ..\Build\Publish\wwwroot\update\check
-echo URL=version/%assemblyVersion%/app.msi>> ..\Build\Publish\wwwroot\update\check
+echo URL=version/%assemblyVersion%/app.exe>> ..\Build\Publish\wwwroot\update\check
 echo.>> ..\Build\Publish\wwwroot\update\check
 echo [Platform:android]>> ..\Build\Publish\wwwroot\update\check
 echo Label=Android>> ..\Build\Publish\wwwroot\update\check

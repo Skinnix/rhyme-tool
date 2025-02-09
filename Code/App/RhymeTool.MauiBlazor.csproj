@@ -66,6 +66,12 @@
 		<OutputType>WinExe</OutputType>
 	</PropertyGroup>
 
+	<ItemGroup Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows' and '$(Configuration)'=='Release'">
+		<PackageReference Include="Tools.InnoSetup" Version="6.3.1" />
+	</ItemGroup>
+
+	<Import Project="Install.targets" Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'windows' and '$(Configuration)'=='Release'" />
+
 	<Import Project="..\Common.targets" />
 
 	<ItemGroup>
