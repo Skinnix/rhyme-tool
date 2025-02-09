@@ -3,14 +3,42 @@
 @inject NavigationManager navigation
 @inject IJSRuntime js
 
-<Router AppAssembly="@typeof(ClientStartup).Assembly">
-    <Found Context="routeData">
-        <RouteView RouteData="@routeData" DefaultLayout="@typeof(Skinnix.RhymeTool.Client.Shared.SimpleLayout)" />
-        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
-    </Found>
-</Router>
+<ErrorBoundary @ref="errorBoundary">
+    <ChildContent>
+        <Router AppAssembly="@typeof(ClientStartup).Assembly">
+            <Found Context="routeData">
+                <RouteView RouteData="@routeData" DefaultLayout="@typeof(Skinnix.RhymeTool.Client.Shared.SimpleLayout)" />
+                <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+            </Found>
+        </Router>
+    </ChildContent>
+
+    <ErrorContent>
+        <div class="modal-backdrop show"></div>
+        <div class="modal modal-xl show d-block" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><i class="fa-solid fa-triangle-exclamation text-danger"></i> Ein Fehler ist aufgetreten</h5>
+                        @* <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button> *@
+                    </div>
+                    <div class="modal-body">
+                        <p style="white-space: pre-wrap">@context</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" @onclick="ReloadAfterError">
+                            Neu Laden
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </ErrorContent>
+</ErrorBoundary>
 
 @code {
+    private ErrorBoundary? errorBoundary;
+
     protected override void OnParametersSet()
     {
         base.OnParametersSet();
@@ -21,5 +49,12 @@
     private async void OnLocationChanged(object? sender, LocationChangedEventArgs args)
     {
         await js.InvokeVoidAsync("hideAllOffcanvases");
+    }
+
+    private async Task ReloadAfterError()
+    {
+        errorBoundary?.Recover();
+
+        await js.InvokeVoidAsync("location.reload");
     }
 }

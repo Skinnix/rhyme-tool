@@ -68,6 +68,13 @@ public static class MauiProgram
 
 		var app = builder.Build();
 
+		//Fehlerhandling
+		MauiExceptions.UnhandledException += async (sender, e) =>
+		{
+			var dialogService = app.Services.GetRequiredService<IDialogService>();
+			await dialogService.ShowErrorAsync("Ein unerwarteter Fehler ist aufgetreten.", e.ExceptionObject.ToString());
+		};
+
 		app.Services.UseRhymeToolClient();
 
 		return app;
