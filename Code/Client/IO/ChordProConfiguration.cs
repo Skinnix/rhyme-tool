@@ -2,7 +2,7 @@
 using Konves.ChordPro.DirectiveHandlers;
 using Konves.ChordPro.Directives;
 
-namespace Skinnix.RhymeTool.Data.Notation.IO;
+namespace Skinnix.RhymeTool.Client.IO;
 
 public class ChordProConfiguration
 {

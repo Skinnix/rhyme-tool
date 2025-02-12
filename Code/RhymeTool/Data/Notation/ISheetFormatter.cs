@@ -130,13 +130,13 @@ public record DefaultSheetFormatter : ISheetEditorFormatter
 	public string SharpDegreeModifier { get; init; } = SharpModifier;
 	public string FlatDegreeModifier { get; init; } = FlatModifier;
 	public string MajorDegreeModifier { get; init; } = "maj";
-	public string MajorSeventhDegreeModifier { get; init; } = "Δ";
+	public string? MajorSeventhDegreeModifier { get; init; } = "Δ";
 
 	public string TextDefaultDegreeModifier { get; init; } = string.Empty;
 	public string TextSharpDegreeModifier { get; init; } = TextSharpModifier;
 	public string TextFlatDegreeModifier { get; init; } = TextFlatModifier;
 	public string TextMajorDegreeModifier { get; init; } = "maj";
-	public string TextMajorSeventhDegreeModifier { get; init; } = "Δ";
+	public string? TextMajorSeventhDegreeModifier { get; init; } = "maj7";
 
 	public string RhythmPatternLeftDelimiter { get; init; } = "|";
 	public string RhythmPatternMiddleDelimiter { get; init; } = "|";

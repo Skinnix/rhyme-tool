@@ -1,7 +1,8 @@
 ﻿using Konves.ChordPro;
 using Konves.ChordPro.Directives;
+using Skinnix.RhymeTool.Data.Notation;
 
-namespace Skinnix.RhymeTool.Data.Notation.IO;
+namespace Skinnix.RhymeTool.Client.IO;
 
 public class ChordProSheetEncoder : SheetEncoderBase<ILine>
 {
@@ -52,9 +53,7 @@ public class ChordProSheetEncoder : SheetEncoderBase<ILine>
 
 				var blocks = new List<Block>();
 				foreach (var component in varietyLine.GetComponents().Index())
-				{
 					if (component.Item is SheetVarietyLine.VarietyComponent varietyComponent)
-					{
 						switch (varietyComponent.Content.Type)
 						{
 							case SheetVarietyLine.ContentType.Chord:
@@ -86,7 +85,7 @@ public class ChordProSheetEncoder : SheetEncoderBase<ILine>
 									}
 									else if (previousAttachment is SheetVarietyLine.VarietyComponent.VarietyAttachment varietyAttachment)
 									{
-										var textBetween = attachment is null 
+										var textBetween = attachment is null
 											? wordText[previousAttachment.Offset.Value..]
 											: wordText[previousAttachment.Offset.Value..attachment.Offset.Value];
 
@@ -97,9 +96,7 @@ public class ChordProSheetEncoder : SheetEncoderBase<ILine>
 										syllables.Add(new(new Konves.ChordPro.Chord(attachmentText), textBetween));
 									}
 									else
-									{
 										throw new SheetWriterException("Unbekannter Attachmenttyp: " + previousAttachment.GetType().Name);
-									}
 
 									previousAttachment = attachment;
 								}
@@ -108,12 +105,8 @@ public class ChordProSheetEncoder : SheetEncoderBase<ILine>
 								blocks.Add(word);
 								break;
 						}
-					}
 					else
-					{
 						throw new SheetWriterException("Unbekannter Komponententyp: " + component.GetType().Name);
-					}
-				}
 
 				yield return new SongLine(blocks);
 				continue;
@@ -151,12 +144,10 @@ public class ChordProSheetEncoderWriter : SheetEncoderWriter<ILine, ChordProShee
 	protected override void Finalize((Stream stream, Document document, bool leaveOpen) state, ChordProSheetEncoder encoder)
 	{
 		using (var writer = new StreamWriter(state.stream, leaveOpen: state.leaveOpen))
-		{
 			ChordProSerializer.Serialize(state.document, writer, new SerializerSettings()
 			{
 				CustomHandlers = ChordProConfiguration.Default.DirectiveHandlers.ToList()
 			});
-		}
 	}
 
 	protected override async Task FinalizeAsync((Stream stream, Document document, bool leaveOpen) state, ChordProSheetEncoder encoder, CancellationToken cancellation = default)

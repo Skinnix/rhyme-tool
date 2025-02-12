@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace Skinnix.RhymeTool.Data.Notation.IO;
+namespace Skinnix.RhymeTool.Client.IO;
 
 public class SheetDecoderStringReader<TDecoder> : SheetDecoderReader<string, TDecoder, TextReader>
 	where TDecoder : SheetDecoderBase<string>, new()

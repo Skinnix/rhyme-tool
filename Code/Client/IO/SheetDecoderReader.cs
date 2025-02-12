@@ -4,12 +4,13 @@ using System.Linq;
 using System.Reflection.PortableExecutable;
 using System.Text;
 using System.Threading.Tasks;
+using Skinnix.RhymeTool.Data.Notation;
 
-namespace Skinnix.RhymeTool.Data.Notation.IO;
+namespace Skinnix.RhymeTool.Client.IO;
 
 public abstract class SheetDecoderReader : SheetReaderBase
 {
-	public static SheetDecoderStringReader<DefaultSheetDecoder> Default { get; } = new();
+	public static SheetDecoderReader Default { get; } = new CombinedSheetDecoderReader();
 }
 
 public abstract class SheetDecoderReader<TLine> : SheetDecoderReader

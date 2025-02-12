@@ -99,10 +99,10 @@ partial class SheetVarietyLine
 
 		internal abstract void BuildLines(LineBuilders builders, int componentIndex, ISheetBuilderFormatter? formatter);
 
-		internal abstract bool TryRemoveContent(ContentOffset offet, ContentOffset length, ISheetEditorFormatter? formatter);
-		internal abstract bool TryReplaceContent(ComponentContent newContent, ISheetEditorFormatter? formatter);
-		internal abstract MergeResult? TryMerge(Component next, ContentOffset offset, ISheetEditorFormatter? formatter);
-		internal abstract Component SplitEnd(ContentOffset offset, ISheetEditorFormatter? formatter);
+		public abstract bool TryRemoveContent(ContentOffset offet, ContentOffset length, ISheetEditorFormatter? formatter);
+		public abstract bool TryReplaceContent(ComponentContent newContent, ISheetEditorFormatter? formatter);
+		public abstract MergeResult? TryMerge(Component next, ContentOffset offset, ISheetEditorFormatter? formatter);
+		public abstract Component SplitEnd(ContentOffset offset, ISheetEditorFormatter? formatter);
 
 		public abstract Stored Store();
 
@@ -417,7 +417,7 @@ partial class SheetVarietyLine
 		private readonly List<Attachment> attachments = new();
 		public IReadOnlyList<Attachment> Attachments => attachments;
 
-		internal ComponentContent Content { get; private set; }
+		public ComponentContent Content { get; private set; }
 
 		public override bool IsEmpty => Content.IsEmpty;
 
@@ -430,7 +430,7 @@ partial class SheetVarietyLine
 		private List<SheetDisplayLineElement> contentElements = new();
 		internal override IReadOnlyList<SheetDisplayLineElement> ContentElements => contentElements;
 
-		internal VarietyComponent(ComponentContent content)
+		public VarietyComponent(ComponentContent content)
 		{
 			Content = content;
 		}
@@ -759,7 +759,7 @@ partial class SheetVarietyLine
 		#endregion
 
 		#region Editing
-		internal override bool TryReplaceContent(ComponentContent newContent, ISheetEditorFormatter? formatter)
+		public override bool TryReplaceContent(ComponentContent newContent, ISheetEditorFormatter? formatter)
 		{
 			//Passt der Inhaltstyp nicht?
 			if (newContent.Type != Content.Type)
@@ -781,7 +781,7 @@ partial class SheetVarietyLine
 			return true;
 		}
 
-		internal override bool TryRemoveContent(ContentOffset offset, ContentOffset length, ISheetEditorFormatter? formatter)
+		public override bool TryRemoveContent(ContentOffset offset, ContentOffset length, ISheetEditorFormatter? formatter)
 		{
 			//Speichere die Länge vor der Bearbeitung
 			var lengthBefore = Content.GetLength(formatter);
@@ -834,7 +834,7 @@ partial class SheetVarietyLine
 			return true;
 		}
 
-		internal override MergeResult? TryMerge(Component next, ContentOffset offset, ISheetEditorFormatter? formatter)
+		public override MergeResult? TryMerge(Component next, ContentOffset offset, ISheetEditorFormatter? formatter)
 		{
 			//Ist das nachfolgende Element kein VarietyComponent?
 			if (next is not VarietyComponent varietyMerge)
@@ -882,7 +882,7 @@ partial class SheetVarietyLine
 			return mergeResult;
 		}
 
-		internal override Component SplitEnd(ContentOffset offset, ISheetEditorFormatter? formatter)
+		public override Component SplitEnd(ContentOffset offset, ISheetEditorFormatter? formatter)
 		{
 			//Trenne den Inhalt
 			var allowedTypes = Owner?.GetAllowedTypes(this) ?? SpecialContentType.None;
@@ -1065,7 +1065,7 @@ partial class SheetVarietyLine
 
 		public sealed class VarietyAttachment : Attachment
 		{
-			internal ComponentContent Content { get; private set; }
+			public ComponentContent Content { get; private set; }
 
 			public override bool IsEmpty => Content.IsEmpty;
 			internal override RenderBounds RenderBounds { get; private protected set; }
@@ -1082,7 +1082,7 @@ partial class SheetVarietyLine
 				Content = new(chord);
 			}
 
-			internal VarietyAttachment(ContentOffset offset, ComponentContent content)
+			public VarietyAttachment(ContentOffset offset, ComponentContent content)
 				: base(offset)
 			{
 				Content = content;

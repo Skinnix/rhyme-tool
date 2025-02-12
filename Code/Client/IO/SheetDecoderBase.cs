@@ -1,6 +1,7 @@
 ﻿using System.Runtime.Serialization;
+using Skinnix.RhymeTool.Data.Notation;
 
-namespace Skinnix.RhymeTool.Data.Notation.IO;
+namespace Skinnix.RhymeTool.Client.IO;
 
 public abstract class SheetDecoderBase<TLine>(ISheetEditorFormatter formatter)
 {

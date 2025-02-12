@@ -1,4 +1,6 @@
-﻿namespace Skinnix.RhymeTool.Data.Notation.IO;
+﻿using Skinnix.RhymeTool.Data.Notation;
+
+namespace Skinnix.RhymeTool.Client.IO;
 
 public static class SheetDecoderHelper
 {
@@ -35,10 +37,8 @@ public static class SheetDecoderHelper
 			//Lies Note und Modifikatoren
 			var noteLength = formatter.TryReadTabNote(line[offset..], out var note, 1);
 			if (noteLength <= 0)
-			{
 				//Keine TabLine
 				return null;
-			}
 
 			//Füge Note hinzu
 			elements.Enqueue(new(TabLineElementType.Note, noteLength, note));
@@ -133,10 +133,8 @@ public static class SheetDecoderHelper
 
 			//Muss die Breite nochmal geprüft werden?
 			if (checkMaxWidthAgain)
-			{
 				//Sind die Elemente unterschiedlich breit?
 				maxWidth = ExtendToWidthWhileNecessary(lines, elements, elements.Max(e => e.Width));
-			}
 
 			//Ist ein Element ein Taktstrich?
 			if (elements.Any(e => e.Type == TabLineElementType.BarLine))
@@ -242,7 +240,7 @@ public static class SheetDecoderHelper
 				return new TabLineElement(
 					TabLineElementType.Note,
 					Width + next.Width,
-					new TabNote(((Note.Value.Value * 10) ?? 0) + (next.Note.Value.Value ?? 0), Note.Value.Modifier | next.Note.Value.Modifier));
+					new TabNote((Note.Value.Value * 10 ?? 0) + (next.Note.Value.Value ?? 0), Note.Value.Modifier | next.Note.Value.Modifier));
 
 			return this with { Width = Width + next.Width };
 		}

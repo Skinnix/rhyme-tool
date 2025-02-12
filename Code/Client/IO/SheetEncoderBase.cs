@@ -1,5 +1,6 @@
-﻿
-namespace Skinnix.RhymeTool.Data.Notation.IO;
+﻿using Skinnix.RhymeTool.Data.Notation;
+
+namespace Skinnix.RhymeTool.Client.IO;
 
 public abstract class SheetEncoderBase<TLine>(ISheetBuilderFormatter formatter)
 {

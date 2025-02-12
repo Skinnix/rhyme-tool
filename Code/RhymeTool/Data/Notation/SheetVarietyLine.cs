@@ -245,12 +245,12 @@ public partial class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetT
 		All = Text | Chord | Fingering | Rhythm,
 	}
 
-	internal readonly record struct MergeResult(ComponentContent NewContent, ContentOffset LengthBefore)
+	public readonly record struct MergeResult(ComponentContent NewContent, ContentOffset LengthBefore)
 	{
 		public ContentOffset MergeLengthBefore { get; init; }
 	}
 
-	internal readonly record struct ComponentContent
+	public readonly record struct ComponentContent
 	{
 		public const string PUNCTUATION = ",.-><!?\"";
 
@@ -328,7 +328,7 @@ public partial class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetT
 			return new(content);
 		}
 
-		public static int TryRead(ReadOnlySpan<char> content, out ComponentContent? result, ISheetEditorFormatter? formatter)
+		public static int TryRead(ReadOnlySpan<char> content, out ComponentContent? result, ISheetEditorFormatter? formatter, SpecialContentType allowedTypes = SpecialContentType.All)
 		{
 			if (content.Length == 0)
 			{
@@ -337,27 +337,37 @@ public partial class SheetVarietyLine : SheetLine, ISelectableSheetLine, ISheetT
 			}
 
 			//Prüfe auf Akkord
-			var read = Chord.TryRead(formatter, content, out var chord);
-			if (read > 0 && chord is not null)
+			int read;
+			if ((allowedTypes & SpecialContentType.Chord) != 0)
 			{
-				result = new ComponentContent(chord);
-				return read;
+				read = Chord.TryRead(formatter, content, out var chord);
+				if (read > 0 && chord is not null)
+				{
+					result = new ComponentContent(chord);
+					return read;
+				}
 			}
 
 			//Prüfe auf Fingering
-			read = Fingering.TryRead(formatter, content, out var fingering);
-			if (read > 0 && fingering is not null)
+			if ((allowedTypes & SpecialContentType.Fingering) != 0)
 			{
-				result = new ComponentContent(fingering);
-				return read;
+				read = Fingering.TryRead(formatter, content, out var fingering);
+				if (read > 0 && fingering is not null)
+				{
+					result = new ComponentContent(fingering);
+					return read;
+				}
 			}
 
 			//Prüfe auf Rhythmus
 			read = RhythmPattern.TryRead(formatter, content, out var rhythm);
-			if (read > 0 && rhythm is not null)
+			if ((allowedTypes & SpecialContentType.Rhythm) != 0)
 			{
-				result = new ComponentContent(rhythm);
-				return read;
+				if (read > 0 && rhythm is not null)
+				{
+					result = new ComponentContent(rhythm);
+					return read;
+				}
 			}
 
 			//Prüfe auf Leerzeichen

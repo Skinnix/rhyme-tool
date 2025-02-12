@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Skinnix.RhymeTool.Client.IO;
 using Skinnix.RhymeTool.Client.Services.Files;
 using Skinnix.RhymeTool.Data.Notation;
-using Skinnix.RhymeTool.Data.Notation.IO;
 
 namespace Skinnix.RhymeTool.Client.Services;
 

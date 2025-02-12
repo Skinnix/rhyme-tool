@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
 using Skinnix.RhymeTool.Data.Notation;
-using Skinnix.RhymeTool.Data.Notation.IO;
 
 namespace Skinnix.RhymeTool.Client.IO;
 

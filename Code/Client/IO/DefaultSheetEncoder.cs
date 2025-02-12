@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Skinnix.RhymeTool.Data.Notation;
 
-namespace Skinnix.RhymeTool.Data.Notation.IO;
+namespace Skinnix.RhymeTool.Client.IO;
 
 public class DefaultSheetEncoder(ISheetBuilderFormatter? formatter = null) : SheetEncoderBase<string>(formatter ?? DefaultWriterFormatter.Instance)
 {
@@ -32,6 +33,7 @@ public class DefaultSheetEncoder(ISheetBuilderFormatter? formatter = null) : She
 		public DefaultWriterFormatter()
 		{
 			CondenseTabNotes = false;
+			MajorSeventhDegreeModifier = null;
 		}
 
 		protected override string ToString(TabNote note, TabColumnWidth width, bool transform)

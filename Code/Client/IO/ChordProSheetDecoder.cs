@@ -5,9 +5,10 @@ using System.Text;
 using System.Threading.Tasks;
 using Konves.ChordPro;
 using Konves.ChordPro.Directives;
+using Skinnix.RhymeTool.Data.Notation;
 using Skinnix.RhymeTool.Data.Notation.Display;
 
-namespace Skinnix.RhymeTool.Data.Notation.IO;
+namespace Skinnix.RhymeTool.Client.IO;
 
 public class ChordProSheetDecoder : SheetDecoderBase<ILine>
 {
@@ -46,13 +47,12 @@ public class ChordProSheetDecoder : SheetDecoderBase<ILine>
 	protected virtual IEnumerable<SheetLine> Read(SongLine songLine)
 	{
 		var components = new List<SheetVarietyLine.Component>();
-		bool needsSpace = false;
+		var needsSpace = false;
 		foreach (var block in songLine.Blocks)
-		{
 			switch (block)
 			{
 				case Konves.ChordPro.Chord chord:
-					if (chord.Text is null || Chord.TryRead(Formatter, chord.Text, out var sheetChord) != chord.Text.Length || sheetChord is null)
+					if (chord.Text is null || Data.Notation.Chord.TryRead(Formatter, chord.Text, out var sheetChord) != chord.Text.Length || sheetChord is null)
 						throw new SheetReaderException("Unbekannter Akkord: " + chord.Text);
 
 					if (needsSpace)
@@ -62,7 +62,7 @@ public class ChordProSheetDecoder : SheetDecoderBase<ILine>
 					needsSpace = true;
 					break;
 
-				case Konves.ChordPro.Whitespace whitespace:
+				case Whitespace whitespace:
 					var whitespaceLength = whitespace.Length;
 
 					if (needsSpace)
@@ -72,7 +72,7 @@ public class ChordProSheetDecoder : SheetDecoderBase<ILine>
 					needsSpace = false;
 					break;
 
-				case Konves.ChordPro.Word word:
+				case Word word:
 					var fullWord = string.Join(null, word.Syllables.Select(s => s?.Text));
 					var component = new SheetVarietyLine.VarietyComponent(fullWord);
 
@@ -99,7 +99,6 @@ public class ChordProSheetDecoder : SheetDecoderBase<ILine>
 				default:
 					throw new SheetReaderException("Unbekannter Blocktyp: " + block.GetType().Name);
 			}
-		}
 
 		if (components.Count == 0)
 			return [new SheetEmptyLine()];
@@ -117,7 +116,6 @@ public class ChordProSheetDecoder : SheetDecoderBase<ILine>
 			return [];
 
 		for (var offset = 0; offset < tabLine.Text.Length / 2; offset++)
-		{
 			for (var cutoff = 0; offset + cutoff < tabLine.Text.Length / 2; cutoff++)
 			{
 				var tabLineRead = SheetDecoderHelper.TryParseTabLine(text[offset..^cutoff], Formatter);
@@ -137,7 +135,6 @@ public class ChordProSheetDecoder : SheetDecoderBase<ILine>
 					return [new SheetVarietyLine([new SheetVarietyLine.VarietyComponent(SheetVarietyLine.ComponentContent.FromString(new string(padding), Formatter))])];
 				}
 			}
-		}
 
 		throw new SheetReaderException("Ungültige Tabulaturzeile: " + tabLine.Text);
 	}

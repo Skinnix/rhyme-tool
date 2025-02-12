@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace Skinnix.RhymeTool.Data.Notation.IO;
+namespace Skinnix.RhymeTool.Client.IO;
 
 public class SheetEncoderStringWriter<TEncoder> : SheetEncoderWriter<string, TEncoder, TextWriter>
 	where TEncoder : SheetEncoderBase<string>, new()

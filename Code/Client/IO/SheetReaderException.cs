@@ -1,4 +1,4 @@
-﻿namespace Skinnix.RhymeTool.Data.Notation.IO;
+﻿namespace Skinnix.RhymeTool.Client.IO;
 
 [Serializable]
 public class SheetReaderException : Exception

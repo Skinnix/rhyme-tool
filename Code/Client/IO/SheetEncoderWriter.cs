@@ -1,8 +1,10 @@
-﻿namespace Skinnix.RhymeTool.Data.Notation.IO;
+﻿using Skinnix.RhymeTool.Data.Notation;
+
+namespace Skinnix.RhymeTool.Client.IO;
 
 public abstract class SheetEncoderWriter : SheetWriterBase
 {
-	public static SheetEncoderStringWriter<DefaultSheetEncoder> Default { get; } = new();
+	public static SheetEncoderWriter Default { get; } = new CpsSheetEncoderWriter();
 }
 
 public abstract class SheetEncoderWriter<TLine> : SheetEncoderWriter
@@ -65,9 +67,7 @@ public abstract class SheetEncoderWriter<TLine, TEncoder, TState> : SheetEncoder
 	public virtual void WriteSheet(TState state, TEncoder encoder, SheetDocument document)
 	{
 		foreach (var line in ProcessLines(encoder, document))
-		{
 			WriteLine(state, line);
-		}
 
 		Finalize(state, encoder);
 	}

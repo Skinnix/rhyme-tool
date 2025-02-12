@@ -6,7 +6,10 @@ using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Skinnix.RhymeTool.Client.IO.Data;
+using LineChar = System.Char;
+using LineString = System.String;
+
+namespace Skinnix.RhymeTool.Client.IO;
 
 public abstract class FlexibleMarkupFile
 {
@@ -23,9 +26,6 @@ public abstract class FlexibleMarkupFile
 		SeparatorChar = separatorChar;
 		EscapeChar = escapeChar;
 	}
-
-	protected bool IsEscapable(char c)
-		=> c == SeparatorChar || c == StartChar || c == EndChar || c == EscapeChar;
 
 	//public static FlexibleMarkupFile? TryCreate(string line)
 	//{
@@ -63,52 +63,47 @@ public abstract class FlexibleMarkupFile
 public abstract class FlexibleMarkupFile<TTokenType> : FlexibleMarkupFile
 	where TTokenType : struct, Enum
 {
-	private readonly TTokenType defaultType;
-	private readonly CharAssignment[] assignments;
-
-	protected FlexibleMarkupFile(TTokenType defaultType, params IEnumerable<CharAssignment> assignments)
-	{
-		this.defaultType = defaultType;
-		this.assignments = assignments.ToArray();
-	}
-
-	protected virtual IEnumerable<CharToken> LexChars(ReadOnlySpan<char> line,
-		CharAssignment? escape, TTokenType escapedType, TTokenType escapeFailedType)
+	protected static IEnumerable<CharToken> LexChars(string line,
+		CharAssignment? escape, TTokenType escapedType, Func<char, bool> isEscapable,
+		TTokenType defaultType, params IEnumerable<CharAssignment> assignments)
 	{
 		int i, escapedIndex;
 		for (i = 0, escapedIndex = 0; i < line.Length; i++, escapedIndex++)
 		{
-			var character = new LineChar(line[i], i, escapedIndex);
-			if (escape is not null && character.Char == escape.Value.Char)
+			var character = line[i]; //new LineChar(line[i], i, escapedIndex);
+			if (escape is not null && character == escape.Value.Char)
 			{
-				if (i + 1 < line.Length && IsEscapable(line[i + 1]))
+				if (i + 1 < line.Length && isEscapable(line[i + 1]))
 				{
 					i++;
-					var next = new LineChar(line[i], i, escapedIndex);
-					yield return new(escapedType, character);
+					var next = line[i]; //new LineChar(line[i], i, escapedIndex);
+					yield return new(escapedType, next);
 				}
 				else
 				{
-					yield return new(escapeFailedType, character);
+					yield return new(escape.Value.Type, character);
 				}
 			}
 			else
 			{
+				var found = false;
 				foreach (var assignment in assignments)
 				{
-					if (character.Char == assignment.Char)
+					if (character == assignment.Char)
 					{
 						yield return new(assignment.Type, character);
+						found = true;
 						break;
 					}
 				}
 
-				yield return new(defaultType, character);
+				if (!found)
+					yield return new(defaultType, character);
 			}
 		}
 	}
 
-	protected virtual IEnumerable<RangeToken> CombineText(IEnumerable<CharToken> chars, TTokenType textType)
+	protected static IEnumerable<RangeToken> CombineText(IEnumerable<CharToken> chars, TTokenType textType)
 	{
 		List<LineChar>? buffer = null;
 		foreach (var token in chars)
@@ -121,46 +116,46 @@ public abstract class FlexibleMarkupFile<TTokenType> : FlexibleMarkupFile
 
 			if (buffer is not null)
 			{
-				yield return new(textType, new(buffer));
+				yield return new(textType, new(buffer.ToArray()));
 				buffer = null;
 			}
 
-			yield return new(token.Type, new(token.Char));
+			yield return new(token.Type, new(token.Char, 1));
 		}
 
 		if (buffer is not null)
-			yield return new(textType, new(buffer));
+			yield return new(textType, new(buffer.ToArray()));
 	}
 
 	public readonly record struct CharAssignment(char Char, TTokenType Type);
 
-	public readonly record struct LineChar(char Char, int Index, int EscapedIndex)
+	public readonly record struct LineChar1(char Char, int Index, int EscapedIndex)
 	{
 		public static LineChar[] FromString(string s)
 		{
 			var chars = new LineChar[s.Length];
 			for (var i = 0; i < s.Length; i++)
-				chars[i] = new LineChar(s[i], i, i);
+				chars[i] = s[i]; // new LineChar(s[i], i, i);
 
 			return chars;
 		}
+
+		public override string ToString() => Char.ToString();
 	}
 
-	public readonly struct LineString : IReadOnlyList<LineChar>
+	public readonly struct LineString1 : IReadOnlyList<LineChar>
 	{
 		private readonly LineChar[] chars;
 
-		public LineString(LineChar[] chars)
+		public LineString1(LineChar[] chars)
 		{
 			this.chars = chars;
 		}
 
-		public LineString(IEnumerable<LineChar> chars)
+		public LineString1(IEnumerable<LineChar> chars)
 		{
 			if (chars is LineChar[] array)
-			{
 				this.chars = array;
-			}
 			else if (chars is IReadOnlyCollection<LineChar> collection)
 			{
 				this.chars = new LineChar[collection.Count];
@@ -168,12 +163,10 @@ public abstract class FlexibleMarkupFile<TTokenType> : FlexibleMarkupFile
 					this.chars[i] = c;
 			}
 			else
-			{
 				this.chars = chars.ToArray();
-			}
 		}
 
-		public LineString(LineChar character)
+		public LineString1(LineChar character)
 		{
 			chars = [character];
 		}
@@ -184,7 +177,15 @@ public abstract class FlexibleMarkupFile<TTokenType> : FlexibleMarkupFile
 		public IEnumerator<LineChar> GetEnumerator() => ArrayEnumerator.Create(chars);
 		IEnumerator IEnumerable.GetEnumerator() => chars.GetEnumerator();
 
-		public static LineString operator +(LineString a, LineString b)
+		public override string ToString()
+		{
+			var characters = new char[chars.Length];
+			for (var i = 0; i < chars.Length; i++)
+				characters[i] = chars[i];
+			return new string(characters);
+		}
+
+		public static LineString1 operator +(LineString1 a, LineString1 b)
 		{
 			var chars = new LineChar[a.Count + b.Count];
 			a.chars.CopyTo(chars, 0);
@@ -201,55 +202,55 @@ public abstract class FlexibleMarkupFile<TTokenType> : FlexibleMarkupFile
 
 
 
-	public interface IWriterSettings
-	{
-		char SeparatorChar { get; }
-		char StartChar { get; }
-		char EndChar { get; }
-	}
+	//public interface IWriterSettings
+	//{
+	//	char SeparatorChar { get; }
+	//	char StartChar { get; }
+	//	char EndChar { get; }
+	//}
 
-	public interface IFileComponent
-	{
-		void Write(IWriterSettings settings, StringBuilder builder);
-	}
+	//public interface IFileComponent
+	//{
+	//	void Write(IWriterSettings settings, StringBuilder builder);
+	//}
 
-	public interface IParseError
-	{
-		string Message { get; }
-	}
+	//public interface IParseError
+	//{
+	//	string Message { get; }
+	//}
 
-	public interface ILine : IFileComponent;
+	//public interface ILine : IFileComponent;
 
-	public interface IDirectiveLine : ILine
-	{
-		ILineDirective Directive { get; }
-	}
+	//public interface IDirectiveLine : ILine
+	//{
+	//	ILineDirective Directive { get; }
+	//}
 
-	public interface IElementLine : ILine, IHasElements;
+	//public interface IElementLine : ILine, IHasElements;
 
-	public interface IHasElements
-	{
-		IReadOnlyList<IElement> Elements { get; }
-	}
+	//public interface IHasElements
+	//{
+	//	IReadOnlyList<IElement> Elements { get; }
+	//}
 
-	public interface IElement : IFileComponent;
+	//public interface IElement : IFileComponent;
 
-	public interface ITextElement : IElement
-	{
-		ReadOnlySpan<char> Text { get; }
-	}
+	//public interface ITextElement : IElement
+	//{
+	//	ReadOnlySpan<char> Text { get; }
+	//}
 
-	public interface IDirective : IFileComponent
-	{
-		string Key { get; }
-	}
+	//public interface IDirective : IFileComponent
+	//{
+	//	string Key { get; }
+	//}
 
-	public interface IContentDirective : IDirective, IHasElements;
+	//public interface IContentDirective : IDirective, IHasElements;
 
-	public interface ILineDirective : IDirective;
+	//public interface ILineDirective : IDirective;
 
-	public interface IInlineDirective : IDirective, IElement;
+	//public interface IInlineDirective : IDirective, IElement;
 
-	#region Default Implementation
-	#endregion
+	//#region Default Implementation
+	//#endregion
 }

@@ -1,8 +1,9 @@
 ﻿using System.Linq;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using Skinnix.RhymeTool.Data.Notation;
 
-namespace Skinnix.RhymeTool.Data.Notation.IO;
+namespace Skinnix.RhymeTool.Client.IO;
 
 public class DefaultSheetDecoder(ISheetEditorFormatter? formatter = null) : SheetDecoderBase<string>(formatter ?? DefaultReaderFormatter.Instance)
 {
