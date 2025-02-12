@@ -2,6 +2,14 @@
 
 namespace Skinnix.RhymeTool.Client.IO;
 
+public static class SheetEncoderHelper
+{
+	public static void WriteTabLine(SheetTabLine line, ISheetBuilderFormatter formatter)
+	{
+
+	}
+}
+
 public static class SheetDecoderHelper
 {
 	public static (Note? Tuning, Queue<TabLineElement> Elements)? TryParseTabLine(ReadOnlySpan<char> line, ISheetEditorFormatter formatter)
@@ -99,32 +107,118 @@ public static class SheetDecoderHelper
 			}
 
 			//Sind alle Elemente Leerzeichen?
-			while (lines.Any(l => l.Elements.Count != 0) && elements.All(e => e.Type == TabLineElementType.Space))
+			if (lines.Any(l => l.Elements.Count != 0) && elements.All(e => e.Type == TabLineElementType.Space))
 			{
-				//Erweitere sie alle um das jeweils nächste Element, bis wieder nur Leerzeichen gelesen wurden
-				bool onlySpaces;
+				//Überspringe zuerst alle weiteren Leerzeichen
+				TabLineElement?[] next;
 				do
 				{
+					next = lines.Select(l => l.Elements.TryPeek(out var next) ? (TabLineElement?)next : null).ToArray();
+
+					//Ist eine der Zeilen zu Ende?
+					if (next.Contains(null))
+						break;
+				} while (next.All(n => n?.Type == TabLineElementType.Space));
+
+				//Erweitere sie alle um das jeweils nächste Element, bis wieder nur Leerzeichen gelesen wurden
+				//oder eine Zeile, die vorher ein Leerzeichen enthielt, jetzt wieder Inhalt hat
+				var hadSpace = new bool[lines.Count];
+				bool cancel = false;
+				bool onlySpaces;
+				while (true)
+				{
 					onlySpaces = true;
-					elements = elements
-						.Zip(lines)
-						.Select(p =>
-						{
-							if (!p.Second.Elements.TryDequeue(out var next))
-								return p.First;
 
-							//Taktstriche gehen auch, müssen aber dann wieder hinzugefügt werden, um den Takt zu zählen
-							if (next.Type == TabLineElementType.BarLine)
-								p.Second.Elements.Enqueue(next);
-							else if (next.Type != TabLineElementType.Space)
-								onlySpaces = false;
+					//Lese die nächsten Zeilen
+					next = lines.Select(l => l.Elements.TryPeek(out var next) ? (TabLineElement?)next : null).ToArray();
 
-							return p.First.Append(next);
-						})
-						.ToArray();
-					checkMaxWidthAgain = true;
+					//Ist eine der Zeilen zu Ende?
+					if (next.Contains(null))
+						break;
+
+					//Ist eins der nächsten Elemente ein Taktstrich?
+					if (next.Any(n => n?.Type == TabLineElementType.BarLine))
+						break;
+
+					//Sind alle nächsten Elemente Leerzeichen?
+					if (next.All(n => n?.Type == TabLineElementType.Space))
+						break;
+
+					//Hatte eine der Zeilen schon Leerzeichen und enthält jetzt wieder Inhalt?
+					foreach (var n in next.Index())
+					{
+						var space = hadSpace[n.Index] |= n.Item?.Type == TabLineElementType.Space;
+						if (space && n.Item?.Type == TabLineElementType.Note)
+							cancel = true;
+					}
+					if (cancel)
+						break;
+
+					//Hänge die nächsten Elemente an
+					for (var i = 0; i < elements.Length; i++)
+					{
+						if (lines[i].Elements.TryDequeue(out var n))
+							elements[i] = elements[i].Append(n);
+					}
+
+
+					//for (var i = 0; i < elements.Length; i++)
+					//{
+					//	//Ist die Zeile zu Ende?
+					//	var line = lines[i];
+					//	if (!line.Elements.TryDequeue(out var next))
+					//	{
+					//		cancel = true;
+					//		continue;
+					//	}
+
+					//	//Ist das nächste Element ein Taktstrich?
+					//	if (next.Type == TabLineElementType.BarLine)
+					//	{
+					//		//Füge den Taktstrich wieder hinzu, um den Takt korrekt zu beenden
+					//		line.Elements.Enqueue(next);
+					//		cancel = true;
+					//		continue;
+					//	}
+
+					//	//Ist das nächste Element ein Leerzeichen?
+					//	if (next.Type == TabLineElementType.Space)
+					//	{
+					//		//Wurde noch kein Inhalt gelesen?
+					//		if (!hadContent[i])
+					//		{
+
+					//		}
+					//		//Merke, dass die Zeile Leerzeichen enthielt
+					//		hadSpace[i] = true;
+					//		onlySpaces = false;
+					//	}
+					//	else
+					//	{
+					//		//Merke, dass die Zeile jetzt Inhalt enthält
+					//		hadContent[i] = true;
+					//		onlySpaces = false;
+					//	}
+					//}
+					//elements = elements
+					//	.Zip(lines)
+					//	.Select((p, i) =>
+					//	{
+					//		if (!p.Second.Elements.TryDequeue(out var next))
+					//			return p.First;
+
+					//		//Taktstriche gehen auch, müssen aber dann wieder hinzugefügt werden, um den Takt zu zählen
+					//		if (next.Type == TabLineElementType.BarLine)
+					//			p.Second.Elements.Enqueue(next);
+					//		else if (next.Type != TabLineElementType.Space)
+					//			onlySpaces = false;
+
+					//		return p.First.Append(next);
+					//	})
+					//	.ToArray();
+					//checkMaxWidthAgain = true;
 				}
-				while (!onlySpaces);
+				//while (!onlySpaces);
 			}
 
 			//Sind immer noch alle Elemente Leerzeichen (und damit die Queues leer)?

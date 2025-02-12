@@ -11,7 +11,11 @@ a, .btn-link {
 }
 
 header, header.sticky-top {
-	z-index: 1050; //modal is 1055
+	z-index: 1030; //modal is 1055
+}
+
+#app {
+	overflow-x: hidden;
 }
 
 .dropdown.dropdown-hide-arrow {

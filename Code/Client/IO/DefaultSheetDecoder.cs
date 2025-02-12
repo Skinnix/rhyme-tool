@@ -248,9 +248,11 @@ public class DefaultSheetDecoder(ISheetEditorFormatter? formatter = null) : Shee
 		canBeAttachmentLine = hasChords && !hasWords;
 		canBeChordOnlyLine = false;*/
 		if (canBeAttachmentLine)
-			//Sind alle Leerkomponenten maximal drei Zeichen lang?
-			if (contents.All(c => c.Content.Type != SheetVarietyLine.ContentType.Space || c.Length.Value <= 3))
-				canBeChordOnlyLine = true;
+			//Enthält die Zeile mehr als einen Akkord?
+			if (contents.Where(c => c.Content.Type == SheetVarietyLine.ContentType.Chord).Skip(1).Any())
+				//Sind alle Leerkomponenten maximal drei Zeichen lang?
+				if (contents.All(c => c.Content.Type != SheetVarietyLine.ContentType.Space || c.Length.Value <= 3))
+					canBeChordOnlyLine = true;
 
 		return contents;
 	}

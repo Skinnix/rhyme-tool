@@ -4,7 +4,7 @@ namespace Skinnix.RhymeTool.Client.IO;
 
 public abstract class SheetEncoderWriter : SheetWriterBase
 {
-	public static SheetEncoderWriter Default { get; } = new CpsSheetEncoderWriter();
+	public static SheetEncoderWriter Default { get; } = new SheetEncoderStringWriter<DefaultSheetEncoder>(); // new CpsSheetEncoderWriter();
 }
 
 public abstract class SheetEncoderWriter<TLine> : SheetEncoderWriter

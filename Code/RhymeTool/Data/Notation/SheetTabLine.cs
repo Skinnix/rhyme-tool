@@ -203,7 +203,7 @@ public partial class SheetTabLine : SheetLine, ISelectableSheetLine
 			{
 				//Erzeuge Element
 				var note = component.GetNote(i);
-				var noteFormat = note.Format(componentWidth);
+				var noteFormat = note.Format(componentWidth, formatter);
 				var element = elements[i] = note.IsEmpty
 					? new SheetDisplayLineTabEmptyNote(noteFormat, componentWidth)
 					{

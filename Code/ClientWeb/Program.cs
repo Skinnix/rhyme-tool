@@ -21,9 +21,6 @@ builder.Services.AddRhymeToolClient();
 //HTTP-Client
 builder.Services.AddScoped(_ => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
-//Worker
-//builder.Services.AddWorkerFactory();
-
 //Reime
 builder.Services.AddSingleton<IRhymeLoadingService, WebRhymeLoadingService>();
 

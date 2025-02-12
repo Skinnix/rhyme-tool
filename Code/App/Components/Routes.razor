@@ -1,5 +1,9 @@
 ﻿@using Skinnix.RhymeTool.Client
+@using Skinnix.RhymeTool.Client.Pages
+@using Skinnix.RhymeTool.Client.Services
+@using Skinnix.RhymeTool.MauiBlazor.Intents
 
+@inject IDocumentService documentService
 @inject NavigationManager navigation
 @inject IJSRuntime js
 
@@ -7,8 +11,11 @@
     <ChildContent>
         <Router AppAssembly="@typeof(ClientStartup).Assembly">
             <Found Context="routeData">
-                <RouteView RouteData="@routeData" DefaultLayout="@typeof(Skinnix.RhymeTool.Client.Shared.SimpleLayout)" />
-                <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+                @if (!hideContent)
+                {
+                    <RouteView RouteData="@routeData" DefaultLayout="@typeof(Skinnix.RhymeTool.Client.Shared.SimpleLayout)" />
+                    <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+                }
             </Found>
         </Router>
     </ChildContent>
@@ -38,22 +45,52 @@
 
 @code {
     private ErrorBoundary? errorBoundary;
+    private bool hideContent = false;
 
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
-        base.OnParametersSet();
+        await base.OnParametersSetAsync();
 
+        hideContent = false;
+
+        navigation.LocationChanged -= OnLocationChanged;
         navigation.LocationChanged += OnLocationChanged;
+
+        //Gibt es einen Intent?
+        var launchIntent = MauiProgram.LaunchIntent;
+        if (launchIntent?.KeepIntent == false)
+            MauiProgram.LaunchIntent = null;
+
+        switch (launchIntent)
+        {
+            case OpenFileIntent openFileIntent:
+                hideContent = true;
+                StateHasChanged();
+                var document = await documentService.LoadFile(openFileIntent.File)
+                    ?? throw new FileNotFoundException("Datei konnte nicht gelesen werden.", "Dateifehler");
+
+                documentService.SetCurrentDocument(document);
+                var url = Document.GetUrl(document);
+                navigation.NavigateTo(url);
+                break;
+        }
     }
 
     private async void OnLocationChanged(object? sender, LocationChangedEventArgs args)
     {
         await js.InvokeVoidAsync("hideAllOffcanvases");
+
+        if (hideContent)
+        {
+            hideContent = false;
+            StateHasChanged();
+        }
     }
 
     private async Task ReloadAfterError()
     {
         errorBoundary?.Recover();
+        hideContent = false;
 
         await js.InvokeVoidAsync("location.reload");
     }

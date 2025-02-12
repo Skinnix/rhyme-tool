@@ -1,5 +1,7 @@
 ﻿using CommunityToolkit.Maui;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Microsoft.Maui.LifecycleEvents;
 using Skinnix.RhymeTool.Client;
 using Skinnix.RhymeTool.Client.Native;
 using Skinnix.RhymeTool.Client.Rhyming;
@@ -7,6 +9,7 @@ using Skinnix.RhymeTool.Client.Services;
 using Skinnix.RhymeTool.Client.Services.Files;
 using Skinnix.RhymeTool.Client.Services.Preferences;
 using Skinnix.RhymeTool.Client.Updating;
+using Skinnix.RhymeTool.MauiBlazor.Intents;
 using Skinnix.RhymeTool.MauiBlazor.Rhyming;
 using Skinnix.RhymeTool.MauiBlazor.Services;
 using Skinnix.RhymeTool.MauiBlazor.Updating;
@@ -15,6 +18,8 @@ namespace Skinnix.RhymeTool.MauiBlazor;
 
 public static class MauiProgram
 {
+	internal static LaunchIntent? LaunchIntent { get; set; }
+
 	public static MauiApp CreateMauiApp()
 	{
 		var builder = MauiApp.CreateBuilder();

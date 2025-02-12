@@ -1,5 +1,7 @@
-﻿@inject NavigationManager navigation
+﻿@using Skinnix.RhymeTool.Client.Services
+@inject NavigationManager navigation
 
+@inject IServiceProvider services
 @inject IJSRuntime js
 
 <ErrorBoundary @ref="errorBoundary">
@@ -40,29 +42,3 @@
         </div>
     </ErrorContent>
 </ErrorBoundary>
-
-@code {
-    private ErrorBoundary? errorBoundary;
-
-    protected override async Task OnParametersSetAsync()
-    {
-        await base.OnParametersSetAsync();
-
-        navigation.LocationChanged += OnLocationChanged;
-
-        if (OperatingSystem.IsBrowser())
-            await js.InvokeVoidAsync("enableSynchronousInvoke");
-    }
-
-    private async void OnLocationChanged(object? sender, LocationChangedEventArgs args)
-    {
-        await js.InvokeVoidAsync("hideAllOffcanvases");
-    }
-
-    private async Task ReloadAfterError()
-    {
-        errorBoundary?.Recover();
-
-        await js.InvokeVoidAsync("location.reload");
-    }
-}

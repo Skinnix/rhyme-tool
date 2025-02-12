@@ -2,6 +2,7 @@
   "profiles": {
     "Windows Machine": {
       "commandName": "MsixPackage",
+      "commandLineArgs": "\"C:\\Users\\Hendrik\\Downloads\\test-sas (13).txt\"",
       "nativeDebugging": false
     },
     "WSL": {

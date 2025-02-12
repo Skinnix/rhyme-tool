@@ -18,10 +18,11 @@ public class DefaultSheetEncoder(ISheetBuilderFormatter? formatter = null) : She
 			var displayLines = lineContext.CreateDisplayLines(Formatter);
 			foreach (var displayLine in displayLines)
 			{
-				foreach (var element in displayLine.GetElements())
-					yield return element.ToString();
+				yield return string.Join(null, displayLine.GetElements().Select(e => e.ToString()));
+				//foreach (var element in displayLine.GetElements())
+				//	yield return element.ToString();
 
-				yield return null;
+				//yield return null;
 			}
 		}
 	}
@@ -34,6 +35,23 @@ public class DefaultSheetEncoder(ISheetBuilderFormatter? formatter = null) : She
 		{
 			CondenseTabNotes = false;
 			MajorSeventhDegreeModifier = null;
+
+			//var properties = GetType().GetProperties();
+			//foreach (var property in properties)
+			//{
+			//	if (!property.Name.StartsWith("Text"))
+			//		continue;
+
+			//	var other = properties.FirstOrDefault(p => p.Name == property.Name[4..]);
+			//	if (other is null)
+			//		continue;
+
+			//	if (property.PropertyType != other.PropertyType || !property.CanRead || !other.CanWrite)
+			//		continue;
+
+			//	var value = property.GetValue(this);
+			//	other.SetValue(this, value);
+			//}
 		}
 
 		protected override string ToString(TabNote note, TabColumnWidth width, bool transform)
@@ -41,6 +59,18 @@ public class DefaultSheetEncoder(ISheetBuilderFormatter? formatter = null) : She
 			var result = base.ToString(note, width, transform);
 			if (width.Min > 1)
 				return " " + result + " ";
+
+			return result;
+		}
+
+		protected override TabNote.TabNoteFormat Format(TabNote note, string noteString, TabColumnWidth width)
+		{
+			var result = base.Format(note, noteString, width);
+			if (!CondenseTabNotes && width.Min > 1)
+				result = result with
+				{
+					Text = " " + noteString + " "
+				};
 
 			return result;
 		}
