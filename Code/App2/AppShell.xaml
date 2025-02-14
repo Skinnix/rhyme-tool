@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="Skinnix.Compoetry.Maui.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:local="clr-namespace:Skinnix.Compoetry.Maui"
+    Shell.FlyoutBehavior="Flyout"
+    Title="Compoetry">
+
+    <FlyoutItem Title="Main">
+        <ShellContent
+            Title="Main"
+            ContentTemplate="{DataTemplate local:MainPage}" />
+    </FlyoutItem>
+
+    <FlyoutItem Title="Test">
+        <ShellContent
+            Title="Test"
+            ContentTemplate="{DataTemplate local:TestPage}" />
+    </FlyoutItem>
+
+</Shell>

@@ -1,0 +1,14 @@
+@namespace Skinnix.Compoetry.Maui.Components
+
+<h1>This is a Test, loaded @(loaded)</h1>
+
+@code {
+    private static int loaded = 0;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        loaded++;
+    }
+}

@@ -1,0 +1,53 @@
+@namespace Skinnix.Compoetry.Maui.Views
+
+@using System.ComponentModel
+
+@implements IDisposable
+
+@inject IMauiUiService mauiUiService
+
+@RenderRootComponent();
+
+@code {
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        mauiUiService.PropertyChanged += OnServicePropertyChanged;
+    }
+
+    public void Dispose()
+    {
+        mauiUiService.PropertyChanged -= OnServicePropertyChanged;
+    }
+
+    private void OnServicePropertyChanged(object? sender, PropertyChangedEventArgs args)
+    {
+        if (args.PropertyName != nameof(IMauiUiService.RootComponent))
+            return;
+
+        StateHasChanged();
+    }
+
+    private RenderFragment? RenderRootComponent()
+    {
+        if (mauiUiService.RootComponent?.ComponentType is null)
+            return null;
+
+        return builder =>
+        {
+            var i = 0;
+            builder.OpenComponent(i++, mauiUiService.RootComponent.ComponentType);
+
+            if (mauiUiService.RootComponent.Parameters is not null)
+            {
+                foreach (var (key, value) in mauiUiService.RootComponent.Parameters)
+                {
+                    builder.AddAttribute(i++, key, value);
+                }
+            }
+
+            builder.CloseComponent();
+        };
+    }
+}
