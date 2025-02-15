@@ -1,0 +1,91 @@
+﻿@namespace Skinnix.Compoetry.Maui.Components
+
+@using Microsoft.JSInterop
+@using Skinnix.RhymeTool.Client.Components
+@using Skinnix.RhymeTool.Client.Components.Rendering
+@using Skinnix.RhymeTool.Data.Notation
+@using System.ComponentModel
+
+@implements IAsyncDisposable
+
+@inject IJSRuntime js
+
+@if (Document is not null && Settings is not null)
+{
+    <div @ref="wrapper" class="chord-sheet-wrapper @(IsDebug ? " debug" : null) @((Settings as RenderingSettings)?.Autofit == true ? " autofit" : null)" style="--font-percent: @Settings.FontSize; --characters: @(maxCharacters)">
+        <SheetRenderer Document="Document" DisplayMode="SheetDisplayMode.Lines" Formatter="Settings.Formatter"
+            BreakWidth="@(Settings.Autofit ? maxCharacters : null)" />
+
+        <span class="calculator">&nbsp;</span>
+    </div>
+}
+
+@code {
+    private static readonly bool IsDebug =
+#if DEBUG
+    true;
+#else
+        false;
+#endif
+
+    [Parameter] public SheetDocument? Document { get; set; }
+    [Parameter] public RenderingSettings? Settings { get; set; }
+
+    private ElementReference wrapper;
+    private int? maxCharacters = null;
+    private IJSObjectReference? resizer;
+
+    public override async Task SetParametersAsync(ParameterView parameters)
+    {
+        if (Settings is not null)
+            Settings.PropertyChanged -= OnSettingsPropertyChanged;
+
+        await base.SetParametersAsync(parameters);
+
+        if (Settings is not null)
+            Settings.PropertyChanged += OnSettingsPropertyChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+
+        if (firstRender)
+        {
+            resizer = await js.InvokeAsync<IJSObjectReference>("registerResize", wrapper, DotNetObjectReference.Create(this), nameof(OnResize));
+        }
+    }
+
+    private void OnSettingsPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public void OnResize(int maxCharacters)
+    {
+        if (this.maxCharacters == maxCharacters)
+            return;
+
+        this.maxCharacters = maxCharacters;
+        StateHasChanged();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (resizer is not null)
+        {
+            try
+            {
+                await resizer.InvokeVoidAsync("destroy");
+                await resizer.DisposeAsync();
+            }
+            catch (Exception)
+            {
+                //Ignore
+            }
+
+            resizer = null;
+        }
+    }
+}

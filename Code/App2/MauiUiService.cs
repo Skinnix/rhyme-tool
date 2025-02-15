@@ -15,8 +15,13 @@ public interface IMauiUiService : INotifyPropertyChanged
 	RootComponent? RootComponent { get; set; }
 }
 
-internal partial class MauiUiService : ObservableObject, IMauiUiService
+internal partial class MauiUiService : ObservableObject, IMauiUiService, IDisposable
 {
 	[ObservableProperty] public partial BlazorWebView? LoadedBlazorWebView { get; set; }
 	[ObservableProperty] public partial RootComponent? RootComponent { get; set; }
+
+	public void Dispose()
+	{
+		LoadedBlazorWebView?.DisconnectHandlers();
+	}
 }

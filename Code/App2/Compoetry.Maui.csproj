@@ -76,12 +76,12 @@
 	  <ProjectReference Include="..\Client\RhymeTool.Client.csproj" />
 	</ItemGroup>
 	<ItemGroup>
-	  <Compile Update="TestPage.xaml.cs">
-	    <DependentUpon>TestPage.xaml</DependentUpon>
+	  <Compile Update="Pages\Document\RendererPage.xaml.cs">
+	    <DependentUpon>RendererPage.xaml</DependentUpon>
 	  </Compile>
 	</ItemGroup>
 	<ItemGroup>
-	  <MauiXaml Update="TestPage.xaml">
+	  <MauiXaml Update="Pages\Document\RendererPage.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
 	</ItemGroup>

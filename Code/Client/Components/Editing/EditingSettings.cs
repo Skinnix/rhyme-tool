@@ -5,7 +5,7 @@ using Skinnix.RhymeTool.Configuration;
 using Skinnix.RhymeTool.Data.Notation;
 using Skinnix.RhymeTool.Data.Notation.Display;
 
-namespace Skinnix.RhymeTool.Client.Components.Rendering;
+namespace Skinnix.RhymeTool.Client.Components.Editing;
 
 public class EditingSettings : DocumentSettings
 {

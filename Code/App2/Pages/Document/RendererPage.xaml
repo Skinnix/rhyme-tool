@@ -1,0 +1,36 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:tk="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             xmlns:local="clr-namespace:Skinnix.Compoetry.Maui.Pages.Document"
+             xmlns:components="clr-namespace:Skinnix.Compoetry.Maui.Components"
+             xmlns:v="clr-namespace:Skinnix.Compoetry.Maui.Views"
+             x:Class="Skinnix.Compoetry.Maui.Pages.Document.RendererPage"
+             x:DataType="local:RendererPageVM">
+
+    <ContentPage.MenuBarItems>
+        <MenuBarItem Text="Test">
+            <MenuFlyoutItem Text="Main" />
+            <MenuFlyoutItem Text="Test" />
+        </MenuBarItem>
+    </ContentPage.MenuBarItems>
+
+    <Grid tk:StateContainer.CurrentState="{Binding IsLoading}">
+        <tk:StateContainer.StateViews>
+            <HorizontalStackLayout tk:StateView.StateKey="True">
+                <ActivityIndicator IsRunning="True" />
+                <Label Text="Lade Dokument..." />
+            </HorizontalStackLayout>
+
+            <v:SingletonBlazorView tk:StateView.StateKey="False" Component="{Binding RootComponent}" />
+        </tk:StateContainer.StateViews>
+    </Grid>
+
+
+    <!--<BlazorWebView x:Name="blazorWebView" HostPage="wwwroot/index.html">
+        <BlazorWebView.RootComponents>
+            <RootComponent Selector="#app" ComponentType="{x:Type local:Components.TestComponent}" />
+        </BlazorWebView.RootComponents>
+    </BlazorWebView>-->
+
+</ContentPage>

@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components.WebView.Maui;
+using Microsoft.Maui.Handlers;
 
 namespace Skinnix.Compoetry.Maui.Views;
 
@@ -29,6 +30,8 @@ public class SingletonBlazorView : ContentView
 
 	public SingletonBlazorView()
 	{
+		this.Behaviors.Add(new LifecycleBehavior());
+
 		if (uiService.LoadedBlazorWebView is BlazorWebView loadedWebView)
 		{
 			webView = loadedWebView;
@@ -72,17 +75,20 @@ public class SingletonBlazorView : ContentView
 	protected void SetContent(RootComponent? component)
 	{
 		uiService.RootComponent = component;
+	}
 
-		//if (component is null)
-		//{
-		//	webView.RootComponents.Clear();
-		//	return;
-		//}
+	public partial class LifecycleBehavior : PlatformBehavior<SingletonBlazorView, object>
+	{
+		protected override void OnAttachedTo(SingletonBlazorView bindable, object platformView)
+		{
+			base.OnAttachedTo(bindable, platformView);
+		}
 
-		////if (webView.RootComponents.Contains(component))
-		////	return;
+		protected override void OnDetachedFrom(SingletonBlazorView bindable, object platformView)
+		{
+			base.OnDetachedFrom(bindable, platformView);
 
-		//webView.RootComponents.Clear();
-		//webView.RootComponents.Add(component);
+			bindable.Content = null;
+		}
 	}
 }

@@ -1,0 +1,25 @@
+﻿@namespace Skinnix.Compoetry.Maui.Components
+
+@using Skinnix.RhymeTool.Client.Components.Editing
+@using Skinnix.RhymeTool.Data.Notation
+
+@if (Document is not null && Settings is not null)
+{
+    <div class="chord-sheet-wrapper@(IsDebug ? " debug" : null)" style="--font-percent: @Settings.FontSize;">
+        <SheetEditor @ref="editor" Document="Document" Formatter="Settings.Formatter" />
+    </div>
+}
+
+@code {
+    private static readonly bool IsDebug =
+#if DEBUG
+        true;
+#else
+        false;
+#endif
+
+    [Parameter] public SheetDocument? Document { get; set; }
+    [Parameter] public EditingSettings? Settings { get; set; }
+
+    private SheetEditor? editor;
+}
