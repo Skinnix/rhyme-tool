@@ -38,19 +38,32 @@ public abstract class DocumentSettings : IConfigurable
 	public int Transpose
 	{
 		get => Formatter.Transformation?.Transpose ?? 0;
-		set => Formatter = Formatter with { Transformation = new SheetTransformation(value) };
+		set
+		{
+			Formatter = Formatter with { Transformation = new SheetTransformation(value) };
+			RaisePropertyChanged();
+		}
 	}
 
 	[Configurable(Name = "Eindeutschen", Toggleable = true)]
 	public GermanNoteMode GermanMode
 	{
 		get => Formatter.GermanMode;
-		set => Formatter = Formatter with { GermanMode = value };
+		set
+		{
+			Formatter = Formatter with { GermanMode = value };
+			RaisePropertyChanged();
+		}
 	}
 
 	protected void Set<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
 	{
 		field = value;
+		RaisePropertyChanged(propertyName);
+	}
+
+	protected void RaisePropertyChanged([CallerMemberName] string? propertyName = null)
+	{
 		PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 	}
 }

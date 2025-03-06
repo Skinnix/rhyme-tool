@@ -11,7 +11,7 @@
                        x:DataType="local:RendererPageVM"
                        FlyoutLayoutBehavior="Popover"
                        FlowDirection="RightToLeft"
-                       Title="Renderer"
+                       Title="{Binding Title}"
                        NavigationPage.HasNavigationBar="True"
                        IsBusy="{Binding IsLoading}">
 
@@ -22,8 +22,9 @@
     </NavigationPage.TitleView>-->
 
     <FlyoutPage.ToolbarItems>
-        
+
         <ToolbarItem Text="Tools" x:Name="toolsToolbarItem"
+                     Order="Secondary"
                      IconImageSource="{mi:FontAwesomeSolid Icon=Gears, IconColor=Gray}"
                      Clicked="FlyoutButton_Clicked" />
         
@@ -40,24 +41,81 @@
         </ContentPage>
     </FlyoutPage.Flyout>
 
-    <ContentPage FlowDirection="LeftToRight" NavigationPage.HasNavigationBar="True" Title="1">
+    <ContentPage FlowDirection="LeftToRight" NavigationPage.HasNavigationBar="True" Title="Renderer">
 
         <Grid tk:StateContainer.CurrentState="{Binding IsLoading}">
-            <Grid.GestureRecognizers>
-                <TapGestureRecognizer NumberOfTapsRequired="2" Command="{Binding EnterEditorCommand}" />
-            </Grid.GestureRecognizers>
-
             <tk:StateContainer.StateViews>
                 <HorizontalStackLayout tk:StateView.StateKey="True">
                     <ActivityIndicator IsRunning="True" HorizontalOptions="Center" />
                     <Label HorizontalOptions="Center" Text="Lade Dokument..." />
                 </HorizontalStackLayout>
 
-                <v:SingletonWrapperBlazorView tk:StateView.StateKey="False" Component="{Binding RootComponent}">
-                    <x:Arguments>
-                        <x:Boolean>False</x:Boolean>
-                    </x:Arguments>
-                </v:SingletonWrapperBlazorView>
+                <Grid tk:StateView.StateKey="False" HorizontalOptions="Fill" VerticalOptions="Fill">
+                    <v:SingletonWrapperBlazorView Component="{Binding RootComponent}">
+                        <x:Arguments>
+                            <x:Boolean>False</x:Boolean>
+                        </x:Arguments>
+                    </v:SingletonWrapperBlazorView>
+
+                    <ContentView Padding="5" BackgroundColor="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource OffBlack}}"
+                                 VerticalOptions="End" HorizontalOptions="StartAndExpand">
+                        <Grid ColumnSpacing="5">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="auto" />
+                                <ColumnDefinition Width="auto" />
+                                <ColumnDefinition Width="auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="auto" />
+                                <ColumnDefinition Width="auto" />
+                                <ColumnDefinition Width="auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <!--<Grid.Resources>
+                                <ResourceDictionary>
+                                    <Style TargetType="View">
+                                        <Setter Property="HeightRequest" Value="{Binding Width, Source={RelativeSource Self}}" />
+                                        <Setter Property="MaximumWidthRequest" Value="{Binding Width, Source={RelativeSource AncestorLevel=1}, Converter={tk:MathExpressionConverter}, ConverterParameter='x/9'}" />
+                                    </Style>
+                                </ResourceDictionary>
+                            </Grid.Resources>-->
+
+                            <Button Grid.Column="0" FontFamily="FontAwesomeSolidIcons" Text="&#xf31e;"
+                                    Command="{Binding ToggleAutofitCommand}">
+                                <Button.Style>
+                                    <Style TargetType="Button">
+                                        <Style.Triggers>
+                                            <DataTrigger TargetType="Button" Binding="{Binding RenderingSettings.Autofit}" Value="False">
+                                                <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource PrimaryDarkText}}" />
+                                                <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                                                <Setter Property="BorderColor" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Button.Style>
+                            </Button>
+
+                            <Button Grid.Column="1" FontFamily="FontAwesomeSolidIcons" Text="&#xf034;" IsEnabled="False" />
+                            <Button Grid.Column="2" FontFamily="FontAwesomeSolidIcons" Text="-"
+                                    Command="{Binding ChangeFontSizeCommand}" CommandParameter="{x:Int32 -1}" />
+                            <Entry Grid.Column="3" ReturnType="Done" Text="{Binding RenderingSettings.FontSize}" Keyboard="Numeric"
+                                   HorizontalTextAlignment="Center"
+                                   WidthRequest="{Binding Height, Source={RelativeSource Self}}" />
+                            <Button Grid.Column="4" FontFamily="FontAwesomeSolidIcons" Text="+"
+                                    Command="{Binding ChangeFontSizeCommand}" CommandParameter="{x:Int32 1}" />
+
+                            <Button Grid.Column="5" FontFamily="FontAwesomeSolidIcons" Text="&#xf001;" IsEnabled="False" />
+                            <Button Grid.Column="6" FontFamily="FontAwesomeSolidIcons" Text="-"
+                                    Command="{Binding ChangeTransposeCommand}" CommandParameter="{x:Int32 -1}" />
+                            <Entry Grid.Column="7" ReturnType="Done" Text="{Binding RenderingSettings.Transpose}" Keyboard="Numeric"
+                                   HorizontalTextAlignment="Center"
+                                   WidthRequest="{Binding Height, Source={RelativeSource Self}}" />
+                            <Button Grid.Column="8" FontFamily="FontAwesomeSolidIcons" Text="+"
+                                    Command="{Binding ChangeTransposeCommand}" CommandParameter="{x:Int32 1}" />
+                        </Grid>
+                    </ContentView>
+                </Grid>
             </tk:StateContainer.StateViews>
         </Grid>
 

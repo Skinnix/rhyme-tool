@@ -78,6 +78,7 @@ public partial class RendererPageVM() : ViewModelBase
 
 	[ObservableProperty] public partial IDocumentSource? DocumentSource { get; set; }
 	[ObservableProperty] public partial SheetDocument? Document { get; set; }
+	[ObservableProperty] public partial string Title { get; set; } = string.Empty;
 	[ObservableProperty] public partial RootComponent? RootComponent { get; set; }
 	[ObservableProperty] public partial RenderingSettings RenderingSettings { get; set; } = new()
 	{
@@ -99,7 +100,10 @@ public partial class RendererPageVM() : ViewModelBase
 			return;
 		}
 
+		Title = string.Empty;
+
 		Document = await DocumentSource.LoadAsync();
+		Title = Document.Label ?? string.Empty;
 		RootComponent = new()
 		{
 			ComponentType = typeof(SheetRendererWrapper),
@@ -118,5 +122,20 @@ public partial class RendererPageVM() : ViewModelBase
 			return Task.CompletedTask;
 
 		return EditorPage.LoadDocument(DocumentSource, Document);
+	}
+
+	[RelayCommand] private void ToggleAutofit()
+	{
+		RenderingSettings.Autofit = !RenderingSettings.Autofit;
+	}
+
+	[RelayCommand] private void ChangeFontSize(int delta)
+	{
+		RenderingSettings.FontSize += delta;
+	}
+
+	[RelayCommand] private void ChangeTranspose(int delta)
+	{
+		RenderingSettings.Transpose += delta;
 	}
 }
