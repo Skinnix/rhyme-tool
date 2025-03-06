@@ -3,21 +3,22 @@ using Microsoft.Maui.Handlers;
 
 namespace Skinnix.Compoetry.Maui.Views;
 
-public class SingletonBlazorView : ContentView
+public class SingletonWrapperBlazorView : ContentView
 {
 	private readonly bool useSingleton;
 
 	private readonly IMauiUiService uiService = App.Services.GetRequiredService<IMauiUiService>();
 
+	private readonly Grid grid;
 	private readonly BlazorWebView webView;
 
 	public static readonly BindableProperty ComponentProperty = BindableProperty.Create(
 		nameof(Component),
 		typeof(RootComponent),
-		typeof(SingletonBlazorView),
+		typeof(SingletonWrapperBlazorView),
 		propertyChanged: (bindable, oldValue, newValue) =>
 		{
-			if (bindable is not SingletonBlazorView view)
+			if (bindable is not SingletonWrapperBlazorView view)
 				return;
 
 			view.SetContent(newValue as RootComponent);
@@ -30,9 +31,9 @@ public class SingletonBlazorView : ContentView
 		set => SetValue(ComponentProperty, value);
 	}
 
-	public SingletonBlazorView() : this(true) { }
+	public SingletonWrapperBlazorView() : this(true) { }
 
-	public SingletonBlazorView(bool useSingleton)
+	public SingletonWrapperBlazorView(bool useSingleton)
 	{
 		this.useSingleton = useSingleton;
 
@@ -40,9 +41,10 @@ public class SingletonBlazorView : ContentView
 		{
 			this.Behaviors.Add(new LifecycleBehavior());
 
-			if (uiService.LoadedBlazorWebView is BlazorWebView loadedWebView)
+			if (uiService.LoadedBlazorWebViewGrid is Grid loadedGrid)
 			{
-				webView = loadedWebView;
+				grid = loadedGrid;
+				webView = uiService.LoadedBlazorWebView!;
 			}
 			else
 			{
@@ -55,6 +57,9 @@ public class SingletonBlazorView : ContentView
 					ComponentType = typeof(DynamicComponentWrapper),
 					Selector = "#app",
 				});
+				
+				grid = uiService.LoadedBlazorWebViewGrid = new Grid();
+				grid.Children.Add(webView);
 			}
 		}
 		else
@@ -76,29 +81,32 @@ public class SingletonBlazorView : ContentView
 
 				webView.RootComponents.Add(useComponent);
 			}
+
+			grid = uiService.LoadedBlazorWebViewGrid = new Grid();
+			grid.Children.Add(webView);
 		}
 
-		TakeWebView();
+		TakeGrid();
 	}
 
 	protected override Size ArrangeOverride(Rect bounds)
 	{
 		if (useSingleton)
-			TakeWebView();
+			TakeGrid();
 
 		return base.ArrangeOverride(bounds);
 	}
 
-	protected void TakeWebView()
+	protected void TakeGrid()
 	{
-		var parent = (SingletonBlazorView?)webView.Parent;
+		var parent = (SingletonWrapperBlazorView?)grid.Parent;
 		if (parent == this)
 			return;
 
 		if (parent is not null)
 			parent.Content = null;
 
-		Content = webView;
+		Content = grid;
 		SetContent(Component);
 	}
 
@@ -112,8 +120,7 @@ public class SingletonBlazorView : ContentView
 		{
 			while (webView.RootComponents.Count != 0)
 			{
-				 if (webView.RootComponents[0].ComponentType == component?.ComponentType
-					&& webView.RootComponents[0].Parameters == component?.Parameters)
+				 if (webView.RootComponents[0].Equals(component))
 					return;
 
 				webView.RootComponents.RemoveAt(0);
@@ -135,14 +142,14 @@ public class SingletonBlazorView : ContentView
 		}
 	}
 
-	public partial class LifecycleBehavior : PlatformBehavior<SingletonBlazorView, object>
+	public partial class LifecycleBehavior : PlatformBehavior<SingletonWrapperBlazorView, object>
 	{
-		protected override void OnAttachedTo(SingletonBlazorView bindable, object platformView)
+		protected override void OnAttachedTo(SingletonWrapperBlazorView bindable, object platformView)
 		{
 			base.OnAttachedTo(bindable, platformView);
 		}
 
-		protected override void OnDetachedFrom(SingletonBlazorView bindable, object platformView)
+		protected override void OnDetachedFrom(SingletonWrapperBlazorView bindable, object platformView)
 		{
 			base.OnDetachedFrom(bindable, platformView);
 

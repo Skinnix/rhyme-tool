@@ -1,0 +1,51 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<pages:InnerFlyoutPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                       xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+                       xmlns:tk="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+                       xmlns:mi="http://www.aathifmahir.com/dotnet/2022/maui/icons"
+                       xmlns:pages="clr-namespace:Skinnix.Compoetry.Maui.Pages"
+                       xmlns:local="clr-namespace:Skinnix.Compoetry.Maui.Pages.Document"
+                       xmlns:components="clr-namespace:Skinnix.Compoetry.Maui.Components"
+                       xmlns:v="clr-namespace:Skinnix.Compoetry.Maui.Views"
+                       x:Class="Skinnix.Compoetry.Maui.Pages.Document.EditorPage"
+                       x:DataType="local:EditorPageVM"
+                       FlyoutLayoutBehavior="Popover"
+                       FlowDirection="RightToLeft"
+                       Title="Editor"
+                       NavigationPage.HasNavigationBar="True">
+
+    <FlyoutPage.ToolbarItems>
+        <v:MarkerToolbarItem FlyoutPage="{x:Reference this}" />
+
+        <ToolbarItem Text="Tools" x:Name="toolsToolbarItem"
+                     IconImageSource="{mi:FontAwesomeSolid Icon=Gears, IconColor=Gray}"
+                     Clicked="FlyoutButton_Clicked" />
+        
+        <ToolbarItem Text="Rückgängig" x:Name="undoToolbarItem"
+                     Order="Secondary"
+                     IconImageSource="{mi:FontAwesomeSolid Icon=ArrowRotateLeft, IconColor=Gray}"
+                     Command="{Binding EditHistory.UndoCommand}" />
+
+        <ToolbarItem Text="Wiederholen" x:Name="redoToolbarItem"
+                     Order="Secondary"
+                     IconImageSource="{mi:FontAwesomeSolid Icon=ArrowRotateRight, IconColor=Gray}"
+                     Command="{Binding EditHistory.RedoCommand}" />
+
+    </FlyoutPage.ToolbarItems>
+
+    <FlyoutPage.Flyout>
+        <ContentPage Title="FlyoutTest" FlowDirection="LeftToRight">
+            <Button Text="Test" />
+        </ContentPage>
+    </FlyoutPage.Flyout>
+
+    <ContentPage FlowDirection="LeftToRight" NavigationPage.HasNavigationBar="True" Title="1">
+
+        <v:SingletonWrapperBlazorView tk:StateView.StateKey="False" Component="{Binding RootComponent}">
+            <x:Arguments>
+                <x:Boolean>False</x:Boolean>
+            </x:Arguments>
+        </v:SingletonWrapperBlazorView>
+
+    </ContentPage>
+</pages:InnerFlyoutPage>

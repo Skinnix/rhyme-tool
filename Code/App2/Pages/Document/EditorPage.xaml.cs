@@ -15,33 +15,31 @@ using Skinnix.RhymeTool.Data.Notation;
 
 namespace Skinnix.Compoetry.Maui.Pages.Document;
 
-public partial class RendererPage : InnerFlyoutPage
+public partial class EditorPage : InnerFlyoutPage
 {
-	public static Task LoadDocument(IDocumentSource document)
+	public static Task LoadDocument(IDocumentSource documentSource, SheetDocument document)
 	{
-		var page = new RendererPage();
-		page.ViewModel.DocumentSource = document;
+		var page = new EditorPage();
+		page.ViewModel.SetDocument(documentSource, document);
 		return App.Navigation.PushAsync(page);
 	}
 
-	protected RendererPageVM ViewModel => (RendererPageVM)BindingContext;
+	protected EditorPageVM ViewModel => (EditorPageVM)BindingContext;
 
-	public RendererPage()
+	public EditorPage()
 	{
-		BindingContext = App.Services.GetRequiredService<RendererPageVM>();
+		BindingContext = App.Services.GetRequiredService<EditorPageVM>();
 
 		InitializeComponent();
 	}
 
-	protected override async void OnNavigatedTo(NavigatedToEventArgs args)
+	protected override void OnNavigatedTo(NavigatedToEventArgs args)
 	{
 		base.OnNavigatedTo(args);
 
 		var blankItem = new ToolbarItem();
 		ToolbarItems.Add(blankItem);
 		ToolbarItems.Remove(blankItem);
-
-		await ViewModel.LoadDocument(this);
 	}
 
 	protected override bool OnBackButtonPressed()
@@ -72,14 +70,14 @@ public partial class RendererPage : InnerFlyoutPage
 	}
 }
 
-public partial class RendererPageVM() : ViewModelBase
+public partial class EditorPageVM() : ViewModelBase
 {
-	[ObservableProperty] public partial bool IsLoading { get; set; } = true;
+	[ObservableProperty] public partial IDocumentSource? DocumentSource { get; private set; }
+	[ObservableProperty] public partial SheetDocument? Document { get; private set; }
 
-	[ObservableProperty] public partial IDocumentSource? DocumentSource { get; set; }
-	[ObservableProperty] public partial SheetDocument? Document { get; set; }
+	[ObservableProperty] public partial DocumentEditHistory? EditHistory { get; set; }
 	[ObservableProperty] public partial RootComponent? RootComponent { get; set; }
-	[ObservableProperty] public partial RenderingSettings RenderingSettings { get; set; } = new()
+	[ObservableProperty] public partial EditingSettings EditingSettings { get; set; } = new()
 	{
 		FontSize = 100,
 		Formatter = new DefaultSheetFormatter()
@@ -88,35 +86,20 @@ public partial class RendererPageVM() : ViewModelBase
 		}
 	};
 
-	public async Task LoadDocument(RendererPage page)
+	public void SetDocument(IDocumentSource documentSource, SheetDocument document)
 	{
-		if (Document is not null)
-			return;
-
-		if (DocumentSource is null)
-		{
-			await page.DisplayAlert("Fehler", "Datei konnte nicht geladen werden", "OK");
-			return;
-		}
-
-		Document = await DocumentSource.LoadAsync();
+		DocumentSource = documentSource;
+		Document = document;
+		EditHistory = new(Document);
 		RootComponent = new()
 		{
-			ComponentType = typeof(SheetRendererWrapper),
+			ComponentType = typeof(SheetEditorWrapper),
 			Parameters = new Dictionary<string, object?>()
 			{
-				[nameof(SheetRendererWrapper.Document)] = Document,
-				[nameof(SheetRendererWrapper.Settings)] = RenderingSettings,
+				[nameof(SheetEditorWrapper.Document)] = Document,
+				[nameof(SheetEditorWrapper.Settings)] = EditingSettings,
+				[nameof(SheetEditorWrapper.EditHistory)] = EditHistory,
 			},
 		};
-		IsLoading = false;
-	}
-
-	[RelayCommand] private Task EnterEditor()
-	{
-		if (IsLoading || DocumentSource is null || Document is null)
-			return Task.CompletedTask;
-
-		return EditorPage.LoadDocument(DocumentSource, Document);
 	}
 }

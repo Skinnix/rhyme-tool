@@ -33,10 +33,10 @@ public class FlyoutPageWrapper : FlyoutPage
 		//};
 	}
 
-	protected override void OnAppearing()
-	{
-		base.OnAppearing();
+	//protected override void OnAppearing()
+	//{
+	//	base.OnAppearing();
 
-		navigation.PushAsync(new Pages.Document.DocumentPage());
-	}
+	//	navigation.PushAsync(new Pages.Document.DocumentPage());
+	//}
 }

@@ -23,7 +23,7 @@ internal class Program
 	private const string rhymeStart = ":{{Reime}}";
 	private static readonly Regex rhymeRegex = new(@"\{\{Reim\|([^\}\|]+)(?:\|([^\}\|]+))(\|[^\}]*)?\}\}", RegexOptions.Compiled);
 
-	private static void Main1(string[] args)
+	private static void Main(string[] args)
 	{
 		/*Console.WriteLine("Dateipfad (.xml):");
 		var path = Console.ReadLine();

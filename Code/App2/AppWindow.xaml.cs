@@ -29,17 +29,23 @@ public partial class AppWindow : Window
 	{
 		flyoutPage.IsGestureEnabled = true;
 	}
+
+	private void navigationPage_Popped(object sender, NavigationEventArgs e)
+	{
+		if (navigationPage.Navigation.NavigationStack.Count == 1 && navigationPage.Navigation.NavigationStack[0] is MainPage)
+			flyoutPage.IsGestureEnabled = true;
+	}
 }
 
 public partial class AppWindowVM : ViewModelBase
 {
 	public AppWindowVM()
 	{
-		MainThread.InvokeOnMainThreadAsync(async () =>
-		{
-			await Task.Delay(5000);
-			OpenSettings();
-		});
+		//MainThread.InvokeOnMainThreadAsync(async () =>
+		//{
+		//	await Task.Delay(5000);
+		//	OpenSettings();
+		//});
 	}
 
 	[RelayCommand] private async void OpenSettings()

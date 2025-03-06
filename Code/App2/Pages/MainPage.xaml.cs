@@ -36,6 +36,6 @@ public partial class MainPageVM(IDocumentService documentService) : ViewModelBas
 		var documentSource = await documentService.LoadFile(file);
 		documentService.SetCurrentDocument(documentSource);
 
-		await DocumentPage.LoadDocument(documentSource);
+		await RendererPage.LoadDocument(documentSource);
 	}
 }

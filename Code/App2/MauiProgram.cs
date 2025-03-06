@@ -55,7 +55,8 @@ public static class MauiProgram
 		builder.Services.AddTransient<MainPageVM>();
 		builder.Services.AddTransient<SettingsPageVM>();
 
-		builder.Services.AddTransient<DocumentPageVM>();
+		builder.Services.AddTransient<RendererPageVM>();
+		builder.Services.AddTransient<EditorPageVM>();
 		#endregion
 
 		builder.ConfigureMauiHandlers(handlers =>

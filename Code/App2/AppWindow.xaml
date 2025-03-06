@@ -20,15 +20,7 @@
             <FlyoutPage.Flyout>
                 <ContentPage Title="Flyout">
                     <VerticalStackLayout>
-                        <!--<Grid ColumnDefinitions="0.2*,0.8*">
-                            <Image Source="{Binding IconImageSource}"
-                                   Margin="5"
-                                   HeightRequest="45" />
-                            <Label Grid.Column="1"
-                                   Text="Test"
-                                   FontAttributes="Italic"
-                                   VerticalTextAlignment="Center" />
-                        </Grid>-->
+                        
                         
                         <Button Text="Einstellungen" 
                                 ImageSource="{mi:FontAwesomeSolid Icon=Gear}"
@@ -41,6 +33,7 @@
                 <NavigationPage x:Name="navigationPage" Title="Detail"
                                 BarTextColor="{AppThemeBinding Light=Black, Dark=White, Default=Black}"
                                 Pushed="navigationPage_Pushed"
+                                Popped="navigationPage_Popped"
                                 PoppedToRoot="navigationPage_PoppedToRoot">
                     <x:Arguments>
                         <pages:MainPage />
@@ -48,6 +41,15 @@
                 </NavigationPage>
             </FlyoutPage.Detail>
         </FlyoutPage>
-        
+
+        <!--<NavigationPage x:Name="navigationPage"
+                        BarTextColor="{AppThemeBinding Light=Black, Dark=White, Default=Black}"
+                        Pushed="navigationPage_Pushed"
+                        PoppedToRoot="navigationPage_PoppedToRoot">
+            <x:Arguments>
+                <app:AppFlyoutContent x:Name="flyoutPage" />
+            </x:Arguments>
+        </NavigationPage>-->
+
     </Window.Page>
 </Window>

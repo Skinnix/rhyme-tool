@@ -1,18 +1,19 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <pages:InnerFlyoutPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-            xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-            xmlns:tk="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
-            xmlns:mi="http://www.aathifmahir.com/dotnet/2022/maui/icons"
-            xmlns:pages="clr-namespace:Skinnix.Compoetry.Maui.Pages"
-            xmlns:local="clr-namespace:Skinnix.Compoetry.Maui.Pages.Document"
-            xmlns:components="clr-namespace:Skinnix.Compoetry.Maui.Components"
-            xmlns:v="clr-namespace:Skinnix.Compoetry.Maui.Views"
-            x:Class="Skinnix.Compoetry.Maui.Pages.Document.DocumentPage"
-            x:DataType="local:DocumentPageVM"
-            FlyoutLayoutBehavior="Popover"
-            FlowDirection="RightToLeft"
-            Title="Renderer"
-            NavigationPage.HasNavigationBar="True">
+                       xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+                       xmlns:tk="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+                       xmlns:mi="http://www.aathifmahir.com/dotnet/2022/maui/icons"
+                       xmlns:pages="clr-namespace:Skinnix.Compoetry.Maui.Pages"
+                       xmlns:local="clr-namespace:Skinnix.Compoetry.Maui.Pages.Document"
+                       xmlns:components="clr-namespace:Skinnix.Compoetry.Maui.Components"
+                       xmlns:v="clr-namespace:Skinnix.Compoetry.Maui.Views"
+                       x:Class="Skinnix.Compoetry.Maui.Pages.Document.RendererPage"
+                       x:DataType="local:RendererPageVM"
+                       FlyoutLayoutBehavior="Popover"
+                       FlowDirection="RightToLeft"
+                       Title="Renderer"
+                       NavigationPage.HasNavigationBar="True"
+                       IsBusy="{Binding IsLoading}">
 
     <!--<NavigationPage.TitleView>
         <tk:DockLayout>
@@ -21,30 +22,16 @@
     </NavigationPage.TitleView>-->
 
     <FlyoutPage.ToolbarItems>
-        <ToolbarItem Text="Rückgängig" x:Name="undoToolbarItem"
-                     Priority="0"
-                     IconImageSource="{mi:FontAwesomeSolid Icon=ArrowRotateLeft, IconColor=Gray}"
-                     Command="{Binding EditHistory.UndoCommand}" />
-
-        <ToolbarItem Text="Wiederholen" x:Name="redoToolbarItem"
-                     Priority="1"
-                     IconImageSource="{mi:FontAwesomeSolid Icon=ArrowRotateRight, IconColor=Gray}"
-                     Command="{Binding EditHistory.RedoCommand}" />
-
+        
+        <ToolbarItem Text="Tools" x:Name="toolsToolbarItem"
+                     IconImageSource="{mi:FontAwesomeSolid Icon=Gears, IconColor=Gray}"
+                     Clicked="FlyoutButton_Clicked" />
+        
         <ToolbarItem Text="Bearbeiten" x:Name="enterEditorToolbarItem"
-                     Priority="2"
+                     Order="Secondary"
                      IconImageSource="{mi:FontAwesomeSolid Icon=PenToSquare, IconColor=Gray}"
                      Command="{Binding EnterEditorCommand}" />
 
-        <ToolbarItem Text="Ansehen" x:Name="enterViewerToolbarItem"
-                     Priority="3"
-                     IconImageSource="{mi:FontAwesomeSolid Icon=Eye, IconColor=Gray}"
-                     Command="{Binding EnterViewerCommand}" />
-
-        <ToolbarItem Text="Tools"
-                     Priority="4"
-                     IconImageSource="{mi:FontAwesomeSolid Icon=Bars, IconColor=Gray}"
-                     Clicked="FlyoutButton_Clicked" />
     </FlyoutPage.ToolbarItems>
 
     <FlyoutPage.Flyout>
@@ -53,8 +40,6 @@
         </ContentPage>
     </FlyoutPage.Flyout>
 
-    <!--<NavigationPage BarTextColor="{AppThemeBinding Light=Black, Dark=White, Default=Black}">
-        <x:Arguments>-->
     <ContentPage FlowDirection="LeftToRight" NavigationPage.HasNavigationBar="True" Title="1">
 
         <Grid tk:StateContainer.CurrentState="{Binding IsLoading}">
@@ -64,15 +49,17 @@
 
             <tk:StateContainer.StateViews>
                 <HorizontalStackLayout tk:StateView.StateKey="True">
-                    <ActivityIndicator IsRunning="True" />
-                    <Label Text="Lade Dokument..." />
+                    <ActivityIndicator IsRunning="True" HorizontalOptions="Center" />
+                    <Label HorizontalOptions="Center" Text="Lade Dokument..." />
                 </HorizontalStackLayout>
 
-                <v:SingletonBlazorView tk:StateView.StateKey="False" Component="{Binding RootComponent}" />
+                <v:SingletonWrapperBlazorView tk:StateView.StateKey="False" Component="{Binding RootComponent}">
+                    <x:Arguments>
+                        <x:Boolean>False</x:Boolean>
+                    </x:Arguments>
+                </v:SingletonWrapperBlazorView>
             </tk:StateContainer.StateViews>
         </Grid>
 
     </ContentPage>
-    <!--</x:Arguments>
-    </NavigationPage>-->
 </pages:InnerFlyoutPage>
