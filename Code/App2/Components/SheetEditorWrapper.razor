@@ -1,12 +1,13 @@
 ﻿@namespace Skinnix.Compoetry.Maui.Components
 
 @using Skinnix.RhymeTool.Client.Components.Editing
+@using Skinnix.RhymeTool.Data.Editing
 @using Skinnix.RhymeTool.Data.Notation
 
 @if (Document is not null && Settings is not null)
 {
     <div class="chord-sheet-wrapper@(IsDebug ? " debug" : null)" style="--font-percent: @Settings.FontSize;">
-        <SheetEditor @ref="editor" Document="Document" Formatter="Settings.Formatter" />
+        <SheetEditor @ref="editor" Document="Document" Formatter="Settings.Formatter" EditHistory="EditHistory" />
     </div>
 }
 
@@ -20,6 +21,7 @@
 
     [Parameter] public SheetDocument? Document { get; set; }
     [Parameter] public EditingSettings? Settings { get; set; }
+    [Parameter] public DocumentEditHistory? EditHistory { get; set; }
 
     private SheetEditor? editor;
 }

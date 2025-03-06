@@ -6,6 +6,11 @@ using Skinnix.RhymeTool.Client.Services.Files;
 using Skinnix.RhymeTool.Client.Services;
 using Skinnix.Compoetry.Maui.Pages;
 using Skinnix.Compoetry.Maui.Pages.Document;
+using Microsoft.Maui.LifecycleEvents;
+using Skinnix.Compoetry.Maui.IO;
+using Skinnix.RhymeTool.Client.Services.Preferences;
+using MauiIcons.FontAwesome;
+using MauiIcons.FontAwesome.Solid;
 
 namespace Skinnix.Compoetry.Maui;
 
@@ -17,6 +22,8 @@ public static class MauiProgram
 		builder
 			.UseMauiApp<App>()
 			.UseMauiCommunityToolkit()
+			.UseFontAwesomeMauiIcons()
+			.UseFontAwesomeSolidMauiIcons()
 			.ConfigureFonts(fonts =>
 			{
 				fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
@@ -34,16 +41,29 @@ public static class MauiProgram
 		builder.Services.AddSingleton<IMauiUiService, MauiUiService>();
 		builder.Services.AddTransient<IDebugDataService, MauiDebugDataService>();
 
+		//Service-Überschreibungen
+		builder.Services.AddSingleton<IDocumentFileService, MauiDocumentFileService>();
+		builder.Services.AddTransient<IPreferencesService, MauiPreferencesService>();
+
 #if DEBUG
 		builder.Logging.AddDebug();
 		builder.Services.AddBlazorWebViewDeveloperTools();
 #endif
 
 		#region ViewModels
+		builder.Services.AddTransient<AppWindowVM>();
 		builder.Services.AddTransient<MainPageVM>();
+		builder.Services.AddTransient<SettingsPageVM>();
 
-		builder.Services.AddWithRoute<RendererPage, RendererPageVM>();
+		builder.Services.AddTransient<DocumentPageVM>();
 		#endregion
+
+		builder.ConfigureMauiHandlers(handlers =>
+		{
+#if WINDOWS
+			handlers.AddHandler<InnerFlyoutPage, Skinnix.Compoetry.Maui.Platforms.Windows.InnerFlyoutPageHandler>();
+#endif
+		});
 
 		return builder.Build();
 	}

@@ -1,3 +1,6 @@
 [submodule "Dependencies/Konves.ChordPro"]
 	path = Dependencies/Konves.ChordPro
 	url = https://github.com/Skinnix/Konves.ChordPro.git
+[submodule "Dependencies/AiForms.Maui.SettingsView"]
+	path = Dependencies/AiForms.Maui.SettingsView
+	url = https://github.com/Skinnix/AiForms.Maui.SettingsView.git

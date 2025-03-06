@@ -6,17 +6,37 @@
              xmlns:components="clr-namespace:Skinnix.Compoetry.Maui.Components"
              xmlns:v="clr-namespace:Skinnix.Compoetry.Maui.Views"
              x:Class="Skinnix.Compoetry.Maui.Pages.MainPage"
-             x:DataType="local:MainPageVM">
+             x:DataType="local:MainPageVM"
+             Title="Compoetry"
+             NavigationPage.HasNavigationBar="True">
 
-    <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+    <!--<FlyoutPage.ToolbarItems>
+        <ToolbarItem Text="Test" />
+    </FlyoutPage.ToolbarItems>
 
-        <Button Text="Datei Öffnen" Command="{Binding OpenFileCommand}" />
+    <FlyoutPage.MenuBarItems>
+        <MenuBarItem Text="Menu" />
+    </FlyoutPage.MenuBarItems>
 
-    </Grid>
+    <FlyoutPage.Flyout>
+        <ContentPage Title="Test" NavigationPage.HasNavigationBar="False">
+            <Button Text="FlyoutButton"></Button>
+        </ContentPage>
+    </FlyoutPage.Flyout>
 
+    <ContentPage NavigationPage.HasNavigationBar="False">-->
+    
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <Button Text="Datei Öffnen" Command="{Binding OpenFileCommand}" />
+
+        </Grid>
+
+    <!--</ContentPage>-->
 </ContentPage>

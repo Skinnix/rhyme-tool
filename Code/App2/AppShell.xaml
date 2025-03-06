@@ -8,10 +8,15 @@
     Shell.FlyoutBehavior="Flyout"
     Title="Compoetry">
 
-    <FlyoutItem Title="Main">
-        <ShellContent
-            Title="Main"
-            ContentTemplate="{DataTemplate pages:MainPage}" />
-    </FlyoutItem>
+    <ShellContent
+        x:Name="defaultContent"
+        Title="Dateien"
+        Route=""
+        FlyoutItemIsVisible="False"
+        ContentTemplate="{DataTemplate pages:MainPage}" />
 
+    <MenuItem
+        Text="Einstellungen"
+        Clicked="Settings_Clicked"
+        IconImageSource="{FontImageSource FontFamily=FontAwesomeSolid, Size=32, Color=Black, Glyph=&#xf013;}" />
 </Shell>

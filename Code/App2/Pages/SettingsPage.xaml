@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:tk="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             xmlns:pages="clr-namespace:Skinnix.Compoetry.Maui.Pages"
+             x:Class="Skinnix.Compoetry.Maui.Pages.SettingsPage"
+             x:DataType="pages:SettingsPageVM"
+             Title="Einstellungen">
+
+    <ContentPage.MenuBarItems>
+        <MenuBarItem Text="Test" />
+    </ContentPage.MenuBarItems>
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Toolbar" />
+    </ContentPage.ToolbarItems>
+    
+    <!--<sv:SettingsView HasUnevenRows="True">
+        <sv:Section Title="Ordner" tk:StateContainer.CurrentState="{Binding HasWorkingDirectoryPermission}">
+            <sv:ButtonCell Title="Arbeitsverzeichnis auswählen"
+                           Command="{Binding SelectWorkingDirectoryCommand}"
+                           tk:StateView.StateKey="False" />
+
+            <sv:CommandCell Title="Aktuelles Arbeitsverzeichnis:" Description="{Binding WorkingDirectory, FallbackValue=Noch nicht ausgewählt}"
+                            Command="{Binding SelectWorkingDirectoryCommand}"
+                            tk:StateView.StateKey="True"/>
+        </sv:Section>
+    </sv:SettingsView>-->
+
+    <ScrollView HorizontalScrollBarVisibility="Never">
+        <VerticalStackLayout>
+            <Button Text="Test" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

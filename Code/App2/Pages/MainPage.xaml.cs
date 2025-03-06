@@ -18,10 +18,6 @@ public partial class MainPage : ContentPage
 
 public partial class MainPageVM(IDocumentService documentService) : ViewModelBase
 {
-	[RelayCommand]
-	private Task NavigateToTestPage()
-		=> Shell.Current.GoToAsync("TestPage");
-
 	[RelayCommand] private async Task OpenFile()
 	{
 		var fileResult = await FilePicker.Default.PickAsync(new()
@@ -40,6 +36,6 @@ public partial class MainPageVM(IDocumentService documentService) : ViewModelBas
 		var documentSource = await documentService.LoadFile(file);
 		documentService.SetCurrentDocument(documentSource);
 
-		await RendererPage.LoadDocument(documentSource);
+		await DocumentPage.LoadDocument(documentSource);
 	}
 }
