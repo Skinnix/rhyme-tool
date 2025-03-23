@@ -2,7 +2,6 @@
 <pages:InnerFlyoutPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
                        xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
                        xmlns:tk="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
-                       xmlns:mi="http://www.aathifmahir.com/dotnet/2022/maui/icons"
                        xmlns:pages="clr-namespace:Skinnix.Compoetry.Maui.Pages"
                        xmlns:local="clr-namespace:Skinnix.Compoetry.Maui.Pages.Document"
                        xmlns:components="clr-namespace:Skinnix.Compoetry.Maui.Components"
@@ -18,18 +17,27 @@
         <v:MarkerToolbarItem FlyoutPage="{x:Reference this}" />
 
         <ToolbarItem Text="Tools" x:Name="toolsToolbarItem"
-                     IconImageSource="{mi:FontAwesomeSolid Icon=Gears, IconColor=Gray}"
-                     Clicked="FlyoutButton_Clicked" />
-        
+                     Clicked="FlyoutButton_Clicked">
+            <ToolbarItem.IconImageSource>
+                <FontImageSource Glyph="&#xF085;" FontFamily="FontAwesomeSolid" Color="Gray" />
+            </ToolbarItem.IconImageSource>
+        </ToolbarItem>
+
         <ToolbarItem Text="Rückgängig" x:Name="undoToolbarItem"
                      Order="Secondary"
-                     IconImageSource="{mi:FontAwesomeSolid Icon=ArrowRotateLeft, IconColor=Gray}"
-                     Command="{Binding EditHistory.UndoCommand}" />
+                     Command="{Binding EditHistory.UndoCommand}">
+            <ToolbarItem.IconImageSource>
+                <FontImageSource Glyph="&#xF0E2;" FontFamily="FontAwesomeSolid" Color="Gray" />
+            </ToolbarItem.IconImageSource>
+        </ToolbarItem>
 
         <ToolbarItem Text="Wiederholen" x:Name="redoToolbarItem"
                      Order="Secondary"
-                     IconImageSource="{mi:FontAwesomeSolid Icon=ArrowRotateRight, IconColor=Gray}"
-                     Command="{Binding EditHistory.RedoCommand}" />
+                     Command="{Binding EditHistory.RedoCommand}">
+            <ToolbarItem.IconImageSource>
+                <FontImageSource Glyph="&#xF01E;" FontFamily="FontAwesomeSolid" Color="Gray" />
+            </ToolbarItem.IconImageSource>
+        </ToolbarItem>
 
     </FlyoutPage.ToolbarItems>
 

@@ -9,8 +9,8 @@ using Skinnix.Compoetry.Maui.Pages.Document;
 using Microsoft.Maui.LifecycleEvents;
 using Skinnix.Compoetry.Maui.IO;
 using Skinnix.RhymeTool.Client.Services.Preferences;
-using MauiIcons.FontAwesome;
-using MauiIcons.FontAwesome.Solid;
+using Skinnix.Compoetry.Maui.Pages.Files;
+using System.Diagnostics;
 
 namespace Skinnix.Compoetry.Maui;
 
@@ -18,23 +18,27 @@ public static class MauiProgram
 {
 	public static MauiApp CreateMauiApp()
 	{
+		Trace.WriteLine("1");
 		var builder = MauiApp.CreateBuilder();
 		builder
 			.UseMauiApp<App>()
 			.UseMauiCommunityToolkit()
-			.UseFontAwesomeMauiIcons()
-			.UseFontAwesomeSolidMauiIcons()
 			.ConfigureFonts(fonts =>
 			{
 				fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
 				fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
+				fonts.AddFont("Font-Awesome-6-Free-Regular-400.otf", "FontAwesome");
+				fonts.AddFont("Font-Awesome-6-Free-Solid-900.otf", "FontAwesomeSolid");
 			});
 
+		Trace.WriteLine("2");
 		builder.Services.AddMauiBlazorWebView();
 
+		Trace.WriteLine("3");
 		//RhymeTool
 		builder.Services.AddRhymeToolClient();
 
+		Trace.WriteLine("4");
 		//HTTP-Client
 		builder.Services.AddScoped(_ => new HttpClient());
 
@@ -53,7 +57,9 @@ public static class MauiProgram
 		#region ViewModels
 		builder.Services.AddTransient<AppWindowVM>();
 		builder.Services.AddTransient<MainPageVM>();
-		builder.Services.AddTransient<SettingsPageVM>();
+		builder.Services.AddTransient<PreferencesPageVM>();
+
+		builder.Services.AddTransient<FileExplorerPageVM>();
 
 		builder.Services.AddTransient<RendererPageVM>();
 		builder.Services.AddTransient<EditorPageVM>();
@@ -63,6 +69,7 @@ public static class MauiProgram
 		{
 #if WINDOWS
 			handlers.AddHandler<InnerFlyoutPage, Skinnix.Compoetry.Maui.Platforms.Windows.InnerFlyoutPageHandler>();
+			handlers.AddHandler<OuterFlyoutPage, Skinnix.Compoetry.Maui.Platforms.Windows.OuterFlyoutPageHandler>();
 #endif
 		});
 

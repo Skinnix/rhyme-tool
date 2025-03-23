@@ -17,7 +17,7 @@ namespace Skinnix.Compoetry.Maui.Pages.Document;
 
 public partial class RendererPage : InnerFlyoutPage
 {
-	public static Task LoadDocument(IDocumentSource document)
+	public static Task ShowDocument(IDocumentSource document)
 	{
 		var page = new RendererPage();
 		page.ViewModel.DocumentSource = document;

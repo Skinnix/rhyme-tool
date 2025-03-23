@@ -21,6 +21,7 @@
 		<Nullable>enable</Nullable>
 		<AssemblyName>Skinnix.Compoetry.Maui</AssemblyName>
 		<RootNamespace>Skinnix.Compoetry.Maui</RootNamespace>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 
 		<OutputPath>..\..\Build\$(Configuration)\$(AssemblyName)</OutputPath>
 
@@ -61,14 +62,15 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="AathifMahir.Maui.MauiIcons.FontAwesome" Version="4.0.0" />
-		<PackageReference Include="AathifMahir.Maui.MauiIcons.FontAwesome.Solid" Version="4.0.0" />
+		<!--<PackageReference Include="AathifMahir.Maui.MauiIcons.FontAwesome" Version="4.0.0" />
+		<PackageReference Include="AathifMahir.Maui.MauiIcons.FontAwesome.Solid" Version="4.0.0" />-->
+		<PackageReference Include="akgul.Maui.DataGrid" Version="4.0.6" />
 		<PackageReference Include="CommunityToolkit.Maui" Version="9.1.1" />
 		<PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
-		<PackageReference Include="Microsoft.Maui.Controls" Version="9.0.40" />
-		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="9.0.40" />
+		<PackageReference Include="CompiledBindings.MAUI" Version="1.0.18" />
+		<PackageReference Include="Microsoft.Maui.Controls" Version="9.0.50" />
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="9.0.50" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.2" />
-		<PackageReference Include="ObjectDumper.NET" Version="4.3.2" />
 	</ItemGroup>
 
 	<!--Windows-->
@@ -79,8 +81,8 @@
 	  <ProjectReference Include="..\Client\RhymeTool.Client.csproj" />
 	</ItemGroup>
 	<ItemGroup>
-	  <Compile Update="Pages\Document\EditorPage.xaml.cs">
-	    <DependentUpon>EditorPage.xaml</DependentUpon>
+	  <Compile Update="Pages\PreferencesPage.xaml.cs">
+	    <DependentUpon>PreferencesPage.xaml</DependentUpon>
 	  </Compile>
 	</ItemGroup>
 	<ItemGroup>
@@ -96,7 +98,10 @@
 	  <MauiXaml Update="Pages\Document\RendererPage.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
-	  <MauiXaml Update="Pages\SettingsPage.xaml">
+	  <MauiXaml Update="Pages\Files\FileExplorerPage.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  <MauiXaml Update="Pages\PreferencesPage.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
 	  <MauiXaml Update="PageWrapper.xaml">

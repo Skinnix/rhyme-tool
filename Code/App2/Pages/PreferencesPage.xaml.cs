@@ -4,12 +4,12 @@ using Skinnix.RhymeTool.Client.Services.Files;
 
 namespace Skinnix.Compoetry.Maui.Pages;
 
-public partial class SettingsPage : ContentPage
+public partial class PreferencesPage : ContentPage
 {
-	public static SettingsPage Load()
-		=> new(App.Services.GetRequiredService<SettingsPageVM>());
+	public static PreferencesPage Load()
+		=> new(App.Services.GetRequiredService<PreferencesPageVM>());
 
-	public SettingsPage(SettingsPageVM viewModel)
+	public PreferencesPage(PreferencesPageVM viewModel)
 	{
 		BindingContext = viewModel;
 
@@ -17,7 +17,7 @@ public partial class SettingsPage : ContentPage
 	}
 }
 
-public partial class SettingsPageVM : ViewModelBase
+public partial class PreferencesPageVM : ViewModelBase
 {
 	private readonly IDocumentFileService fileService;
 
@@ -25,7 +25,7 @@ public partial class SettingsPageVM : ViewModelBase
 	[ObservableProperty] public partial bool HasWorkingDirectoryPermission { get; set; }
 	[ObservableProperty] public partial string? WorkingDirectory { get; set; }
 
-	public SettingsPageVM(IDocumentFileService fileService)
+	public PreferencesPageVM(IDocumentFileService fileService)
 	{
 		this.fileService = fileService;
 

@@ -11,6 +11,18 @@ using Skinnix.RhymeTool.Client.Services.Preferences;
 
 namespace Skinnix.Compoetry.Maui.IO;
 
+public interface IMauiDocumentFileService
+{
+	SystemRequestResult<IFileList?> TryGetFileList();
+	SystemRequestResult<IFileContent?> TrySelectFile();
+	SystemRequestResult TryWorkingDirectoryPermission();
+	SystemRequestResult<string?> TryGetWorkingDirectory();
+	SystemRequestResult<string?> TrySelectWorkingDirectory();
+	SystemRequestResult<IFileContent?> TryLoadFile(string id);
+
+	SystemRequestResult<IFileContent> OpenSelectedFile(IBrowserFile file);
+}
+
 internal class MauiDocumentFileService(IPreferencesService preferenceService) : IDocumentFileService
 {
 	private class PreferencesHolder(IPreferencesService preferenceService) : PreferenceObject(preferenceService, "Files_")
@@ -244,8 +256,8 @@ internal class MauiDocumentFileService(IPreferencesService preferenceService) : 
 
 		private record FileItem(IFileListItemParent Parent, FileInfo File, string Name, DateTime? LastModified, long? Size) : IFileListFile
 		{
-			public Task<IFileContent?> GetContentAsync(CancellationToken cancellation = default)
-				=> Task.FromResult<IFileContent?>(new FileContent(this));
+			public Task<IFileContent> GetContentAsync(CancellationToken cancellation = default)
+				=> Task.FromResult<IFileContent>(new FileContent(this));
 
 			private record FileContent(FileItem Owner) : IFileContent
 			{

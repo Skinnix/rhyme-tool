@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.Input;
 using Skinnix.Compoetry.Maui.Pages;
+using Skinnix.Compoetry.Maui.Pages.Files;
 
 namespace Skinnix.Compoetry.Maui;
 
@@ -23,17 +24,22 @@ public partial class AppWindow : Window
 	{
 		flyoutPage.IsGestureEnabled = false;
 		flyoutPage.IsPresented = false;
+		flyoutPage.ShowButton = false;
 	}
 
 	private void navigationPage_PoppedToRoot(object sender, NavigationEventArgs e)
 	{
 		flyoutPage.IsGestureEnabled = true;
+		flyoutPage.ShowButton = true;
 	}
 
 	private void navigationPage_Popped(object sender, NavigationEventArgs e)
 	{
-		if (navigationPage.Navigation.NavigationStack.Count == 1 && navigationPage.Navigation.NavigationStack[0] is MainPage)
+		if (navigationPage.Navigation.NavigationStack.Count == 1 && navigationPage.Navigation.NavigationStack[0] is FileExplorerPage)
+		{
 			flyoutPage.IsGestureEnabled = true;
+			flyoutPage.ShowButton = true;
+		}
 	}
 }
 
@@ -48,8 +54,8 @@ public partial class AppWindowVM : ViewModelBase
 		//});
 	}
 
-	[RelayCommand] private async void OpenSettings()
+	[RelayCommand] private async Task OpenSettings()
 	{
-		await App.Navigation.PushAsync(SettingsPage.Load());
+		await App.Navigation.PushAsync(SettingsPage.Load(), true);
 	}
 }

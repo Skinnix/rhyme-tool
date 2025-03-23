@@ -5,6 +5,7 @@
         xmlns:mi="http://www.aathifmahir.com/dotnet/2022/maui/icons"
         xmlns:app="clr-namespace:Skinnix.Compoetry.Maui"
         xmlns:pages="clr-namespace:Skinnix.Compoetry.Maui.Pages"
+        xmlns:files="clr-namespace:Skinnix.Compoetry.Maui.Pages.Files"
         x:Class="Skinnix.Compoetry.Maui.AppWindow"
         x:DataType="app:AppWindowVM">
 
@@ -16,31 +17,32 @@
         </app:FlyoutPageWrapper>-->
         <!--<app:AppShell />-->
 
-        <FlyoutPage x:Name="flyoutPage" FlyoutLayoutBehavior="Popover">
-            <FlyoutPage.Flyout>
+        <pages:OuterFlyoutPage x:Name="flyoutPage" FlyoutLayoutBehavior="Popover">
+            <pages:OuterFlyoutPage.Flyout>
                 <ContentPage Title="Flyout">
                     <VerticalStackLayout>
-                        
-                        
-                        <Button Text="Einstellungen" 
-                                ImageSource="{mi:FontAwesomeSolid Icon=Gear}"
-                                Command="{Binding OpenSettingsCommand}"/>
+                        <Button Text="Einstellungen"
+                                Command="{Binding OpenSettingsCommand}">
+                            <Button.ImageSource>
+                                <FontImageSource Glyph="⚙" FontFamily="FontAwesomeSolid" Size="16" />
+                            </Button.ImageSource>
+                        </Button>
                     </VerticalStackLayout>
                 </ContentPage>
-            </FlyoutPage.Flyout>
+            </pages:OuterFlyoutPage.Flyout>
 
-            <FlyoutPage.Detail>
+            <pages:OuterFlyoutPage.Detail>
                 <NavigationPage x:Name="navigationPage" Title="Detail"
                                 BarTextColor="{AppThemeBinding Light=Black, Dark=White, Default=Black}"
                                 Pushed="navigationPage_Pushed"
                                 Popped="navigationPage_Popped"
                                 PoppedToRoot="navigationPage_PoppedToRoot">
                     <x:Arguments>
-                        <pages:MainPage />
+                        <files:FileExplorerPage />
                     </x:Arguments>
                 </NavigationPage>
-            </FlyoutPage.Detail>
-        </FlyoutPage>
+            </pages:OuterFlyoutPage.Detail>
+        </pages:OuterFlyoutPage>
 
         <!--<NavigationPage x:Name="navigationPage"
                         BarTextColor="{AppThemeBinding Light=Black, Dark=White, Default=Black}"

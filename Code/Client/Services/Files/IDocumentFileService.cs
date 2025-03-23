@@ -118,7 +118,7 @@ public interface IFileListFile : IFileListItem
 {
 	long? Size { get; }
 
-	Task<IFileContent?> GetContentAsync(CancellationToken cancellation = default);
+	Task<IFileContent> GetContentAsync(CancellationToken cancellation = default);
 }
 
 public interface IFileContent

@@ -3,8 +3,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:tk="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              xmlns:pages="clr-namespace:Skinnix.Compoetry.Maui.Pages"
-             x:Class="Skinnix.Compoetry.Maui.Pages.SettingsPage"
-             x:DataType="pages:SettingsPageVM"
+             x:Class="Skinnix.Compoetry.Maui.Pages.PreferencesPage"
+             x:DataType="pages:PreferencesPageVM"
              Title="Einstellungen">
 
     <ContentPage.MenuBarItems>

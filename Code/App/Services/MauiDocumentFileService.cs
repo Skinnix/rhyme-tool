@@ -244,8 +244,8 @@ internal class MauiDocumentFileService(IPreferencesService preferenceService) : 
 
 		private record FileItem(IFileListItemParent Parent, FileInfo File, string Name, DateTime? LastModified, long? Size) : IFileListFile
 		{
-			public Task<IFileContent?> GetContentAsync(CancellationToken cancellation = default)
-				=> Task.FromResult<IFileContent?>(new FileContent(this));
+			public Task<IFileContent> GetContentAsync(CancellationToken cancellation = default)
+				=> Task.FromResult<IFileContent>(new FileContent(this));
 
 			private record FileContent(FileItem Owner) : IFileContent
 			{

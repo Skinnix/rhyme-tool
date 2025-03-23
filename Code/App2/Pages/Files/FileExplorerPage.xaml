@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:tk="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             xmlns:mi="http://www.aathifmahir.com/dotnet/2022/maui/icons"
+             xmlns:dg="clr-namespace:Maui.DataGrid;assembly=Maui.DataGrid"
+             xmlns:files="clr-namespace:Skinnix.Compoetry.Maui.Pages.Files"
+             x:Class="Skinnix.Compoetry.Maui.Pages.Files.FileExplorerPage"
+             x:DataType="files:FileExplorerPageVM"
+             x:Name="page"
+             Title="Compoetry"
+             IsBusy="{Binding IsLoading}">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <tk:ItemTappedEventArgsConverter x:Key="itemTappedEventArgsConverter" />
+            <tk:InvertedBoolConverter x:Key="invertedBoolConverter" />
+            <tk:IsNullConverter x:Key="isNullConverter" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="auto,auto,*" RowSpacing="10" Margin="10,0" IsVisible="{Binding IsLoading, Converter={tk:InvertedBoolConverter}}">
+
+        <Button Text="Datei öffnen"
+                Command="{Binding SelectFileCommand}"
+                IsVisible="{Binding CanSelectFile}"
+                Grid.Row="0">
+            <Button.ImageSource>
+                <FontImageSource Glyph="&#xF56F;" FontFamily="FontAwesomeSolid" Size="20" />
+            </Button.ImageSource>
+        </Button>
+
+        <Grid ColumnDefinitions="auto,*"
+              IsVisible="{Binding IsWorkingDirectorySelected, Converter={StaticResource invertedBoolConverter}}"
+              IsClippedToBounds="True"
+              Grid.Row="1">
+
+            <Image Grid.Column="0"
+                   VerticalOptions="Center">
+                <Image.Source>
+                    <FontImageSource Glyph="⚠" FontFamily="FontAwesomeSolid" Color="{StaticResource Error}" Size="16" />
+                </Image.Source>
+            </Image>
+
+            <Label Text="Es wurde noch kein Arbeitsordner ausgewählt." TextColor="{StaticResource Error}"
+                   Grid.Column="1"
+                   VerticalOptions="Center" />
+
+            <Button Text="Arbeitsordner auswählen" Grid.ColumnSpan="2"
+                    Command="{Binding SelectWorkingDirectoryCommand}" />
+        </Grid>
+
+        <Grid RowDefinitions="auto,auto,*"
+              IsVisible="{Binding IsWorkingDirectorySelected}"
+              Grid.Row="2">
+            <Label x:Name="breadcrumbLabel" FormattedText="{Binding BreadcrumbString}" LineBreakMode="WordWrap" tk:DockLayout.DockPosition="Top" Margin="0,0,0,5" />
+
+            <ContentView BackgroundColor="{tk:AppThemeResource SurfaceVariant}" Grid.Row="1">
+                <Grid ColumnDefinitions="19,5*,2*,*" Margin="5">
+                    <Label Text="Name" FontAttributes="Bold" Grid.Column="0" Grid.ColumnSpan="2" />
+                    <Label Text="Datum" FontAttributes="Bold" Grid.Column="2" />
+                    <Label Text="Größe" FontAttributes="Bold" Grid.Column="3" />
+                </Grid>
+            </ContentView>
+            
+            <ListView ItemsSource="{Binding CurrentItems}"
+                  SelectionMode="None"
+                  IsPullToRefreshEnabled="True" RefreshCommand="{Binding RefreshCommand}"
+                  IsVisible="{Binding CurrentItems, Converter={tk:IsNotNullConverter}}"
+                  Grid.Row="2">
+
+                <ListView.Behaviors>
+                    <tk:EventToCommandBehavior EventName="ItemTapped" Command="{Binding LoadItemCommand}" EventArgsConverter="{StaticResource itemTappedEventArgsConverter}" />
+                </ListView.Behaviors>
+
+                <ListView.ItemTemplate>
+                    <DataTemplate x:DataType="files:Item">
+                        <ViewCell>
+                            <Grid ColumnDefinitions="19,5*,2*,*" RowDefinitions="*,*" Padding="5,5" VerticalOptions="Center">
+                                <Image HeightRequest="16" Margin="0,0,3,0" Grid.Column="0">
+                                    <Image.Source>
+                                        <FontImageSource Glyph="{Binding Icon}" FontFamily="FontAwesomeSolid" Color="{tk:AppThemeResource OnSurface}" />
+                                    </Image.Source>
+                                </Image>
+
+                                <Label Text="{Binding Name}" LineBreakMode="TailTruncation" Grid.Column="1" />
+                                <!--<Label Text="{Binding LastModifiedString}" Grid.Column="2" />-->
+                                <Label Text="{Binding SizeString}" Grid.Column="3" />
+                            </Grid>
+                        </ViewCell>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+        </Grid>
+
+        <!--<dg:DataGrid ItemsSource="{Binding CurrentItems}"
+                     PullToRefreshCommand="{Binding RefreshCommand}"
+                     IsVisible="{x:Bind not IsLoading and CurrentItems ne null}"
+                     Grid.Row="2">
+            <dg:DataGrid.Columns>
+                <dg:DataGridColumn Title="" PropertyName=".">
+                    <dg:DataGridColumn.CellTemplate>
+                        <DataTemplate x:DataType="files:Item">
+                            <Image>
+                                <Image.Source>
+                                    <FontImageSource Glyph="{Binding Icon}" Size="06" />
+                                </Image.Source>
+                            </Image>
+                        </DataTemplate>
+                    </dg:DataGridColumn.CellTemplate>
+                </dg:DataGridColumn>
+
+                <dg:DataGridColumn Title="Name" PropertyName="Name" />
+
+                <dg:DataGridColumn Title="Datum" PropertyName="LastModified" />
+
+                <dg:DataGridColumn Title="Größe" PropertyName="Size" />
+            </dg:DataGrid.Columns>
+        </dg:DataGrid>-->
+    </Grid>
+</ContentPage>

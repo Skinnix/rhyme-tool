@@ -11,6 +11,7 @@ public readonly record struct SystemRequestResult(SystemRequestResultType Result
 	public bool IsOk => Result.HasFlag(SystemRequestResultType.OkFlag);
 	public bool IsPending => Result.HasFlag(SystemRequestResultType.PendingFlag);
 	public bool IsError => Result.HasFlag(SystemRequestResultType.ErrorFlag);
+	public bool IsDenied => Result.HasFlag(SystemRequestResultType.Denied);
 
 	public static implicit operator SystemRequestResult(SystemRequestResultType result) => new(result);
 }
@@ -20,6 +21,7 @@ public readonly record struct SystemRequestResult<T>(SystemRequestResultType Res
 	public bool IsOk => Result.HasFlag(SystemRequestResultType.OkFlag);
 	public bool IsPending => Result.HasFlag(SystemRequestResultType.PendingFlag);
 	public bool IsError => Result.HasFlag(SystemRequestResultType.ErrorFlag);
+	public bool IsDenied => Result.HasFlag(SystemRequestResultType.Denied);
 
 	public static implicit operator SystemRequestResult<T>(SystemRequestResultType result) => new(result);
 }

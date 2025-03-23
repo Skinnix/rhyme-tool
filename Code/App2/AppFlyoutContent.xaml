@@ -19,10 +19,12 @@
            VerticalTextAlignment="Center" />
 </Grid>-->
 
-                    <Button Text="Einstellungen" 
-        ImageSource="{mi:FontAwesomeSolid Icon=Gear}"
-        Command="{Binding OpenSettingsCommand}"/>
-                </VerticalStackLayout>
+                <Button Text="Einstellungen" Command="{Binding OpenSettingsCommand}">
+                    <Button.ImageSource>
+                        <FontImageSource Glyph="⚙" FontFamily="FontAwesomeSolid" />
+                    </Button.ImageSource>
+                </Button>
+            </VerticalStackLayout>
             </ContentPage>
         </FlyoutPage.Flyout>
 
