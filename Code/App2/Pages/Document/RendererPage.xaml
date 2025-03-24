@@ -1,6 +1,9 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
-<pages:InnerFlyoutPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+<uranium:UraniumContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
                        xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+                       xmlns:uranium="http://schemas.enisn-projects.io/dotnet/maui/uraniumui"
+                       xmlns:material="http://schemas.enisn-projects.io/dotnet/maui/uraniumui/material"
+                       xmlns:fa="clr-namespace:UraniumUI.Icons.FontAwesome;assembly=UraniumUI.Icons.FontAwesome"
                        xmlns:tk="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
                        xmlns:pages="clr-namespace:Skinnix.Compoetry.Maui.Pages"
                        xmlns:local="clr-namespace:Skinnix.Compoetry.Maui.Pages.Document"
@@ -8,157 +11,135 @@
                        xmlns:v="clr-namespace:Skinnix.Compoetry.Maui.Views"
                        x:Class="Skinnix.Compoetry.Maui.Pages.Document.RendererPage"
                        x:DataType="local:RendererPageVM"
-                       FlyoutLayoutBehavior="Popover"
-                       FlowDirection="RightToLeft"
                        Title="{Binding Title}"
-                       NavigationPage.HasNavigationBar="True"
                        IsBusy="{Binding IsLoading}">
 
-    <!--<NavigationPage.TitleView>
-        <tk:DockLayout>
-            <Button HorizontalOptions="End" Text="a" />
-        </tk:DockLayout>
-    </NavigationPage.TitleView>-->
-
-    <FlyoutPage.ToolbarItems>
-
+    <uranium:UraniumContentPage.ToolbarItems>
         <ToolbarItem Text="Tools" x:Name="toolsToolbarItem"
-                     Order="Secondary"
-                     Clicked="FlyoutButton_Clicked">
+            Order="{OnIdiom Desktop=Primary, Default=Secondary}"
+            Clicked="FlyoutButton_Clicked">
             <ToolbarItem.IconImageSource>
                 <FontImageSource Glyph="&#xF085;" FontFamily="FontAwesomeSolid" Color="Gray" />
             </ToolbarItem.IconImageSource>
         </ToolbarItem>
-        
+
         <ToolbarItem Text="Bearbeiten" x:Name="enterEditorToolbarItem"
-                     Order="Secondary"
-                     Command="{Binding EnterEditorCommand}">
+            Order="{OnIdiom Desktop=Primary, Default=Secondary}"
+            Command="{Binding EnterEditorCommand}">
             <ToolbarItem.IconImageSource>
                 <FontImageSource Glyph="&#xF044;" FontFamily="FontAwesomeSolid" Color="Gray" />
             </ToolbarItem.IconImageSource>
         </ToolbarItem>
+    </uranium:UraniumContentPage.ToolbarItems>
 
-    </FlyoutPage.ToolbarItems>
+    <Grid tk:StateContainer.CurrentState="{Binding IsLoading}" RowDefinitions="*" ColumnDefinitions="*" Margin="0,0,0,22">
+        <tk:StateContainer.StateViews>
+            <HorizontalStackLayout tk:StateView.StateKey="True">
+                <!--<ActivityIndicator IsRunning="True" HorizontalOptions="Center" />-->
+                <Label HorizontalOptions="Center" Text="Lade Dokument..." />
+            </HorizontalStackLayout>
 
-    <FlyoutPage.Flyout>
-        <ContentPage Title="FlyoutTest" FlowDirection="LeftToRight">
-            <Button Text="Test" />
-        </ContentPage>
-    </FlyoutPage.Flyout>
+            <Grid tk:StateView.StateKey="False" HorizontalOptions="Fill" VerticalOptions="Fill">
+                <v:SingletonWrapperBlazorView Component="{Binding RootComponent}">
+                    <x:Arguments>
+                        <x:Boolean>False</x:Boolean>
+                    </x:Arguments>
+                </v:SingletonWrapperBlazorView>
+            </Grid>
+        </tk:StateContainer.StateViews>
+    </Grid>
 
-    <ContentPage FlowDirection="LeftToRight" NavigationPage.HasNavigationBar="True" Title="Renderer">
+    <uranium:UraniumContentPage.Attachments>
+        <v:SideSheetView x:Name="sideSheetView">
+            <v:SideSheetView.Header>
+                <ContentView BackgroundColor="Transparent" />
+            </v:SideSheetView.Header>
 
-        <Grid tk:StateContainer.CurrentState="{Binding IsLoading}" RowDefinitions="*" ColumnDefinitions="*">
-            <tk:StateContainer.StateViews>
-                <HorizontalStackLayout tk:StateView.StateKey="True">
-                    <!--<ActivityIndicator IsRunning="True" HorizontalOptions="Center" />-->
-                    <Label HorizontalOptions="Center" Text="Lade Dokument..." />
-                </HorizontalStackLayout>
+            <ScrollView>
+                <uranium:AutoFormView Source="{Binding RenderingSettings}" WidthRequest="500"
+                                      ShowMissingProperties="False"
+                                      ShowResetButton="False" ShowSubmitButton="False" />
+            </ScrollView>
+        </v:SideSheetView>
 
-                <Grid tk:StateView.StateKey="False" HorizontalOptions="Fill" VerticalOptions="Fill">
-                    <v:SingletonWrapperBlazorView Component="{Binding RootComponent}">
-                        <x:Arguments>
-                            <x:Boolean>False</x:Boolean>
-                        </x:Arguments>
-                    </v:SingletonWrapperBlazorView>
+        <material:BottomSheetView CloseOnTapOutside="False" DisablePageWhenOpened="False">
 
-                    <Border Stroke="Transparent"
-                            StrokeThickness="0"
-                            StrokeShape="RoundRectangle 8"
-                            BackgroundColor="{tk:AppThemeResource Surface}"
-                            Padding="10"
-                            VerticalOptions="End" HorizontalOptions="Start">
-                        <FlexLayout Direction="Row" VerticalOptions="End">
+            <FlexLayout Direction="Row" HorizontalOptions="Fill" Wrap="Wrap" Padding="5">
 
-                            <FlexLayout.Resources>
-                                <ResourceDictionary>
-                                    <Style TargetType="Label">
-                                        <Setter Property="HeightRequest" Value="32" />
-                                        <Setter Property="WidthRequest" Value="32" />
-                                        <Setter Property="HorizontalOptions" Value="Fill" />
-                                        <Setter Property="HorizontalTextAlignment" Value="Center" />
-                                        <Setter Property="VerticalTextAlignment" Value="Center" />
-                                        <Setter Property="BackgroundColor" Value="{tk:AppThemeResource SurfaceVariant}" />
-                                    </Style>
-                                    
-                                    <Style TargetType="Button">
-                                        <Setter Property="HeightRequest" Value="32" />
-                                        <Setter Property="WidthRequest" Value="40" />
-                                        <Setter Property="Padding" Value="5" />
-                                        <Setter Property="CornerRadius" Value="0" />
-                                        <Setter Property="HorizontalOptions" Value="Fill" />
-                                    </Style>
-                                    
-                                    <Style TargetType="Entry">
-                                        <Setter Property="HeightRequest" Value="32" />
-                                        <Setter Property="WidthRequest" Value="64" />
-                                        <Setter Property="HorizontalOptions" Value="Fill" />
-                                        <Setter Property="HorizontalTextAlignment" Value="Center" />
-                                    </Style>
-                                </ResourceDictionary>
-                            </FlexLayout.Resources>
+                <FlexLayout.Resources>
+                    <ResourceDictionary>
+                        <Style TargetType="Label">
+                            <Setter Property="HeightRequest" Value="32" />
+                            <Setter Property="WidthRequest" Value="32" />
+                            <Setter Property="HorizontalOptions" Value="Fill" />
+                            <Setter Property="HorizontalTextAlignment" Value="Center" />
+                            <Setter Property="VerticalTextAlignment" Value="Center" />
+                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SurfaceVariant}, Dark={StaticResource SurfaceVariantDark}}" />
+                        </Style>
 
-                            <!--<Grid.Resources>
-                                <ResourceDictionary>
-                                    <Style TargetType="View">
-                                        <Setter Property="HeightRequest" Value="{Binding Width, Source={RelativeSource Self}}" />
-                                        <Setter Property="MaximumWidthRequest" Value="{Binding Width, Source={RelativeSource AncestorLevel=1}, Converter={tk:MathExpressionConverter}, ConverterParameter='x/9'}" />
-                                    </Style>
-                                </ResourceDictionary>
-                            </Grid.Resources>-->
+                        <Style TargetType="Button">
+                            <Setter Property="HeightRequest" Value="32" />
+                            <Setter Property="WidthRequest" Value="40" />
+                            <Setter Property="Padding" Value="5" />
+                            <Setter Property="CornerRadius" Value="0" />
+                            <Setter Property="HorizontalOptions" Value="Fill" />
+                        </Style>
 
-                            <Border Stroke="Transparent"
-                                    StrokeThickness="0"
-                                    StrokeShape="RoundRectangle 8"
-                                    Margin="0,0,10,0"
-                                    Grid.Column="0">
+                        <Style TargetType="Entry">
+                            <Setter Property="HeightRequest" Value="32" />
+                            <Setter Property="WidthRequest" Value="64" />
+                            <Setter Property="HorizontalOptions" Value="Fill" />
+                            <Setter Property="HorizontalTextAlignment" Value="Center" />
+                        </Style>
+                    </ResourceDictionary>
+                </FlexLayout.Resources>
 
-                                <Button Grid.Column="0" FontFamily="FontAwesomeSolid" Text="&#xf31e;"
-                                    Command="{Binding ToggleAutofitCommand}">
-                                    <Button.Triggers>
-                                        <DataTrigger TargetType="Button" Binding="{Binding RenderingSettings.Autofit}" Value="False">
-                                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource PrimaryDarkText}}" />
-                                            <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
-                                            <Setter Property="BorderColor" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
-                                        </DataTrigger>
-                                    </Button.Triggers>
-                                </Button>
-                            </Border>
+                <Border Stroke="Transparent"
+                        StrokeThickness="0"
+                        StrokeShape="RoundRectangle 8"
+                        Margin="5">
+                    <Button Grid.Column="0" FontFamily="FontAwesomeSolid" Text="{x:Static fa:Solid.Maximize}"
+                            Command="{Binding ToggleAutofitCommand}">
+                        <Button.Triggers>
+                            <DataTrigger TargetType="Button" Binding="{Binding RenderingSettings.Autofit}" Value="True">
+                                <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource White}, Dark={StaticResource PrimaryDarkText}}" />
+                                <Setter Property="TextColor" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                                <Setter Property="BorderColor" Value="{AppThemeBinding Light={StaticResource Primary}, Dark={StaticResource PrimaryDark}}" />
+                            </DataTrigger>
+                        </Button.Triggers>
+                    </Button>
+                </Border>
 
-                            <Border Stroke="Transparent"
-                                    StrokeThickness="0"
-                                    StrokeShape="RoundRectangle 8"
-                                    Margin="0,0,10,0"
-                                    Grid.Column="1">
-                                <Grid ColumnDefinitions="auto,auto,auto,auto">
-                                    <Label Grid.Column="0" FontFamily="FontAwesomeSolid" Text="&#xf034;" />
-                                    <Button Grid.Column="1" FontFamily="FontAwesomeSolid" Text="-"
-                                        Command="{Binding ChangeFontSizeCommand}" CommandParameter="{x:Int32 -1}" />
-                                    <Entry Grid.Column="2" ReturnType="Done" Text="{Binding RenderingSettings.FontSize}" Keyboard="Numeric" />
-                                    <Button Grid.Column="3" FontFamily="FontAwesomeSolid" Text="+"
-                                        Command="{Binding ChangeFontSizeCommand}" CommandParameter="{x:Int32 1}" />
-                                </Grid>
-                            </Border>
+                <Border Stroke="Transparent"
+                                StrokeThickness="0"
+                                StrokeShape="RoundRectangle 8"
+                                Margin="5">
+                    <Grid ColumnDefinitions="auto,auto,auto,auto">
+                        <Label Grid.Column="0" FontFamily="FontAwesomeSolid" Text="{x:Static fa:Solid.TextHeight}" />
+                        <Button Grid.Column="1" FontFamily="FontAwesomeSolid" Text="-"
+                                    Command="{Binding ChangeFontSizeCommand}" CommandParameter="{x:Int32 -1}" />
+                        <Entry Grid.Column="2" ReturnType="Done" Text="{Binding RenderingSettings.FontSize}" Keyboard="Numeric" />
+                        <Button Grid.Column="3" FontFamily="FontAwesomeSolid" Text="+"
+                                    Command="{Binding ChangeFontSizeCommand}" CommandParameter="{x:Int32 1}" />
+                    </Grid>
+                </Border>
 
-                            <Border Stroke="Transparent"
-                                    StrokeThickness="0"
-                                    StrokeShape="RoundRectangle 8"
-                                    Grid.Column="2">
+                <Border Stroke="Transparent"
+                                StrokeThickness="0"
+                                Margin="5"
+                                StrokeShape="RoundRectangle 8">
 
-                                <Grid ColumnDefinitions="auto,auto,auto,auto">
-                                    <Button Grid.Column="0" FontFamily="FontAwesomeSolid" Text="&#xf001;" IsEnabled="False" />
-                                    <Button Grid.Column="1" FontFamily="FontAwesomeSolid" Text="-"
-                                        Command="{Binding ChangeTransposeCommand}" CommandParameter="{x:Int32 -1}" />
-                                    <Entry Grid.Column="2" ReturnType="Done" Text="{Binding RenderingSettings.Transpose}" Keyboard="Numeric" />
-                                    <Button Grid.Column="3" FontFamily="FontAwesomeSolid" Text="+"
-                                        Command="{Binding ChangeTransposeCommand}" CommandParameter="{x:Int32 1}" />
-                                </Grid>
-                            </Border>
-                        </FlexLayout>
-                    </Border>
-                </Grid>
-            </tk:StateContainer.StateViews>
-        </Grid>
+                    <Grid ColumnDefinitions="auto,auto,auto,auto">
+                        <Label Grid.Column="0" FontFamily="FontAwesomeSolid" Text="{x:Static fa:Solid.Music}" />
+                        <Button Grid.Column="1" FontFamily="FontAwesomeSolid" Text="-"
+                                    Command="{Binding ChangeTransposeCommand}" CommandParameter="{x:Int32 -1}" />
+                        <Entry Grid.Column="2" ReturnType="Done" Text="{Binding RenderingSettings.Transpose}" Keyboard="Numeric" />
+                        <Button Grid.Column="3" FontFamily="FontAwesomeSolid" Text="+"
+                                    Command="{Binding ChangeTransposeCommand}" CommandParameter="{x:Int32 1}" />
+                    </Grid>
+                </Border>
+            </FlexLayout>
+        </material:BottomSheetView>
+    </uranium:UraniumContentPage.Attachments>
 
-    </ContentPage>
-</pages:InnerFlyoutPage>
+</uranium:UraniumContentPage>

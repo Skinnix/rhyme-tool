@@ -21,6 +21,6 @@ public partial class AppShell : Shell
 
 	private async void Settings_Clicked(object sender, EventArgs e)
 	{
-		await Shell.Current.Navigation.PushAsync(SettingsPage.Load());
+		await Shell.Current.Navigation.PushAsync(PreferencesPage.Load());
     }
 }

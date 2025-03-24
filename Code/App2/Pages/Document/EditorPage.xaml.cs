@@ -12,10 +12,11 @@ using Skinnix.RhymeTool.Client.Components.Rendering;
 using Skinnix.RhymeTool.Client.Services;
 using Skinnix.RhymeTool.Data.Editing;
 using Skinnix.RhymeTool.Data.Notation;
+using UraniumUI.Pages;
 
 namespace Skinnix.Compoetry.Maui.Pages.Document;
 
-public partial class EditorPage : InnerFlyoutPage
+public partial class EditorPage : UraniumContentPage
 {
 	public static Task LoadDocument(IDocumentSource documentSource, SheetDocument document)
 	{
@@ -44,29 +45,18 @@ public partial class EditorPage : InnerFlyoutPage
 
 	protected override bool OnBackButtonPressed()
 	{
-		if (Handler is IFlyoutToggleHandler toggleHandler)
-		{
-			if (toggleHandler.IsFlyoutOpen)
-			{
-				toggleHandler.IsFlyoutOpen = false;
-				return true;
-			}
-		}
-		else if (IsPresented)
-		{
-			IsPresented = false;
-			return true;
-		}
+		//if (sideSheetView.IsPresented)
+		//{
+		//	sideSheetView.IsPresented = false;
+		//	return true;
+		//}
 
 		return base.OnBackButtonPressed();
 	}
 
 	private void FlyoutButton_Clicked(object sender, EventArgs e)
 	{
-		if (Handler is IFlyoutToggleHandler toggleHandler)
-			toggleHandler.ToggleFlyout();
-		else
-			IsPresented = !IsPresented;
+		//sideSheetView.IsPresented = !sideSheetView.IsPresented;
 	}
 }
 

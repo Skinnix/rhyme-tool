@@ -12,10 +12,11 @@ using Skinnix.RhymeTool.Client.Components.Rendering;
 using Skinnix.RhymeTool.Client.Services;
 using Skinnix.RhymeTool.Data.Editing;
 using Skinnix.RhymeTool.Data.Notation;
+using UraniumUI.Pages;
 
 namespace Skinnix.Compoetry.Maui.Pages.Document;
 
-public partial class RendererPage : InnerFlyoutPage
+public partial class RendererPage : UraniumContentPage
 {
 	public static Task ShowDocument(IDocumentSource document)
 	{
@@ -33,42 +34,27 @@ public partial class RendererPage : InnerFlyoutPage
 		InitializeComponent();
 	}
 
-	protected override async void OnNavigatedTo(NavigatedToEventArgs args)
-	{
-		base.OnNavigatedTo(args);
-
-		var blankItem = new ToolbarItem();
-		ToolbarItems.Add(blankItem);
-		ToolbarItems.Remove(blankItem);
-
-		await ViewModel.LoadDocument(this);
-	}
-
 	protected override bool OnBackButtonPressed()
 	{
-		if (Handler is IFlyoutToggleHandler toggleHandler)
+		if (sideSheetView.IsPresented)
 		{
-			if (toggleHandler.IsFlyoutOpen)
-			{
-				toggleHandler.IsFlyoutOpen = false;
-				return true;
-			}
-		}
-		else if (IsPresented)
-		{
-			IsPresented = false;
+			sideSheetView.IsPresented = false;
 			return true;
 		}
 
 		return base.OnBackButtonPressed();
 	}
 
+	protected override async void OnNavigatedTo(NavigatedToEventArgs args)
+	{
+		base.OnNavigatedTo(args);
+
+		await ViewModel.LoadDocument(this);
+	}
+
 	private void FlyoutButton_Clicked(object sender, EventArgs e)
 	{
-		if (Handler is IFlyoutToggleHandler toggleHandler)
-			toggleHandler.ToggleFlyout();
-		else
-			IsPresented = !IsPresented;
+		sideSheetView.IsPresented = !sideSheetView.IsPresented;
 	}
 }
 

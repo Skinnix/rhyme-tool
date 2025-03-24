@@ -40,6 +40,9 @@ public abstract class DocumentSettings : IConfigurable
 		get => Formatter.Transformation?.Transpose ?? 0;
 		set
 		{
+			if ((Formatter.Transformation?.Transpose ?? 0) == value)
+				return;
+
 			Formatter = Formatter with { Transformation = new SheetTransformation(value) };
 			RaisePropertyChanged();
 		}
@@ -51,6 +54,9 @@ public abstract class DocumentSettings : IConfigurable
 		get => Formatter.GermanMode;
 		set
 		{
+			if (Formatter.GermanMode.Equals(value))
+				return;
+
 			Formatter = Formatter with { GermanMode = value };
 			RaisePropertyChanged();
 		}

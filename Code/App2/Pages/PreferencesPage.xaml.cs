@@ -1,10 +1,11 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Skinnix.RhymeTool.Client.Services.Files;
+using UraniumUI.Pages;
 
 namespace Skinnix.Compoetry.Maui.Pages;
 
-public partial class PreferencesPage : ContentPage
+public partial class PreferencesPage : UraniumContentPage
 {
 	public static PreferencesPage Load()
 		=> new(App.Services.GetRequiredService<PreferencesPageVM>());

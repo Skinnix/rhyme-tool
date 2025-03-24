@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+<uranium:UraniumContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:uranium="http://schemas.enisn-projects.io/dotnet/maui/uraniumui"
              xmlns:tk="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              xmlns:mi="http://www.aathifmahir.com/dotnet/2022/maui/icons"
              xmlns:dg="clr-namespace:Maui.DataGrid;assembly=Maui.DataGrid"
@@ -55,14 +56,14 @@
               Grid.Row="2">
             <Label x:Name="breadcrumbLabel" FormattedText="{Binding BreadcrumbString}" LineBreakMode="WordWrap" tk:DockLayout.DockPosition="Top" Margin="0,0,0,5" />
 
-            <ContentView BackgroundColor="{tk:AppThemeResource SurfaceVariant}" Grid.Row="1">
+            <ContentView BackgroundColor="{AppThemeBinding Light={StaticResource SurfaceVariant}, Dark={StaticResource SurfaceVariantDark}}" Grid.Row="1">
                 <Grid ColumnDefinitions="19,5*,2*,*" Margin="5">
                     <Label Text="Name" FontAttributes="Bold" Grid.Column="0" Grid.ColumnSpan="2" />
                     <Label Text="Datum" FontAttributes="Bold" Grid.Column="2" />
                     <Label Text="Größe" FontAttributes="Bold" Grid.Column="3" />
                 </Grid>
             </ContentView>
-            
+
             <ListView ItemsSource="{Binding CurrentItems}"
                   SelectionMode="None"
                   IsPullToRefreshEnabled="True" RefreshCommand="{Binding RefreshCommand}"
@@ -79,7 +80,7 @@
                             <Grid ColumnDefinitions="19,5*,2*,*" RowDefinitions="*,*" Padding="5,5" VerticalOptions="Center">
                                 <Image HeightRequest="16" Margin="0,0,3,0" Grid.Column="0">
                                     <Image.Source>
-                                        <FontImageSource Glyph="{Binding Icon}" FontFamily="FontAwesomeSolid" Color="{tk:AppThemeResource OnSurface}" />
+                                        <FontImageSource Glyph="{Binding Icon}" FontFamily="FontAwesomeSolid" Color="{AppThemeBinding Light={StaticResource OnSurface}, Dark={StaticResource OnSurfaceDark}}" />
                                     </Image.Source>
                                 </Image>
 
@@ -92,30 +93,5 @@
                 </ListView.ItemTemplate>
             </ListView>
         </Grid>
-
-        <!--<dg:DataGrid ItemsSource="{Binding CurrentItems}"
-                     PullToRefreshCommand="{Binding RefreshCommand}"
-                     IsVisible="{x:Bind not IsLoading and CurrentItems ne null}"
-                     Grid.Row="2">
-            <dg:DataGrid.Columns>
-                <dg:DataGridColumn Title="" PropertyName=".">
-                    <dg:DataGridColumn.CellTemplate>
-                        <DataTemplate x:DataType="files:Item">
-                            <Image>
-                                <Image.Source>
-                                    <FontImageSource Glyph="{Binding Icon}" Size="06" />
-                                </Image.Source>
-                            </Image>
-                        </DataTemplate>
-                    </dg:DataGridColumn.CellTemplate>
-                </dg:DataGridColumn>
-
-                <dg:DataGridColumn Title="Name" PropertyName="Name" />
-
-                <dg:DataGridColumn Title="Datum" PropertyName="LastModified" />
-
-                <dg:DataGridColumn Title="Größe" PropertyName="Size" />
-            </dg:DataGrid.Columns>
-        </dg:DataGrid>-->
     </Grid>
-</ContentPage>
+</uranium:UraniumContentPage>

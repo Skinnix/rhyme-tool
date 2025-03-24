@@ -1,41 +1,96 @@
 ﻿<?xml version="1.0" encoding="UTF-8" ?>
 <?xaml-comp compile="true" ?>
-<ResourceDictionary 
+<ResourceDictionary
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit">
 
     <!-- Note: For Android please see also Platforms\Android\Resources\values\colors.xml -->
 
-    <Color x:Key="Primary">#0D6EFD</Color>
-    <Color x:Key="PrimaryDark">#00419E</Color>
-    <Color x:Key="PrimaryLight">#87A9FF</Color>
-    <Color x:Key="PrimaryDarkText">#fbfcfd</Color>
-    <Color x:Key="PrimaryLightText">#0e1415</Color>
-    <Color x:Key="Secondary">#6F7880</Color>
-    <Color x:Key="SecondaryDark">#3F484F</Color>
-    <Color x:Key="SecondaryLight">#A3ACB5</Color>
-    <Color x:Key="SecondaryDarkText">#fbfcfd</Color>
-    <Color x:Key="SecondaryLightText">#0e1415</Color>
-    <Color x:Key="Tertiary">#A06B4D</Color>
-    <Color x:Key="Error">#DC3545</Color>
-    <Color x:Key="Success">#198754</Color>
-    <Color x:Key="Warning">#FFC107</Color>
-    <Color x:Key="Info">#0DCAF0</Color>
-    <Color x:Key="Neutral">#FFFFFF</Color>
-    <Color x:Key="NeutralVariant">#E9ECEF</Color>
+    <Color x:Key="Primary">#52D681</Color>
+    <Color x:Key="OnPrimary">#FFFFFF</Color>
+    <Color x:Key="PrimaryContainer">#baefcd</Color>
+    <Color x:Key="OnPrimaryContainer">#176031</Color>
 
-    <!--<Color x:Key="Neutral">#FFFFFF</Color>
-    <Color x:Key="NeutralVariant">#E9ECEF</Color>
-    <Color x:Key="PrimaryDarkText">#fbfcfd</Color>
-    <Color x:Key="SecondaryDarkText">#fbfcfd</Color>-->
+    <Color x:Key="Secondary">#B5FF7D</Color>
+    <Color x:Key="OnSecondary">#2C3639</Color>
+    <Color x:Key="SecondaryContainer">#e1ffcb</Color>
+    <Color x:Key="OnSecondaryContainer">#3F4E4F</Color>
+
+    <Color x:Key="Tertiary">#FDDB3A</Color>
+    <Color x:Key="OnTertiary">#2C3639</Color>
+    <Color x:Key="TertiaryContainer">#786301</Color>
+    <Color x:Key="OnTertiaryContainer">#fef1b0</Color>
+
+    <Color x:Key="Surface">#F6F4E6</Color>
+    <Color x:Key="OnSurface">#3F4E4F</Color>
+    <Color x:Key="SurfaceVariant">#E7E0EC</Color>
+    <Color x:Key="OnSurfaceVariant">#49454E</Color>
+
+    <Color x:Key="Background">#FFFBFE</Color>
+    <Color x:Key="OnBackground">#1C1B1F</Color>
+
+    <Color x:Key="Error">#B3261E</Color>
+    <Color x:Key="ErrorContainer">#F9DEDC</Color>
+    <Color x:Key="OnError">#FFFFFF</Color>
+    <Color x:Key="OnErrorContainer">#370B1E</Color>
+
+    <Color x:Key="Outline">#79747E</Color>
+    <Color x:Key="OutlineVariant">#C4C7C5</Color>
+    <Color x:Key="Shadow">#000000</Color>
+
+    <Color x:Key="InverseSurface">#313033</Color>
+    <Color x:Key="InverseOnSurface">#F4EFF4</Color>
+
+    <Color x:Key="InversePrimary">#52D681</Color>
+    <Color x:Key="Scrim">#000000</Color>
+
+    <!--DARK COLORS-->
+    <Color x:Key="PrimaryDark">#a8eac0</Color>
+    <Color x:Key="OnPrimaryDark">#1c783d</Color>
+    <Color x:Key="PrimaryContainerDark">#1a6c37</Color>
+    <Color x:Key="OnPrimaryContainerDark">#baefcd</Color>
+
+    <Color x:Key="SecondaryDark">#daffbe</Color>
+    <Color x:Key="OnSecondaryDark">#52be00</Color>
+    <Color x:Key="SecondaryContainerDark">#193900</Color>
+    <Color x:Key="OnSecondaryContainerDark">#e1ffcb</Color>
+
+    <Color x:Key="TertiaryDark">#feed9d</Color>
+    <Color x:Key="OnTertiaryDark">#9a7f02</Color>
+    <Color x:Key="TertiaryContainerDark">#8b7301</Color>
+    <Color x:Key="OnTertiaryContainerDark">#fef1b0</Color>
+
+    <Color x:Key="SurfaceDark">#2C3639</Color>
+    <Color x:Key="OnSurfaceDark">#F6F4E6</Color>
+    <Color x:Key="SurfaceVariantDark">#49454F</Color>
+    <Color x:Key="OnSurfaceVariantDark">#DCD7C9</Color>
+
+    <Color x:Key="BackgroundDark">#1C1B1F</Color>
+    <Color x:Key="OnBackgroundDark">#E6E1E5</Color>
+
+    <Color x:Key="ErrorDark">#F2B8B5</Color>
+    <Color x:Key="ErrorContainerDark">#8C1D18</Color>
+    <Color x:Key="OnErrorDark">#601410</Color>
+    <Color x:Key="OnErrorContainerDark">#F9DEDC</Color>
+
+    <Color x:Key="OutlineDark">#938F99</Color>
+    <Color x:Key="OutlineVariantDark">#444746</Color>
+    <Color x:Key="ShadowDark">#000000</Color>
+
+    <Color x:Key="InverseSurfaceDark">#E6E1E5</Color>
+    <Color x:Key="InverseOnSurfaceDark">#313033</Color>
+    <Color x:Key="InversePrimaryDark">#6750A4</Color>
+    <Color x:Key="ScrimDark">#000000</Color>
+
+    <Color x:Key="DisabledText">#ba919191</Color>
+    <Color x:Key="DisabledBackground">#80919191</Color>
+
+
+    <!--MAUI COLORS-->
 
     <Color x:Key="White">White</Color>
     <Color x:Key="Black">Black</Color>
-    <Color x:Key="Magenta">#D600AA</Color>
-    <Color x:Key="MidnightBlue">#190649</Color>
-    <Color x:Key="OffBlack">#1f1f1f</Color>
-
     <Color x:Key="Gray100">#E1E1E1</Color>
     <Color x:Key="Gray200">#C8C8C8</Color>
     <Color x:Key="Gray300">#ACACAC</Color>
@@ -44,7 +99,11 @@
     <Color x:Key="Gray600">#404040</Color>
     <Color x:Key="Gray900">#212121</Color>
     <Color x:Key="Gray950">#141414</Color>
-
+    <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource Primary}"/>
+    <SolidColorBrush x:Key="SecondaryBrush" Color="{StaticResource Secondary}"/>
+    <SolidColorBrush x:Key="TertiaryBrush" Color="{StaticResource Tertiary}"/>
+    <SolidColorBrush x:Key="WhiteBrush" Color="{StaticResource White}"/>
+    <SolidColorBrush x:Key="BlackBrush" Color="{StaticResource Black}"/>
     <SolidColorBrush x:Key="Gray100Brush" Color="{StaticResource Gray100}"/>
     <SolidColorBrush x:Key="Gray200Brush" Color="{StaticResource Gray200}"/>
     <SolidColorBrush x:Key="Gray300Brush" Color="{StaticResource Gray300}"/>
@@ -54,255 +113,14 @@
     <SolidColorBrush x:Key="Gray900Brush" Color="{StaticResource Gray900}"/>
     <SolidColorBrush x:Key="Gray950Brush" Color="{StaticResource Gray950}"/>
 
-    <toolkit:AppThemeColor x:Key="Surface" Light="#F5FAFB" Dark="#0E1415" />
-    <toolkit:AppThemeColor x:Key="OnSurface" Light="#171D1E" Dark="#DEE3E5" />
-    <toolkit:AppThemeColor x:Key="SurfaceVariant" Light="#DCE4E9" Dark="#40484C" />
-    <toolkit:AppThemeColor x:Key="OnSurfaceVariant" Light="#40484C" Dark="#C0C8CD" />
-
-
-    <!-- Primary -->
-    <Color x:Key="Primary0">#000000</Color>
-    <Color x:Key="Primary5">#000F31</Color>
-    <Color x:Key="Primary10">#001946</Color>
-    <Color x:Key="Primary15">#00225B</Color>
-    <Color x:Key="Primary20">#002C70</Color>
-    <Color x:Key="Primary25">#003687</Color>
-    <Color x:Key="Primary30">#00419E</Color>
-    <Color x:Key="Primary35">#004CB6</Color>
-    <Color x:Key="Primary40">#0057CE</Color>
-    <Color x:Key="Primary50">#0E6EFD</Color>
-    <Color x:Key="Primary60">#588CFF</Color>
-    <Color x:Key="Primary70">#87A9FF</Color>
-    <Color x:Key="Primary80">#B1C5FF</Color>
-    <Color x:Key="Primary90">#DAE2FF</Color>
-    <Color x:Key="Primary95">#EEF0FF</Color>
-    <Color x:Key="Primary98">#FAF8FF</Color>
-    <Color x:Key="Primary99">#FEFBFF</Color>
-    <Color x:Key="Primary100">#FFFFFF</Color>
-    <!-- Secondary -->
-    <Color x:Key="Secondary0">#000000</Color>
-    <Color x:Key="Secondary5">#091218</Color>
-    <Color x:Key="Secondary10">#141D23</Color>
-    <Color x:Key="Secondary15">#1E272E</Color>
-    <Color x:Key="Secondary20">#293138</Color>
-    <Color x:Key="Secondary25">#343C44</Color>
-    <Color x:Key="Secondary30">#3F484F</Color>
-    <Color x:Key="Secondary35">#4B535B</Color>
-    <Color x:Key="Secondary40">#575F67</Color>
-    <Color x:Key="Secondary50">#6F7880</Color>
-    <Color x:Key="Secondary60">#89929A</Color>
-    <Color x:Key="Secondary70">#A3ACB5</Color>
-    <Color x:Key="Secondary80">#BFC8D0</Color>
-    <Color x:Key="Secondary90">#DBE4ED</Color>
-    <Color x:Key="Secondary95">#E9F2FB</Color>
-    <Color x:Key="Secondary98">#F6FAFF</Color>
-    <Color x:Key="Secondary99">#FBFCFF</Color>
-    <Color x:Key="Secondary100">#FFFFFF</Color>
-    <!-- Tertiary -->
-    <Color x:Key="Tertiary0">#000000</Color>
-    <Color x:Key="Tertiary5">#220A00</Color>
-    <Color x:Key="Tertiary10">#331200</Color>
-    <Color x:Key="Tertiary15">#401C05</Color>
-    <Color x:Key="Tertiary20">#4D260E</Color>
-    <Color x:Key="Tertiary25">#5A3118</Color>
-    <Color x:Key="Tertiary30">#683C22</Color>
-    <Color x:Key="Tertiary35">#76472C</Color>
-    <Color x:Key="Tertiary40">#845237</Color>
-    <Color x:Key="Tertiary50">#A06B4D</Color>
-    <Color x:Key="Tertiary60">#BD8464</Color>
-    <Color x:Key="Tertiary70">#DB9D7D</Color>
-    <Color x:Key="Tertiary80">#F9B896</Color>
-    <Color x:Key="Tertiary90">#FFDBCA</Color>
-    <Color x:Key="Tertiary95">#FFEDE5</Color>
-    <Color x:Key="Tertiary98">#FFF8F6</Color>
-    <Color x:Key="Tertiary99">#FFFBFF</Color>
-    <Color x:Key="Tertiary100">#FFFFFF</Color>
-    <!-- Neutral -->
-    <Color x:Key="Neutral0">#000000</Color>
-    <Color x:Key="Neutral5">#111111</Color>
-    <Color x:Key="Neutral10">#1C1B1B</Color>
-    <Color x:Key="Neutral15">#262625</Color>
-    <Color x:Key="Neutral20">#313030</Color>
-    <Color x:Key="Neutral25">#3C3B3B</Color>
-    <Color x:Key="Neutral30">#484646</Color>
-    <Color x:Key="Neutral35">#535252</Color>
-    <Color x:Key="Neutral40">#5F5E5E</Color>
-    <Color x:Key="Neutral50">#787776</Color>
-    <Color x:Key="Neutral60">#929090</Color>
-    <Color x:Key="Neutral70">#ADAAAA</Color>
-    <Color x:Key="Neutral80">#C9C6C5</Color>
-    <Color x:Key="Neutral90">#E5E2E1</Color>
-    <Color x:Key="Neutral95">#F4F0EF</Color>
-    <Color x:Key="Neutral98">#FCF8F8</Color>
-    <Color x:Key="Neutral99">#F6FEFF</Color>
-    <Color x:Key="Neutral100">#FFFFFF</Color>
-    <!-- Neutral-variant -->
-    <Color x:Key="NeutralVariant0">#000000</Color>
-    <Color x:Key="NeutralVariant5">#111111</Color>
-    <Color x:Key="NeutralVariant10">#1C1B1C</Color>
-    <Color x:Key="NeutralVariant15">#262626</Color>
-    <Color x:Key="NeutralVariant20">#313030</Color>
-    <Color x:Key="NeutralVariant25">#3C3B3B</Color>
-    <Color x:Key="NeutralVariant30">#474647</Color>
-    <Color x:Key="NeutralVariant35">#535252</Color>
-    <Color x:Key="NeutralVariant40">#5F5E5E</Color>
-    <Color x:Key="NeutralVariant50">#787777</Color>
-    <Color x:Key="NeutralVariant60">#929090</Color>
-    <Color x:Key="NeutralVariant70">#ADABAB</Color>
-    <Color x:Key="NeutralVariant80">#C8C6C6</Color>
-    <Color x:Key="NeutralVariant90">#E5E2E1</Color>
-    <Color x:Key="NeutralVariant95">#F3F0F0</Color>
-    <Color x:Key="NeutralVariant98">#FCF9F8</Color>
-    <Color x:Key="NeutralVariant99">#FFFBFB</Color>
-    <Color x:Key="NeutralVariant100">#FFFFFF</Color>
-    
-    <!-- AppThemeColor from .NET MAUI Community Toolkit -->
-    <!--<toolkit:AppThemeColor x:Key="Primary" Light="#485D92" Dark="#B1C5FF" />
-    <toolkit:AppThemeColor x:Key="SurfaceTint" Light="#485D92" Dark="#B1C5FF" />
-    <toolkit:AppThemeColor x:Key="OnPrimary" Light="#FFFFFF" Dark="#162E60" />
-    <toolkit:AppThemeColor x:Key="PrimaryContainer" Light="#DAE2FF" Dark="#2F4578" />
-    <toolkit:AppThemeColor x:Key="OnPrimaryContainer" Light="#2F4578" Dark="#DAE2FF" />
-    <toolkit:AppThemeColor x:Key="Secondary" Light="#246488" Dark="#94CDF6" />
-    <toolkit:AppThemeColor x:Key="OnSecondary" Light="#FFFFFF" Dark="#00344D" />
-    <toolkit:AppThemeColor x:Key="SecondaryContainer" Light="#C8E6FF" Dark="#004C6D" />
-    <toolkit:AppThemeColor x:Key="OnSecondaryContainer" Light="#004C6D" Dark="#C8E6FF" />
-    <toolkit:AppThemeColor x:Key="Tertiary" Light="#8C4E29" Dark="#FFB68F" />
-    <toolkit:AppThemeColor x:Key="OnTertiary" Light="#FFFFFF" Dark="#532201" />
-    <toolkit:AppThemeColor x:Key="TertiaryContainer" Light="#FFDBCA" Dark="#703714" />
-    <toolkit:AppThemeColor x:Key="OnTertiaryContainer" Light="#703714" Dark="#FFDBCA" />
-    <toolkit:AppThemeColor x:Key="Error" Light="#904A4A" Dark="#FFB3B2" />
-    <toolkit:AppThemeColor x:Key="OnError" Light="#FFFFFF" Dark="#561D1F" />
-    <toolkit:AppThemeColor x:Key="ErrorContainer" Light="#FFDAD9" Dark="#733334" />
-    <toolkit:AppThemeColor x:Key="OnErrorContainer" Light="#733334" Dark="#FFDAD9" />
-    <toolkit:AppThemeColor x:Key="Background" Light="#FAF8FF" Dark="#121318" />
-    <toolkit:AppThemeColor x:Key="OnBackground" Light="#1A1B21" Dark="#E2E2E9" />
-    <toolkit:AppThemeColor x:Key="Surface" Light="#F5FAFB" Dark="#0E1415" />
-    <toolkit:AppThemeColor x:Key="OnSurface" Light="#171D1E" Dark="#DEE3E5" />
-    <toolkit:AppThemeColor x:Key="SurfaceVariant" Light="#DCE4E9" Dark="#40484C" />
-    <toolkit:AppThemeColor x:Key="OnSurfaceVariant" Light="#40484C" Dark="#C0C8CD" />
-    <toolkit:AppThemeColor x:Key="Outline" Light="#70787D" Dark="#8A9297" />
-    <toolkit:AppThemeColor x:Key="OutlineVariant" Light="#C0C8CD" Dark="#40484C" />
-    <toolkit:AppThemeColor x:Key="Shadow" Light="#000000" Dark="#000000" />
-    <toolkit:AppThemeColor x:Key="Scrim" Light="#000000" Dark="#000000" />
-    <toolkit:AppThemeColor x:Key="InverseSurface" Light="#2B3133" Dark="#DEE3E5" />
-    <toolkit:AppThemeColor x:Key="InverseOnSurface" Light="#ECF2F3" Dark="#2B3133" />
-    <toolkit:AppThemeColor x:Key="InversePrimary" Light="#B1C5FF" Dark="#485D92" />
-    <toolkit:AppThemeColor x:Key="PrimaryFixed" Light="#DAE2FF" Dark="#DAE2FF" />
-    <toolkit:AppThemeColor x:Key="OnPrimaryFixed" Light="#001946" Dark="#001946" />
-    <toolkit:AppThemeColor x:Key="PrimaryFixedDim" Light="#B1C5FF" Dark="#B1C5FF" />
-    <toolkit:AppThemeColor x:Key="OnPrimaryFixedVariant" Light="#2F4578" Dark="#2F4578" />
-    <toolkit:AppThemeColor x:Key="SecondaryFixed" Light="#C8E6FF" Dark="#C8E6FF" />
-    <toolkit:AppThemeColor x:Key="OnSecondaryFixed" Light="#001E2E" Dark="#001E2E" />
-    <toolkit:AppThemeColor x:Key="SecondaryFixedDim" Light="#94CDF6" Dark="#94CDF6" />
-    <toolkit:AppThemeColor x:Key="OnSecondaryFixedVariant" Light="#004C6D" Dark="#004C6D" />
-    <toolkit:AppThemeColor x:Key="TertiaryFixed" Light="#FFDBCA" Dark="#FFDBCA" />
-    <toolkit:AppThemeColor x:Key="OnTertiaryFixed" Light="#331200" Dark="#331200" />
-    <toolkit:AppThemeColor x:Key="TertiaryFixedDim" Light="#FFB68F" Dark="#FFB68F" />
-    <toolkit:AppThemeColor x:Key="OnTertiaryFixedVariant" Light="#703714" Dark="#703714" />
-    <toolkit:AppThemeColor x:Key="SurfaceDim" Light="#D5DBDC" Dark="#0E1415" />
-    <toolkit:AppThemeColor x:Key="SurfaceBright" Light="#F5FAFB" Dark="#343A3B" />
-    <toolkit:AppThemeColor x:Key="SurfaceContainerLowest" Light="#FFFFFF" Dark="#090F10" />
-    <toolkit:AppThemeColor x:Key="SurfaceContainerLow" Light="#EFF5F6" Dark="#171D1E" />
-    <toolkit:AppThemeColor x:Key="SurfaceContainer" Light="#E9EFF0" Dark="#1B2122" />
-    <toolkit:AppThemeColor x:Key="SurfaceContainerHigh" Light="#E3E9EA" Dark="#252B2C" />
-    <toolkit:AppThemeColor x:Key="SurfaceContainerHighest" Light="#DEE3E5" Dark="#303637" />
-    <toolkit:AppThemeColor x:Key="MediumContrastPrimary" Light="#1D3466" Dark="#D1DCFF" />
-    <toolkit:AppThemeColor x:Key="MediumContrastSurfaceTint" Light="#485D92" Dark="#B1C5FF" />
-    <toolkit:AppThemeColor x:Key="MediumContrastOnPrimary" Light="#FFFFFF" Dark="#072355" />
-    <toolkit:AppThemeColor x:Key="MediumContrastPrimaryContainer" Light="#576CA1" Dark="#7A90C8" />
-    <toolkit:AppThemeColor x:Key="MediumContrastOnPrimaryContainer" Light="#FFFFFF" Dark="#000000" />
-    <toolkit:AppThemeColor x:Key="MediumContrastSecondary" Light="#003A55" Dark="#BBE1FF" />
-    <toolkit:AppThemeColor x:Key="MediumContrastOnSecondary" Light="#FFFFFF" Dark="#00293D" />
-    <toolkit:AppThemeColor x:Key="MediumContrastSecondaryContainer" Light="#367398" Dark="#5D97BE" />
-    <toolkit:AppThemeColor x:Key="MediumContrastOnSecondaryContainer" Light="#FFFFFF" Dark="#000000" />
-    <toolkit:AppThemeColor x:Key="MediumContrastTertiary" Light="#5B2705" Dark="#FFD3BD" />
-    <toolkit:AppThemeColor x:Key="MediumContrastOnTertiary" Light="#FFFFFF" Dark="#431900" />
-    <toolkit:AppThemeColor x:Key="MediumContrastTertiaryContainer" Light="#9E5C36" Dark="#C87F56" />
-    <toolkit:AppThemeColor x:Key="MediumContrastOnTertiaryContainer" Light="#FFFFFF" Dark="#000000" />
-    <toolkit:AppThemeColor x:Key="MediumContrastError" Light="#5E2325" Dark="#FFD2D0" />
-    <toolkit:AppThemeColor x:Key="MediumContrastOnError" Light="#FFFFFF" Dark="#481216" />
-    <toolkit:AppThemeColor x:Key="MediumContrastErrorContainer" Light="#A15858" Dark="#CB7A7A" />
-    <toolkit:AppThemeColor x:Key="MediumContrastOnErrorContainer" Light="#FFFFFF" Dark="#000000" />
-    <toolkit:AppThemeColor x:Key="MediumContrastBackground" Light="#FAF8FF" Dark="#121318" />
-    <toolkit:AppThemeColor x:Key="MediumContrastOnBackground" Light="#1A1B21" Dark="#E2E2E9" />
-    <toolkit:AppThemeColor x:Key="MediumContrastSurface" Light="#F5FAFB" Dark="#0E1415" />
-    <toolkit:AppThemeColor x:Key="MediumContrastOnSurface" Light="#0C1213" Dark="#FFFFFF" />
-    <toolkit:AppThemeColor x:Key="MediumContrastSurfaceVariant" Light="#DCE4E9" Dark="#40484C" />
-    <toolkit:AppThemeColor x:Key="MediumContrastOnSurfaceVariant" Light="#30373B" Dark="#D6DDE3" />
-    <toolkit:AppThemeColor x:Key="MediumContrastOutline" Light="#4C5458" Dark="#ABB3B8" />
-    <toolkit:AppThemeColor x:Key="MediumContrastOutlineVariant" Light="#666E73" Dark="#8A9196" />
-    <toolkit:AppThemeColor x:Key="MediumContrastShadow" Light="#000000" Dark="#000000" />
-    <toolkit:AppThemeColor x:Key="MediumContrastScrim" Light="#000000" Dark="#000000" />
-    <toolkit:AppThemeColor x:Key="MediumContrastInverseSurface" Light="#2B3133" Dark="#DEE3E5" />
-    <toolkit:AppThemeColor x:Key="MediumContrastInverseOnSurface" Light="#ECF2F3" Dark="#252B2C" />
-    <toolkit:AppThemeColor x:Key="MediumContrastInversePrimary" Light="#B1C5FF" Dark="#304679" />
-    <toolkit:AppThemeColor x:Key="MediumContrastPrimaryFixed" Light="#576CA1" Dark="#DAE2FF" />
-    <toolkit:AppThemeColor x:Key="MediumContrastOnPrimaryFixed" Light="#FFFFFF" Dark="#000F31" />
-    <toolkit:AppThemeColor x:Key="MediumContrastPrimaryFixedDim" Light="#3E5387" Dark="#B1C5FF" />
-    <toolkit:AppThemeColor x:Key="MediumContrastOnPrimaryFixedVariant" Light="#FFFFFF" Dark="#1D3466" />
-    <toolkit:AppThemeColor x:Key="MediumContrastSecondaryFixed" Light="#367398" Dark="#C8E6FF" />
-    <toolkit:AppThemeColor x:Key="MediumContrastOnSecondaryFixed" Light="#FFFFFF" Dark="#00131F" />
-    <toolkit:AppThemeColor x:Key="MediumContrastSecondaryFixedDim" Light="#155A7E" Dark="#94CDF6" />
-    <toolkit:AppThemeColor x:Key="MediumContrastOnSecondaryFixedVariant" Light="#FFFFFF" Dark="#003A55" />
-    <toolkit:AppThemeColor x:Key="MediumContrastTertiaryFixed" Light="#9E5C36" Dark="#FFDBCA" />
-    <toolkit:AppThemeColor x:Key="MediumContrastOnTertiaryFixed" Light="#FFFFFF" Dark="#230A00" />
-    <toolkit:AppThemeColor x:Key="MediumContrastTertiaryFixedDim" Light="#814521" Dark="#FFB68F" />
-    <toolkit:AppThemeColor x:Key="MediumContrastOnTertiaryFixedVariant" Light="#FFFFFF" Dark="#5B2705" />
-    <toolkit:AppThemeColor x:Key="MediumContrastSurfaceDim" Light="#C2C7C9" Dark="#0E1415" />
-    <toolkit:AppThemeColor x:Key="MediumContrastSurfaceBright" Light="#F5FAFB" Dark="#3F4647" />
-    <toolkit:AppThemeColor x:Key="MediumContrastSurfaceContainerLowest" Light="#FFFFFF" Dark="#040809" />
-    <toolkit:AppThemeColor x:Key="MediumContrastSurfaceContainerLow" Light="#EFF5F6" Dark="#191F20" />
-    <toolkit:AppThemeColor x:Key="MediumContrastSurfaceContainer" Light="#E3E9EA" Dark="#23292A" />
-    <toolkit:AppThemeColor x:Key="MediumContrastSurfaceContainerHigh" Light="#D8DEDF" Dark="#2D3435" />
-    <toolkit:AppThemeColor x:Key="MediumContrastSurfaceContainerHighest" Light="#CDD3D4" Dark="#393F40" />
-    <toolkit:AppThemeColor x:Key="HighContrastPrimary" Light="#112A5C" Dark="#EDEFFF" />
-    <toolkit:AppThemeColor x:Key="HighContrastSurfaceTint" Light="#485D92" Dark="#B1C5FF" />
-    <toolkit:AppThemeColor x:Key="HighContrastOnPrimary" Light="#FFFFFF" Dark="#000000" />
-    <toolkit:AppThemeColor x:Key="HighContrastPrimaryContainer" Light="#32487B" Dark="#ACC2FD" />
-    <toolkit:AppThemeColor x:Key="HighContrastOnPrimaryContainer" Light="#FFFFFF" Dark="#000925" />
-    <toolkit:AppThemeColor x:Key="HighContrastSecondary" Light="#003046" Dark="#E3F2FF" />
-    <toolkit:AppThemeColor x:Key="HighContrastOnSecondary" Light="#FFFFFF" Dark="#000000" />
-    <toolkit:AppThemeColor x:Key="HighContrastSecondaryContainer" Light="#004E71" Dark="#90C9F2" />
-    <toolkit:AppThemeColor x:Key="HighContrastOnSecondaryContainer" Light="#FFFFFF" Dark="#000D17" />
-    <toolkit:AppThemeColor x:Key="HighContrastTertiary" Light="#4D1E00" Dark="#FFECE4" />
-    <toolkit:AppThemeColor x:Key="HighContrastOnTertiary" Light="#FFFFFF" Dark="#000000" />
-    <toolkit:AppThemeColor x:Key="HighContrastTertiaryContainer" Light="#733A16" Dark="#FFB186" />
-    <toolkit:AppThemeColor x:Key="HighContrastOnTertiaryContainer" Light="#FFFFFF" Dark="#190600" />
-    <toolkit:AppThemeColor x:Key="HighContrastError" Light="#51191C" Dark="#FFECEB" />
-    <toolkit:AppThemeColor x:Key="HighContrastOnError" Light="#FFFFFF" Dark="#000000" />
-    <toolkit:AppThemeColor x:Key="HighContrastErrorContainer" Light="#763537" Dark="#FFADAC" />
-    <toolkit:AppThemeColor x:Key="HighContrastOnErrorContainer" Light="#FFFFFF" Dark="#220002" />
-    <toolkit:AppThemeColor x:Key="HighContrastBackground" Light="#FAF8FF" Dark="#121318" />
-    <toolkit:AppThemeColor x:Key="HighContrastOnBackground" Light="#1A1B21" Dark="#E2E2E9" />
-    <toolkit:AppThemeColor x:Key="HighContrastSurface" Light="#F5FAFB" Dark="#0E1415" />
-    <toolkit:AppThemeColor x:Key="HighContrastOnSurface" Light="#000000" Dark="#FFFFFF" />
-    <toolkit:AppThemeColor x:Key="HighContrastSurfaceVariant" Light="#DCE4E9" Dark="#40484C" />
-    <toolkit:AppThemeColor x:Key="HighContrastOnSurfaceVariant" Light="#000000" Dark="#FFFFFF" />
-    <toolkit:AppThemeColor x:Key="HighContrastOutline" Light="#262D31" Dark="#E9F1F6" />
-    <toolkit:AppThemeColor x:Key="HighContrastOutlineVariant" Light="#434A4F" Dark="#BCC4C9" />
-    <toolkit:AppThemeColor x:Key="HighContrastShadow" Light="#000000" Dark="#000000" />
-    <toolkit:AppThemeColor x:Key="HighContrastScrim" Light="#000000" Dark="#000000" />
-    <toolkit:AppThemeColor x:Key="HighContrastInverseSurface" Light="#2B3133" Dark="#DEE3E5" />
-    <toolkit:AppThemeColor x:Key="HighContrastInverseOnSurface" Light="#FFFFFF" Dark="#000000" />
-    <toolkit:AppThemeColor x:Key="HighContrastInversePrimary" Light="#B1C5FF" Dark="#304679" />
-    <toolkit:AppThemeColor x:Key="HighContrastPrimaryFixed" Light="#32487B" Dark="#DAE2FF" />
-    <toolkit:AppThemeColor x:Key="HighContrastOnPrimaryFixed" Light="#FFFFFF" Dark="#000000" />
-    <toolkit:AppThemeColor x:Key="HighContrastPrimaryFixedDim" Light="#193163" Dark="#B1C5FF" />
-    <toolkit:AppThemeColor x:Key="HighContrastOnPrimaryFixedVariant" Light="#FFFFFF" Dark="#000F31" />
-    <toolkit:AppThemeColor x:Key="HighContrastSecondaryFixed" Light="#004E71" Dark="#C8E6FF" />
-    <toolkit:AppThemeColor x:Key="HighContrastOnSecondaryFixed" Light="#FFFFFF" Dark="#000000" />
-    <toolkit:AppThemeColor x:Key="HighContrastSecondaryFixedDim" Light="#003650" Dark="#94CDF6" />
-    <toolkit:AppThemeColor x:Key="HighContrastOnSecondaryFixedVariant" Light="#FFFFFF" Dark="#00131F" />
-    <toolkit:AppThemeColor x:Key="HighContrastTertiaryFixed" Light="#733A16" Dark="#FFDBCA" />
-    <toolkit:AppThemeColor x:Key="HighContrastOnTertiaryFixed" Light="#FFFFFF" Dark="#000000" />
-    <toolkit:AppThemeColor x:Key="HighContrastTertiaryFixedDim" Light="#562402" Dark="#FFB68F" />
-    <toolkit:AppThemeColor x:Key="HighContrastOnTertiaryFixedVariant" Light="#FFFFFF" Dark="#230A00" />
-    <toolkit:AppThemeColor x:Key="HighContrastSurfaceDim" Light="#B4BABB" Dark="#0E1415" />
-    <toolkit:AppThemeColor x:Key="HighContrastSurfaceBright" Light="#F5FAFB" Dark="#4B5152" />
-    <toolkit:AppThemeColor x:Key="HighContrastSurfaceContainerLowest" Light="#FFFFFF" Dark="#000000" />
-    <toolkit:AppThemeColor x:Key="HighContrastSurfaceContainerLow" Light="#ECF2F3" Dark="#1B2122" />
-    <toolkit:AppThemeColor x:Key="HighContrastSurfaceContainer" Light="#DEE3E5" Dark="#2B3133" />
-    <toolkit:AppThemeColor x:Key="HighContrastSurfaceContainerHigh" Light="#CFD5D6" Dark="#363C3E" />
-    <toolkit:AppThemeColor x:Key="HighContrastSurfaceContainerHighest" Light="#C2C7C9" Dark="#424849" />-->
+    <Color x:Key="Yellow100Accent">#F7B548</Color>
+    <Color x:Key="Yellow200Accent">#FFD590</Color>
+    <Color x:Key="Yellow300Accent">#FFE5B9</Color>
+    <Color x:Key="Cyan100Accent">#28C2D1</Color>
+    <Color x:Key="Cyan200Accent">#7BDDEF</Color>
+    <Color x:Key="Cyan300Accent">#C3F2F4</Color>
+    <Color x:Key="Blue100Accent">#3E8EED</Color>
+    <Color x:Key="Blue200Accent">#72ACF1</Color>
+    <Color x:Key="Blue300Accent">#A7CBF6</Color>
 
 </ResourceDictionary>

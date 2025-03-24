@@ -1,6 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
-<pages:InnerFlyoutPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+<uranium:UraniumContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
                        xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+                       xmlns:uranium="http://schemas.enisn-projects.io/dotnet/maui/uraniumui"
                        xmlns:tk="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
                        xmlns:pages="clr-namespace:Skinnix.Compoetry.Maui.Pages"
                        xmlns:local="clr-namespace:Skinnix.Compoetry.Maui.Pages.Document"
@@ -8,13 +9,9 @@
                        xmlns:v="clr-namespace:Skinnix.Compoetry.Maui.Views"
                        x:Class="Skinnix.Compoetry.Maui.Pages.Document.EditorPage"
                        x:DataType="local:EditorPageVM"
-                       FlyoutLayoutBehavior="Popover"
-                       FlowDirection="RightToLeft"
-                       Title="Editor"
-                       NavigationPage.HasNavigationBar="True">
+                       Title="Editor">
 
-    <FlyoutPage.ToolbarItems>
-        <v:MarkerToolbarItem FlyoutPage="{x:Reference this}" />
+    <uranium:UraniumContentPage.ToolbarItems>
 
         <ToolbarItem Text="Tools" x:Name="toolsToolbarItem"
                      Clicked="FlyoutButton_Clicked">
@@ -39,21 +36,26 @@
             </ToolbarItem.IconImageSource>
         </ToolbarItem>
 
-    </FlyoutPage.ToolbarItems>
+    </uranium:UraniumContentPage.ToolbarItems>
 
-    <FlyoutPage.Flyout>
-        <ContentPage Title="FlyoutTest" FlowDirection="LeftToRight">
-            <Button Text="Test" />
-        </ContentPage>
-    </FlyoutPage.Flyout>
+    <v:SingletonWrapperBlazorView tk:StateView.StateKey="False" Component="{Binding RootComponent}">
+        <x:Arguments>
+            <x:Boolean>False</x:Boolean>
+        </x:Arguments>
+    </v:SingletonWrapperBlazorView>
 
-    <ContentPage FlowDirection="LeftToRight" NavigationPage.HasNavigationBar="True" Title="1">
+    <uranium:UraniumContentPage.Attachments>
+        <!--<v:SideSheetView x:Name="sideSheetView">
+            <v:SideSheetView.Header>
+                <ContentView BackgroundColor="Transparent" />
+            </v:SideSheetView.Header>
 
-        <v:SingletonWrapperBlazorView tk:StateView.StateKey="False" Component="{Binding RootComponent}">
-            <x:Arguments>
-                <x:Boolean>False</x:Boolean>
-            </x:Arguments>
-        </v:SingletonWrapperBlazorView>
+            <ScrollView>
+                <uranium:AutoFormView Source="{Binding EditingSettings}" WidthRequest="500"
+                                  ShowMissingProperties="False"
+                                  ShowResetButton="False" ShowSubmitButton="False" />
+            </ScrollView>
+        </v:SideSheetView>-->
+    </uranium:UraniumContentPage.Attachments>
 
-    </ContentPage>
-</pages:InnerFlyoutPage>
+</uranium:UraniumContentPage>

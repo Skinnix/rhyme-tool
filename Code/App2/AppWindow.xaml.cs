@@ -56,6 +56,6 @@ public partial class AppWindowVM : ViewModelBase
 
 	[RelayCommand] private async Task OpenSettings()
 	{
-		await App.Navigation.PushAsync(SettingsPage.Load(), true);
+		await App.Navigation.PushAsync(PreferencesPage.Load(), true);
 	}
 }

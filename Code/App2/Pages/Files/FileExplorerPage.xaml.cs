@@ -8,10 +8,11 @@ using System.Collections;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.ComponentModel;
+using UraniumUI.Pages;
 
 namespace Skinnix.Compoetry.Maui.Pages.Files;
 
-public partial class FileExplorerPage : ContentPage
+public partial class FileExplorerPage : UraniumContentPage
 {
 	public FileExplorerPageVM ViewModel => (FileExplorerPageVM)BindingContext;
 

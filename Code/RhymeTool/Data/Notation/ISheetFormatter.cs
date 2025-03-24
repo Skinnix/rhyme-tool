@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -76,22 +77,22 @@ public interface ISheetEditorFormatter : ISheetBuilderFormatter
 
 public enum GermanNoteMode
 {
-	[EnumName("B, B♭")]
+	[EnumName("B, B♭"), Description("B, B♭")]
 	AlwaysB,
 
-	[EnumName("H, B")]
+	[EnumName("H, B"), Description("H, B")]
 	German,
 
-	[EnumName("H, B♭")]
+	[EnumName("H, B♭"), Description("H, B♭")]
 	Descriptive,
 
-	[EnumName("H, H♭")]
+	[EnumName("H, H♭"), Description("H, H♭")]
 	AlwaysH,
 
-	[EnumName("B♮, H♭")]
+	[EnumName("B♮, H♭"), Description("B♮, H♭")]
 	ExplicitB,
 
-	[EnumName("H♮, H♭")]
+	[EnumName("H♮, H♭"), Description("H♮, H♭")]
 	ExplicitH,
 }
 
