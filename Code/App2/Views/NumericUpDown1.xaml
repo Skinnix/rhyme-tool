@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentView xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:uranium="http://schemas.enisn-projects.io/dotnet/maui/uraniumui"
+             xmlns:material="http://schemas.enisn-projects.io/dotnet/maui/uraniumui/material"
+             xmlns:tk="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             xmlns:v="clr-namespace:Skinnix.Compoetry.Maui.Views"
+             x:Class="Skinnix.Compoetry.Maui.Views.NumericUpDown1"
+             x:DataType="v:NumericUpDown"
+             x:Name="view"
+             BindingContext="{x:Reference view}">
+
+    <Grid>
+        <Border Stroke="Transparent"
+            StrokeThickness="0"
+            StrokeShape="RoundRectangle 8">
+
+            <Grid ColumnDefinitions="auto,*,auto">
+                <Button x:Name="leftButton" Grid.Column="0" FontFamily="FASolid" Text="-" CornerRadius="0" Clicked="Decrement" />
+
+                <Entry Grid.Column="1" ReturnType="Done" Text="{Binding Value, Converter={v:PersistentIntValueConverter}}" Keyboard="Numeric">
+                    <Entry.Behaviors>
+                        <v:IntValueBehavior />
+                    </Entry.Behaviors>
+                </Entry>
+
+                <Button Grid.Column="2" FontFamily="FASolid" Text="+" CornerRadius="0" Clicked="Increment" />
+            </Grid>
+        </Border>
+
+        <Border Margin="50,-10,0,0" Padding="0" StrokeThickness="0" HorizontalOptions="Start" VerticalOptions="Start">
+            <Label Text="{Binding Title}" Scale="0.8" />
+        </Border>
+    </Grid>
+</ContentView>

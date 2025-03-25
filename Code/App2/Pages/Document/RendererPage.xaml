@@ -1,18 +1,20 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
 <uranium:UraniumContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-                       xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-                       xmlns:uranium="http://schemas.enisn-projects.io/dotnet/maui/uraniumui"
-                       xmlns:material="http://schemas.enisn-projects.io/dotnet/maui/uraniumui/material"
-                       xmlns:fa="clr-namespace:UraniumUI.Icons.FontAwesome;assembly=UraniumUI.Icons.FontAwesome"
-                       xmlns:tk="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
-                       xmlns:pages="clr-namespace:Skinnix.Compoetry.Maui.Pages"
-                       xmlns:local="clr-namespace:Skinnix.Compoetry.Maui.Pages.Document"
-                       xmlns:components="clr-namespace:Skinnix.Compoetry.Maui.Components"
-                       xmlns:v="clr-namespace:Skinnix.Compoetry.Maui.Views"
-                       x:Class="Skinnix.Compoetry.Maui.Pages.Document.RendererPage"
-                       x:DataType="local:RendererPageVM"
-                       Title="{Binding Title}"
-                       IsBusy="{Binding IsLoading}">
+                            xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+                            xmlns:uranium="http://schemas.enisn-projects.io/dotnet/maui/uraniumui"
+                            xmlns:material="http://schemas.enisn-projects.io/dotnet/maui/uraniumui/material"
+                            xmlns:fa="clr-namespace:UraniumUI.Icons.FontAwesome;assembly=UraniumUI.Icons.FontAwesome"
+                            xmlns:tk="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+                            xmlns:pages="clr-namespace:Skinnix.Compoetry.Maui.Pages"
+                            xmlns:local="clr-namespace:Skinnix.Compoetry.Maui.Pages.Document"
+                            xmlns:components="clr-namespace:Skinnix.Compoetry.Maui.Components"
+                            xmlns:notation="clr-namespace:Skinnix.RhymeTool.Data.Notation;assembly=Skinnix.RhymeTool"
+                            xmlns:v="clr-namespace:Skinnix.Compoetry.Maui.Views"
+                            x:Class="Skinnix.Compoetry.Maui.Pages.Document.RendererPage"
+                            x:DataType="local:RendererPageVM"
+                            x:Name="page"
+                            Title="{Binding Title}"
+                            IsBusy="{Binding IsLoading}">
 
     <uranium:UraniumContentPage.ToolbarItems>
         <ToolbarItem Text="Tools" x:Name="toolsToolbarItem"
@@ -55,10 +57,40 @@
                 <ContentView BackgroundColor="Transparent" />
             </v:SideSheetView.Header>
 
-            <ScrollView>
-                <uranium:AutoFormView Source="{Binding RenderingSettings}" WidthRequest="500"
-                                      ShowMissingProperties="False"
-                                      ShowResetButton="False" ShowSubmitButton="False" />
+            <ScrollView WidthRequest="500" MaximumWidthRequest="{Binding Width, Source={x:Reference page}}">
+                <uranium:ExpanderView IsExpanded="True">
+                    <uranium:ExpanderView.Resources>
+                        <Style TargetType="Layout" Class="ExpanderView.Header" ApplyToDerivedTypes="True">
+                            <Setter Property="BackgroundColor" Value="{AppThemeBinding Light={StaticResource SurfaceVariant}, Dark={StaticResource SurfaceVariantDark}}" />
+                        </Style>
+                    </uranium:ExpanderView.Resources>
+                    
+                    <uranium:ExpanderView.Header>
+                        <Label Text="Tools" TextColor="{AppThemeBinding Light={StaticResource OnSurfaceVariant}, Dark={StaticResource OnSurfaceVariantDark}}"
+                               Margin="10" FontAttributes="Bold" />
+                    </uranium:ExpanderView.Header>
+                    
+                    <VerticalStackLayout Spacing="20" Padding="10">
+                        <!--<material:CheckBox Text="Autofit" IsChecked="{Binding RenderingSettings.Autofit}" />-->
+                        <Grid ColumnDefinitions="auto,*">
+                            <Grid WidthRequest="40" IsClippedToBounds="True" Grid.Column="0">
+                                <CheckBox IsChecked="{Binding RenderingSettings.Autofit}" VerticalOptions="Center" />
+                            </Grid>
+
+                            <Label Text="Autofit" VerticalOptions="Center" Grid.Column="1">
+                                <Label.GestureRecognizers>
+                                    <TapGestureRecognizer Command="{Binding ToggleAutofitCommand}" />
+                                </Label.GestureRecognizers>
+                            </Label>
+                        </Grid>
+
+                        <v:NumericUpDown Title="Schriftgröße" Value="{Binding RenderingSettings.FontSize}" />
+
+                        <v:EnumPicker x:TypeArguments="notation:GermanNoteMode" Title="Eindeutschen" Value="{Binding RenderingSettings.GermanMode}" />
+
+                        <v:NumericUpDown Title="Transponieren" Value="{Binding RenderingSettings.Transpose}" />
+                    </VerticalStackLayout>
+                </uranium:ExpanderView>
             </ScrollView>
         </v:SideSheetView>
 

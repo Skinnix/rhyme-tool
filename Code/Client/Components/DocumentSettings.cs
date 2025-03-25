@@ -43,7 +43,11 @@ public abstract class DocumentSettings : IConfigurable
 			if ((Formatter.Transformation?.Transpose ?? 0) == value)
 				return;
 
-			Formatter = Formatter with { Transformation = new SheetTransformation(value) };
+			var newTransformation = new SheetTransformation(value);
+			if ((Formatter.Transformation?.Transpose ?? 0) == newTransformation.Transpose)
+				return;
+
+			Formatter = Formatter with { Transformation = newTransformation };
 			RaisePropertyChanged();
 		}
 	}

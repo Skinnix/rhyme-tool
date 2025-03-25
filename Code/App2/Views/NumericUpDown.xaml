@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<material:InputField xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+                     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+                     xmlns:uranium="http://schemas.enisn-projects.io/dotnet/maui/uraniumui"
+                     xmlns:material="http://schemas.enisn-projects.io/dotnet/maui/uraniumui/material"
+                     xmlns:plainer="clr-namespace:Plainer.Maui.Controls;assembly=Plainer.Maui"
+                     xmlns:tk="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+                     xmlns:v="clr-namespace:Skinnix.Compoetry.Maui.Views"
+                     x:Class="Skinnix.Compoetry.Maui.Views.NumericUpDown"
+                     x:DataType="v:NumericUpDown"
+                     x:Name="view">
+
+    <Border Stroke="Transparent"
+            StrokeThickness="0"
+            StrokeShape="RoundRectangle 8">
+
+        <Grid ColumnDefinitions="auto,*,auto">
+            <Button FontFamily="FASolid" Text="-" Clicked="Decrement"
+                    StyleClass="OutlinedButton"
+                    CornerRadius="0" HeightRequest="-1"
+                    VerticalOptions="Fill" Grid.Column="0" />
+
+            <!--<Entry Grid.Column="1" ReturnType="Done" Text="{Binding Value, Converter={v:PersistentIntValueConverter}}" Keyboard="Numeric">
+                <Entry.Behaviors>
+                    <v:IntValueBehavior />
+                </Entry.Behaviors>
+            </Entry>-->
+
+            <plainer:EntryView x:Name="entry" Grid.Column="1" ReturnType="Done" Text="{Binding Value, Source={x:Reference view}}" Keyboard="Numeric">
+                <plainer:EntryView.Behaviors>
+                    <v:IntValueBehavior />
+                </plainer:EntryView.Behaviors>
+            </plainer:EntryView>
+
+            <Button Grid.Column="2" FontFamily="FASolid" Text="+" Clicked="Increment"
+                    StyleClass="OutlinedButton"
+                    CornerRadius="0" HeightRequest="-1"
+                    VerticalOptions="Fill" />
+        </Grid>
+    </Border>
+</material:InputField>

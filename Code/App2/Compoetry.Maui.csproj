@@ -88,6 +88,9 @@
 	  <Compile Update="Pages\PreferencesPage.xaml.cs">
 	    <DependentUpon>PreferencesPage.xaml</DependentUpon>
 	  </Compile>
+	  <Compile Update="Views\NumericUpDown1.xaml.cs">
+	    <DependentUpon>NumericUpDown1.xaml</DependentUpon>
+	  </Compile>
 	</ItemGroup>
 	<ItemGroup>
 	  <MauiXaml Update="AppFlyoutContent.xaml">
@@ -109,6 +112,12 @@
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
 	  <MauiXaml Update="PageWrapper.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  <MauiXaml Update="Views\NumericUpDown1.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  <MauiXaml Update="Views\NumericUpDown.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
 	</ItemGroup>

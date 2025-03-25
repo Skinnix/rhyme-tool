@@ -118,6 +118,9 @@ public static class SheetDecoderHelper
 					//Ist eine der Zeilen zu Ende?
 					if (next.Contains(null))
 						break;
+
+					foreach (var line in lines)
+						line.Elements.TryDequeue(out _);
 				} while (next.All(n => n?.Type == TabLineElementType.Space));
 
 				//Erweitere sie alle um das jeweils nächste Element, bis wieder nur Leerzeichen gelesen wurden
