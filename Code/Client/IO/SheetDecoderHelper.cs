@@ -110,18 +110,11 @@ public static class SheetDecoderHelper
 			if (lines.Any(l => l.Elements.Count != 0) && elements.All(e => e.Type == TabLineElementType.Space))
 			{
 				//Überspringe zuerst alle weiteren Leerzeichen
-				TabLineElement?[] next;
-				do
+				var next = lines.Select(l => l.Elements.TryPeek(out var next) ? (TabLineElement?)next : null).ToArray();
+				while (!next.Contains(null) && next.All(n => n?.Type == TabLineElementType.Space))
 				{
-					next = lines.Select(l => l.Elements.TryPeek(out var next) ? (TabLineElement?)next : null).ToArray();
-
-					//Ist eine der Zeilen zu Ende?
-					if (next.Contains(null))
-						break;
-
-					foreach (var line in lines)
-						line.Elements.TryDequeue(out _);
-				} while (next.All(n => n?.Type == TabLineElementType.Space));
+					next = lines.Select(l => l.Elements.TryDequeue(out var next) ? (TabLineElement?)next : null).ToArray();
+				}
 
 				//Erweitere sie alle um das jeweils nächste Element, bis wieder nur Leerzeichen gelesen wurden
 				//oder eine Zeile, die vorher ein Leerzeichen enthielt, jetzt wieder Inhalt hat
